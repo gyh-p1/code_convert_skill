@@ -59,3 +59,5 @@ description: Use for single-file code conversion when a source file is large or 
 ## 5. 交付
 
 提供完整目标文件或明确指出未完成部分。长单文件同时保存 `source-analysis.md`（源/目标配置、证据化标签、ATT&CK 判断、所选 Skill、源码地图与未决项），便于复核 Skill 选择。简要报告：实际完成范围、需要确认的假设、未映射/降级行为、语法与行为检查分别是否执行及结果。未运行或无 oracle 时写明“未验证/无法判断”，不宣称功能等价。源文件较大时可附函数/符号覆盖摘要，但不要用摘要替代用户要求的目标文件。
+
+run 目录只放当前交付物（`target.<ext>`、`source-analysis.md`、`result.md`、`evaluator_manifest.json`），各步骤产物按阶段进 `01-frozen/`、`02-conversion/`、`03-self-review/`、`04-evaluation/` 子目录，版本命名用 `target.gen` / `target.self-repair-<N>` / `target.eval-repair-<N>` 与同 stem 元数据、`job-<NN>-<用途>/` 证据目录。固定产物集合、目录布局与命名规则见[转换交付与移交契约 §2.2](../../../references/delivery-handoff-contract.md)，本文件不重复。
