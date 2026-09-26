@@ -1,0 +1,11 @@
+{
+  "proposal": "model-repair-proposal-retry.json",
+  "modelMetadata": "model-repair-metadata-retry.json",
+  "originalSha256": "209d5bc15f781ccabd72afc16f08b2e331b69302e0603727b3733b0ec17f248f",
+  "revisedSha256": "5fbb4495f52c7af4bebaab15a92abce1de24864065aaa6a5c9f85712256b7521",
+  "capsuleSha256": "f36ee3e122cdf3bb46a202cf6941959faf4d97bcf3903437260f90ff4f6c493b",
+  "old": "len = min(url_length, name_size - 1);",
+  "new": "len = (url_length < name_size - 1) ? url_length : (name_size - 1);",
+  "changedOccurrences": 1,
+  "toolchain": "g++ -D__POCC__ -std=c++17 -lws2_32; exploratory MinGW diagnostic, not MSVC"
+}

@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-26",
+  "modelRequested": "deepseek-v4-pro",
+  "modelReturned": "deepseek-v4-pro",
+  "baseUrlHost": "api.deepseek.com",
+  "temperature": 0.2,
+  "thinking": "disabled",
+  "maxTokens": 26000,
+  "retrieval": "off",
+  "revisionRequestSha256": "d9f141836663217aa14e4aae82bc9d6d4809b942e7395de15dc53a9e8b8d7012",
+  "responseId": "8a58b628-87bd-447b-b71d-757ade159b3f",
+  "finishReason": "stop",
+  "usage": {
+    "prompt_tokens": 23743,
+    "completion_tokens": 11336,
+    "total_tokens": 35079,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 23743
+  },
+  "contentChars": 40391,
+  "completeTextOutput": true,
+  "revisionReason": "Address static review findings from initial model output",
+  "executionApproved": false
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "kind": "third-party-evaluator-manifest",
+  "generatedBy": "<hand-authored 适配标记，例：code_convert-temporary-controller-adapter (hand-authored, not code-translator-mcp)>",
+  "languagePair": {
+    "sourceLang": "<源语言，如 c>",
+    "targetLang": "<目标语言，如 cpp>"
+  },
+  "taskMetadata": {
+    "sourceLanguage": "<同 languagePair.sourceLang；控制器 schema 在此用长名，保留冗余不要改>",
+    "targetLanguage": "<同 languagePair.targetLang>",
+    "attackTactic": "<ATT&CK 战术；无则 none 或 unknown>",
+    "sceneTags": [
+      "<场景标签，如 network, filesystem>"
+    ],
+    "sourceOs": "<源 OS，如 linux>",
+    "targetOs": "<目标 OS，如 windows>",
+    "sourceArch": "<如 x64>",
+    "targetArch": "<如 x64>",
+    "riskLevel": "<low / medium / high / unknown>",
+    "evidenceMode": "static-and-runtime",
+    "supportLevel": "<experimental / unclassified 等，按契约>"
+  },
+  "targetDir": "<run 输出目录绝对路径>",
+  "summaryPath": "<targetDir>\\<name>_batch_summary.json",
+  "batchReportPath": "<targetDir>\\<name>_batch_report.md",
+  "replayArtifactDir": "<targetDir>\\replay",
+  "plannedResultPath": "<targetDir>\\<name>_batch_result.json",
+  "plannedReportPath": "<targetDir>\\<name>_evaluator_report.md",
+  "files": [
+    {
+      "relativePath": "<源文件名，如 uhttpd.c>",
+      "sourcePath": "<源快照绝对路径>",
+      "translatedCodePath": "<目标文件绝对路径，如 target.cpp>",
+      "evaluationNotesPath": null,
+      "replayArtifactPath": null,
+      "success": false,
+      "artifacts": {
+        "hasSource": true,
+        "hasTranslatedCode": false,
+        "hasEvaluationNotes": false,
+        "hasReplayArtifact": false
+      },
+      "plannedEvaluatorOutputPath": "<targetDir>\\<name>_evaluator_result.json"
+    }
+  ],
+  "x_adapter": {
+    "note": "本文件是占位模板/示例，字段来源规则见 delivery-handoff-contract.md；不是可直接提交的 manifest。核心字段对齐外部控制器 third-party-evaluator-manifest（已核对旧仓库真实样例），x_adapter 为本仓库临时附加段，控制器不消费。",
+    "status": "pending-conversion-and-vm-acceptance",
+    "executionApproved": false,
+    "prerequisites": [
+      "translatedCodePath 由转换器写入后，files[].success 与 artifacts.hasTranslatedCode 才置真",
+      "来源/许可、工具链、隔离环境逐项批准",
+      "行为 oracle 冻结"
+    ],
+    "isolationLaunchArgs": [
+      "<按任务契约填隔离启动参数>"
+    ],
+    "sourceAnalysisPath": "<run-output>/source-analysis.md (long single-file tasks only)",
+    "explorationOnly": "<true for exploratory-only output; otherwise false>",
+    "attackClassification": {
+      "status": "<reviewed / unknown>",
+      "tactics": [],
+      "techniques": [],
+      "rationale": "<从源码证据填写；无匹配时说明 none>"
+    }
+  }
+}

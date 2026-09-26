@@ -1,0 +1,19 @@
+{
+  "modelRequested": "deepseek-flash",
+  "modelReturned": "deepseek-flash",
+  "responseId": "640b576d-1eed-4a0b-8d11-3af2f15a293b",
+  "finishReason": "stop",
+  "usage": {
+    "prompt_tokens": 114,
+    "completion_tokens": 69,
+    "total_tokens": 183,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 114
+  },
+  "requestSha256": "7c618b9f868c6c950cb33d2ae66c16bdf1eca0e8be6a76c848318e2027b8440b",
+  "thinking": "disabled",
+  "authority": "model patch proposal only"
+}

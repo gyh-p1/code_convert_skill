@@ -1,0 +1,31 @@
+---
+name: concurrency
+description: Preserve observable concurrency, shared state, ordering, and resource-lifecycle semantics when converting concurrent code.
+---
+
+# 并发场景
+
+本 Skill 仅在源码实际创建或协作使用多个线程/任务时加载。它定义应盘点的行为，不替代 source OS → target OS 的线程 API 映射，也不证明无数据竞争。
+
+## 转换前盘点
+
+- 线程/任务创建点、入口函数签名、参数所有权、启动失败路径与线程数量限制；
+- 共享状态的读写者、同步原语、状态机、发布/完成信号与主线程观察时机；
+- 每个线程拥有的 socket、缓冲区、文件、锁和句柄，以及成功、失败、取消、退出时的清理顺序；
+- join/wait、detach、句柄回收与进程退出路径；
+- 可观察的并发拓扑、请求顺序、超时和背压行为。
+
+## 转换约束
+
+- 保持原有并发模型和可观察顺序；不要把每连接线程静默改成线程池、异步 I/O 或串行处理。
+- API 名称相似不代表生命周期等价。分别核对线程句柄与线程 ID、join/wait、结果值、取消/强制终止及资源回收。
+- 发现普通共享变量被多个线程并发访问而没有同步时，标记为源代码既有风险；不要把 `volatile` 当作同步，也不要在未经授权时静默重构。
+- `TerminateThread`、`pthread_cancel` 等强制取消不能视作可互换的常规清理路径；确认代码是否真正调用，再归入行为地图。
+- 跨段转换时，将共享状态结构、入口签名、所有权及终止协议作为跨单元契约。
+
+## uhttpd 静态观察
+
+在归档的候选文件中，`StartHttpThread` 为每个客户端连接创建工作线程；`HttpTransferThread` 处理请求并设置 `ThStatus`；主循环的 `ManageTerminatedThreads` 检查该状态、等待线程并回收记录。`ThStatus` 是普通枚举字段，工作线程写入而主线程读取，源码未见围绕该字段的显式同步。转换时应保留并报告此风险，不据此宣称线程安全。
+
+以上是静态结构观察和转换约束，不是竞态检测或运行验证。
+

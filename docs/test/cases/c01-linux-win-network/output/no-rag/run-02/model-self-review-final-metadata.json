@@ -1,0 +1,26 @@
+{
+  "date": "2026-09-26",
+  "modelRequested": "deepseek-flash",
+  "modelReturned": "deepseek-flash",
+  "apiHost": "api.deepseek.com",
+  "temperature": 0.2,
+  "thinking": "disabled",
+  "maxTokens": 3200,
+  "retrieval": "off",
+  "requestSha256": "c186ee96203e0c9ae026b481f2a56b1517bd0da44d7b24499f12b66206130298",
+  "responseId": "87f515f2-fedd-472e-b557-a40a9c70b15d",
+  "finishReason": "stop",
+  "usage": {
+    "prompt_tokens": 23662,
+    "completion_tokens": 553,
+    "total_tokens": 24215,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 23662
+  },
+  "authority": "model-self-review only; not independent syntax assessment",
+  "executionApproved": false,
+  "jsonParsed": true
+}

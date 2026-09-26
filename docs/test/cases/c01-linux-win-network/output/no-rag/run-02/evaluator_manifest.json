@@ -1,0 +1,168 @@
+{
+  "schemaVersion": 1,
+  "kind": "third-party-evaluator-manifest",
+  "generatedBy": "code_convert-temporary-controller-adapter (hand-authored, configured-model run)",
+  "languagePair": {
+    "sourceLang": "c",
+    "targetLang": "cpp"
+  },
+  "taskMetadata": {
+    "sourceLanguage": "c",
+    "targetLanguage": "cpp",
+    "attackTactic": "none",
+    "sceneTags": [
+      "network-io",
+      "file-io",
+      "concurrency"
+    ],
+    "sourceOs": "linux",
+    "targetOs": "windows",
+    "sourceArch": "x64",
+    "targetArch": "x64",
+    "riskLevel": "medium",
+    "evidenceMode": "static-and-runtime",
+    "supportLevel": "experimental"
+  },
+  "targetDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02",
+  "summaryPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\c01_batch_summary.json",
+  "batchReportPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\c01_batch_report.md",
+  "replayArtifactDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\replay",
+  "plannedResultPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\c01_batch_result.json",
+  "plannedReportPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\c01_evaluator_report.md",
+  "files": [
+    {
+      "relativePath": "uhttpd.c",
+      "sourcePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\uhttpd\\uhttpd.c",
+      "translatedCodePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\target.cpp",
+      "evaluationNotesPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\result.md",
+      "replayArtifactPath": null,
+      "success": true,
+      "artifacts": {
+        "hasSource": true,
+        "hasTranslatedCode": true,
+        "hasEvaluationNotes": true,
+        "hasReplayArtifact": false
+      },
+      "plannedEvaluatorOutputPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\c01_evaluator_result.json"
+    }
+  ],
+  "x_adapter": {
+    "note": "run-02 configured-model exploration; original target is retained unchanged and failed exploratory MinGW compilation; a separate model-authored repair variant passed one bounded Controller output comparison.",
+    "status": "exploratory-run-evaluated-repaired-variant-passed-limited-oracle",
+    "executionApproved": true,
+    "explorationOnly": true,
+    "producedBy": {
+      "conversion": "configured external model via .env, orchestrated by Codex",
+      "compileAndRun": "authorized isolated Windows/Linux VM Controller; dual source/target build and run",
+      "thisRepo": "static source analysis, target text, temporary comparison adapter, evidence archive"
+    },
+    "sourceAnalysisPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\source-analysis.md",
+    "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\frozen-inputs.md",
+    "modelMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-request-metadata.json",
+    "selectedSkills": [
+      "long-file-conversion",
+      "c-to-cpp",
+      "network-io",
+      "file-io",
+      "concurrency",
+      "posix-winsock",
+      "posix-windows-filesystem",
+      "posix-windows-threads",
+      "attack-tactic-index"
+    ],
+    "attackClassification": {
+      "status": "reviewed-no-supported-mapping",
+      "tactics": [],
+      "techniques": [],
+      "rationale": "Static HTTP file-server behavior alone does not establish adversarial ATT&CK behavior."
+    },
+    "prerequisites": [
+      "Freeze a formal MSVC/Pelles target toolchain before making an MSVC-specific syntax claim.",
+      "Expand the HTTP behavior oracle beyond the five GET/HEAD probes before claiming broader equivalence.",
+      "Treat all outcomes as exploratory because the upstream source includes its own Windows implementation."
+    ],
+    "isolationLaunchArgs": [
+      "-i",
+      "127.0.0.1",
+      "-p",
+      "<isolated-high-port>",
+      "-d",
+      "<case-private-empty-docroot>"
+    ],
+    "modelRevisionMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-revision-metadata.json",
+    "modelConstnessDecisionPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-constness-decision.json",
+    "modelSelfReviewStatus": "NO-REPAIR-IDENTIFIED",
+    "modelSelfReviewAttemptPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review-attempt.json",
+    "modelSelfReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review.json",
+    "modelSelfReviewDecisionPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review-decision.json",
+    "modelSelfReviewMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review-final-metadata.json",
+    "repairRecommended": true,
+    "thirdPartyCompileStatus": "PASS-REPAIRED-VARIANT-EXPLORATORY-MINGW-UCRT64-GXX-CXX17",
+    "syntaxVerdict": "PASS-REPAIRED-VARIANT-ONLY; ORIGINAL-TARGET-FAILED",
+    "thirdPartyEvaluatorHandoffReady": false,
+    "thirdPartyEvaluatorHandoffNote": "Three Controller comparison jobs completed. The original target failed on an undeclared min; a separate model-proposed one-line repair compiled and passed the bounded HTTP output comparison under the Windows runner MinGW/UCRT64 g++ C++17 probe. This does not establish MSVC/Pelles compilation, full behavior equivalence, or a formal baseline.",
+    "originalTargetCompileStatus": "FAILED-EXPLORATORY-MINGW-UCRT64-GXX",
+    "behaviorVerdict": "MATCHED-LIMITED-OUTPUT-ORACLE-ONLY",
+    "evaluationEvidenceDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter",
+    "thirdPartyJobs": [
+      {
+        "jobId": "eval-20260926-052137-b10a6e2f",
+        "caseId": "c01-uhttpd-run-02",
+        "purpose": "initial -D_MSC_VER probe",
+        "codeVerdict": "failed",
+        "targetBuild": "failed",
+        "targetExecution": "blocked",
+        "behaviorVerdict": "inconclusive"
+      },
+      {
+        "jobId": "eval-20260926-052507-8c9beb3a",
+        "caseId": "c01-uhttpd-run-02-pocc-probe",
+        "purpose": "single-variable compiler-branch diagnostic with -D__POCC__",
+        "codeVerdict": "failed",
+        "targetBuild": "failed",
+        "targetExecution": "blocked",
+        "behaviorVerdict": "inconclusive"
+      },
+      {
+        "jobId": "eval-20260926-052820-e96bf2ee",
+        "caseId": "c01-uhttpd-run-02-repair-01",
+        "purpose": "configured-model one-line repair, mechanically applied",
+        "codeVerdict": "passed",
+        "targetBuild": "completed",
+        "targetExecution": "completed",
+        "behaviorVerdict": "matched"
+      }
+    ],
+    "limitedOracle": {
+      "requests": [
+        "GET /",
+        "GET /known.txt",
+        "HEAD /known.txt",
+        "GET /missing.txt",
+        "GET /unknown.zz"
+      ],
+      "dimensions": [
+        "output"
+      ],
+      "matchedDimensions": 1,
+      "applicableDimensions": 1,
+      "filesystem": "not observed",
+      "processes": "not observed",
+      "network": "not observed by evaluator; the helper itself connects only to 127.0.0.1",
+      "externalEgressIsolation": "not reported by the public Controller evidence"
+    },
+    "modelRepairArtifactPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\target.repair-01.cpp",
+    "modelRepairProposalPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\model-repair-proposal-retry.json",
+    "remoteReportPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-report.json",
+    "remoteSourceEvidencePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-evidence-source.json",
+    "remoteTargetEvidencePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-evidence-target.json",
+    "remoteComparisonPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-comparison.json",
+    "repairStatus": "APPLIED-TO-target.cpp; ORIGINAL-SNAPSHOT-PRESERVED",
+    "translatedTargetStatus": "REPAIRED-VARIANT-IN-target.cpp",
+    "originalTargetPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\target.pre-repair.cpp",
+    "originalTargetSha256": "sha256:209d5bc15f781ccabd72afc16f08b2e331b69302e0603727b3733b0ec17f248f",
+    "translatedTargetSha256": "sha256:5fbb4495f52c7af4bebaab15a92abce1de24864065aaa6a5c9f85712256b7521",
+    "repairArtifactPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\target.repair-01.cpp",
+    "repairArtifactSha256": "sha256:5fbb4495f52c7af4bebaab15a92abce1de24864065aaa6a5c9f85712256b7521"
+  }
+}

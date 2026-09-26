@@ -1,0 +1,35 @@
+{
+  "self_review": "REPAIR-RECOMMENDED",
+  "findings": [
+    {
+      "category": "likely_compile_risk",
+      "location": "Windows branch: #define INVALID_THREAD_VALUE NULL and _startnewthread return",
+      "issue": "THREAD_ID is HANDLE (a pointer type); INVALID_THREAD_VALUE is NULL, and _startnewthread returns reinterpret_cast<THREAD_ID>(_beginthreadex(...)). reinterpret_cast from uintptr_t to HANDLE is valid, but the source used (THREAD_ID)-0; the change is benign. However StartHttpThread returns pCur->ThreadId after the else-branch where pCur may have been freed on thread-creation failure, which is a source-existing bug, not target-introduced.",
+      "confidence": "low",
+      "repair": "No repair; source-existing."
+    },
+    {
+      "category": "likely_compile_risk",
+      "location": "GetSocketMSS: int opt_len = sizeof tcp_mss; getsockopt(..., &opt_len)",
+      "issue": "On Windows getsockopt expects int* for optlen, so int is correct; source used unsigned which is also accepted. No compile risk.",
+      "confidence": "low",
+      "repair": "No repair."
+    },
+    {
+      "category": "behavior_risk",
+      "location": "HTTPSendError: StringCchPrintf with szHTTPDataFmt and %I64u via PRIu64",
+      "issue": "StringCchPrintf (strsafe) does not support the %I64u format specifier the same way as printf; on MSVC strsafe uses its own formatting and may not handle PRIu64 (\"I64u\") correctly, producing wrong Content-Length. This is source-existing (source also uses StringCchPrintf with PRIu64).",
+      "confidence": "medium",
+      "repair": "No repair; source-existing."
+    },
+    {
+      "category": "coverage_risk",
+      "location": "Unix branch removed entirely in target",
+      "issue": "Target dropped the #ifdef UNIX portability block, so the file is now Windows-only. Profile is C Linux x64 to C++ Windows x64, so this is acceptable, but any non-Windows compile will fail.",
+      "confidence": "medium",
+      "repair": "No repair; consistent with Windows-only target profile."
+    }
+  ],
+  "replacements": [],
+  "limitations": "Non-authoritative self-review only; no compile was performed. Findings are limited to visible target-introduced changes; several apparent issues (StringCchPrintf/PRIu64, StartHttpThread use-after-free, ExtractFileName strpbrk NULL deref) are source-existing and not repaired per instructions. reinterpret_cast additions are the main target-introduced edits and appear syntactically valid under MSVC C++17."
+}
