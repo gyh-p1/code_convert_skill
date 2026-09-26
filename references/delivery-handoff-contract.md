@@ -12,16 +12,50 @@
 
 ## 2. 固定产物集合与目录布局
 
-一次转换 run 的输出落在任务契约指定的同一目录，至少包含：长单文件还须保留 `source-analysis.md`，记录源码事实、任务标签和 Skill 选择；短片段无需强制生成该文件。
+一次转换 run 的输出落在任务契约指定的同一 run 目录。**run 根目录只放"最终交付物"**，过程产物按阶段归入子目录（见 2.2），使消费方一眼区分"当前交付稿 / 过程记录 / 评估证据"，不必在扁平目录里猜哪份是第几轮转换、哪份是评估证据。
+
+### 2.1 run 根目录：最终交付物
 
 | 产物 | 内容 | 备注 |
 |---|---|---|
-| `target.<ext>`（可多个） | 目标语言文件 | 多文件逐一列入 manifest `files[]` |
-| `source-analysis.md`（长单文件） | 源/目标画像、证据化标签、ATT&CK 判断、Skill 选择、源码地图与未决项 | 为 Skill 选择及全文件核对提供可审阅依据 |
+| `target.<ext>`（可多个） | **当前交付**的目标语言文件（最后一个成功版本） | 多文件逐一列入 manifest `files[]`；历史/失败版本进 `02-conversion/`，不在根目录堆叠 |
+| `source-analysis.md`（长单文件） | 源/目标画像、证据化标签、ATT&CK 判断、Skill 选择、源码地图与未决项 | 为 Skill 选择及全文件核对提供可审阅依据；短片段可省 |
 | `result.md` | 交付说明：完成范围、待确认假设、模型自检/repair、第三方编译与行为结果 | 模型预检不得充当语法结论；未收到第三方编译结果时明确标记 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED` |
-| `evaluator_manifest.json` | 移交清单：告知编译/运行环境文件位置、任务元数据、待批准状态 | 形状见第 4 节，临时适配 |
+| `evaluator_manifest.json` | 移交清单：告知编译/运行环境文件位置、任务元数据、待批准状态 | 形状见第 4 节，临时适配；其中路径指针须指向本布局的实际落点 |
+| `README.md`（可选） | run 概览与状态 | 说明 run 类型（探索/基线）、当前状态与阶段目录导航 |
 
-上述产物同目录，便于消费方按清单定位；长单文件多一份 `source-analysis.md`。命名与落点以任务契约为准。
+短片段任务若无评测需求，可只产出 `target.<ext>` 与 `result.md`，不强制建阶段子目录。
+
+### 2.2 阶段子目录：过程产物与命名
+
+过程产物按[转换—自审—第三方评估闭环](conversion-evaluation-loop.md)的阶段归入固定子目录，命名用确定性的**轮次/job 编号**，不用 `remote`/`pocc`/`final`/`retry` 等临时词，使"第几轮转换、第几次自审、第几个 job"直接从文件名读出。只创建当前 run 实际产生的目录与文件；未产生的阶段不建空目录。
+
+| 子目录 | 阶段 | 产物与命名 |
+|---|---|---|
+| `01-frozen/` | `FROZEN` | `frozen-inputs.md`：源快照哈希、语言/OS/ABI、条件编译分支、目标编译器/SDK、模型标识与参数、RAG 开关、oracle、隔离/授权范围 |
+| `02-conversion/` | `GENERATED`·`SELF_REPAIRED`·`REPAIR_AFTER_EVAL` | 各版本目标稿及其模型元数据（见下） |
+| `03-self-review/` | `SELF_REVIEWED` | `self-review-<N>.json`（结构化结论与逐项证据）、`self-review-<N>.model.json`（该次调用元数据）、`self-review-<N>.decision.json`（结论经澄清时）、`self-review-<N>.attempt-<k>-failed.json`（无效/截断/矛盾的失败尝试） |
+| `04-evaluation/` | `EVALUATED`·`REPAIR_AFTER_EVAL` | 每个第三方 job 一个子目录 `job-<NN>-<用途>/`（见下） |
+
+**`02-conversion/` 版本命名**（同一 run 内按先后，`<ext>` 为目标扩展名）：
+
+- `target.gen.<ext>`：首个模型稿（GENERATED）。未单独快照的同模型微调（如修订、constness 决策）并入本稿，另存元数据说明。
+- `target.self-repair-<N>.<ext>`：第 N 次结构化自修稿（SELF_REPAIRED，默认 ≤2）。
+- `target.eval-repair-<N>.<ext>`：第三方评估失败后第 N 次修复稿（REPAIR_AFTER_EVAL，默认 ≤2）。
+- 每份代码稿配同 stem 元数据：`<stem>.model.json`（模型名、参数、token、finish_reason、输入/输出 SHA-256）、`<stem>.proposal.json`（机械应用时模型给出的补丁/建议）、`<stem>.provenance.json`（差异与来源哈希，若适用）、`<stem>.attempt-<k>-failed.json`（该轮失败/截断尝试及原因）。
+- run 根 `target.<ext>` 始终等于最后一个成功版本；不在根目录堆叠历史稿。
+
+**`04-evaluation/job-<NN>-<用途>/`**：`<NN>` 按提交顺序（`01`、`02`…），`<用途>` 用简短英文连字符描述（如 `initial-probe`、`branch-diagnostic`、`repair-verified`）。每个 job 目录内统一 stem：
+
+- `job-id.txt`：Controller job ID。
+- `report.json` / `report.md`：Controller canonical report。
+- `comparison.json`、`evidence-source.json`、`evidence-target.json`、`logs.json`：原始比较、双侧证据与生命周期日志。
+- `capsule.zip`：提交的输入 capsule；`source/`、`target/`：该 job 暂存的源/目标树（若保留）。
+- job 内 JSON 是第三方返回或提交时的**记录**：重命名文件不改其内部内容；内部出现的旧文件名是当时提交名的历史事实，不回改。
+
+上述目录与 run 根、`01-frozen/`、`03-self-review/` 同属一次 run；`evaluator_manifest.json` 的路径指针须指向这些实际落点。
+
+上述产物同目录，便于消费方按清单定位；长单文件多一份 `source-analysis.md`。命名细节以任务契约为准，但阶段归位与轮次/job 编号规则不因契约省略。
 
 ## 3. `evaluator_manifest.json` 字段来源纪律（三分）
 

@@ -57,8 +57,8 @@
       "thisRepo": "static source analysis, target text, temporary comparison adapter, evidence archive"
     },
     "sourceAnalysisPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\source-analysis.md",
-    "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\frozen-inputs.md",
-    "modelMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-request-metadata.json",
+    "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\01-frozen\\frozen-inputs.md",
+    "modelMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\02-conversion\\target.gen.model.json",
     "selectedSkills": [
       "long-file-conversion",
       "c-to-cpp",
@@ -89,13 +89,13 @@
       "-d",
       "<case-private-empty-docroot>"
     ],
-    "modelRevisionMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-revision-metadata.json",
-    "modelConstnessDecisionPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-constness-decision.json",
+    "modelRevisionMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\02-conversion\\target.gen.revision.model.json",
+    "modelConstnessDecisionPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\02-conversion\\target.gen.constness.json",
     "modelSelfReviewStatus": "NO-REPAIR-IDENTIFIED",
-    "modelSelfReviewAttemptPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review-attempt.json",
-    "modelSelfReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review.json",
-    "modelSelfReviewDecisionPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review-decision.json",
-    "modelSelfReviewMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\model-self-review-final-metadata.json",
+    "modelSelfReviewAttemptPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\03-self-review\\self-review-1.attempt-1-failed.json",
+    "modelSelfReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\03-self-review\\self-review-1.json",
+    "modelSelfReviewDecisionPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\03-self-review\\self-review-1.decision.json",
+    "modelSelfReviewMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\03-self-review\\self-review-1.model.json",
     "repairRecommended": true,
     "thirdPartyCompileStatus": "PASS-REPAIRED-VARIANT-EXPLORATORY-MINGW-UCRT64-GXX-CXX17",
     "syntaxVerdict": "PASS-REPAIRED-VARIANT-ONLY; ORIGINAL-TARGET-FAILED",
@@ -103,7 +103,7 @@
     "thirdPartyEvaluatorHandoffNote": "Three Controller comparison jobs completed. The original target failed on an undeclared min; a separate model-proposed one-line repair compiled and passed the bounded HTTP output comparison under the Windows runner MinGW/UCRT64 g++ C++17 probe. This does not establish MSVC/Pelles compilation, full behavior equivalence, or a formal baseline.",
     "originalTargetCompileStatus": "FAILED-EXPLORATORY-MINGW-UCRT64-GXX",
     "behaviorVerdict": "MATCHED-LIMITED-OUTPUT-ORACLE-ONLY",
-    "evaluationEvidenceDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter",
+    "evaluationEvidenceDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\04-evaluation",
     "thirdPartyJobs": [
       {
         "jobId": "eval-20260926-052137-b10a6e2f",
@@ -151,18 +151,18 @@
       "network": "not observed by evaluator; the helper itself connects only to 127.0.0.1",
       "externalEgressIsolation": "not reported by the public Controller evidence"
     },
-    "modelRepairArtifactPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\target.repair-01.cpp",
-    "modelRepairProposalPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\model-repair-proposal-retry.json",
-    "remoteReportPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-report.json",
-    "remoteSourceEvidencePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-evidence-source.json",
-    "remoteTargetEvidencePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-evidence-target.json",
-    "remoteComparisonPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\repair-01-comparison.json",
+    "modelRepairArtifactPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\02-conversion\\target.eval-repair-1.cpp",
+    "modelRepairProposalPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\02-conversion\\target.eval-repair-1.proposal.json",
+    "remoteReportPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\04-evaluation\\job-03-repair-verified\\report.json",
+    "remoteSourceEvidencePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\04-evaluation\\job-03-repair-verified\\evidence-source.json",
+    "remoteTargetEvidencePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\04-evaluation\\job-03-repair-verified\\evidence-target.json",
+    "remoteComparisonPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\04-evaluation\\job-03-repair-verified\\comparison.json",
     "repairStatus": "APPLIED-TO-target.cpp; ORIGINAL-SNAPSHOT-PRESERVED",
     "translatedTargetStatus": "REPAIRED-VARIANT-IN-target.cpp",
-    "originalTargetPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\target.pre-repair.cpp",
+    "originalTargetPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\02-conversion\\target.gen.cpp",
     "originalTargetSha256": "sha256:209d5bc15f781ccabd72afc16f08b2e331b69302e0603727b3733b0ec17f248f",
     "translatedTargetSha256": "sha256:5fbb4495f52c7af4bebaab15a92abce1de24864065aaa6a5c9f85712256b7521",
-    "repairArtifactPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\third-party-evaluator-adapter\\target.repair-01.cpp",
+    "repairArtifactPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\c01-linux-win-network\\output\\no-rag\\run-02\\02-conversion\\target.eval-repair-1.cpp",
     "repairArtifactSha256": "sha256:5fbb4495f52c7af4bebaab15a92abce1de24864065aaa6a5c9f85712256b7521"
   }
 }
