@@ -2,13 +2,13 @@
 
 ## 结论速览
 
-本次把 `fe.c`（rxi/fe Lisp 解释器，879 物理行）由 `.env` 配置模型一次性转换为单文件 C++（`target.cpp`），并经模型一次结构化自审判为 `NO-REPAIR-IDENTIFIED`，无自修轮。**目标代码尚未经编译验证**：双侧 comparison capsule 已按 Controller 契约组装（[`04-evaluation/job-01-dual-build/`](04-evaluation/job-01-dual-build/README.md)，`READY-TO-SUBMIT`），但尚未回传 build 证据，语法与功能结论均为 `未验证`。远端 Controller 恒就绪且已授权；本 Claude Code 会话无对接 Controller 的提交工具，实际 POST 经既定渠道进行。模型自审不是语法结论——C01 先例中自审通过仍被第三方 MinGW 定位到 `min` 未声明。
+本次把 `fe.c`（rxi/fe Lisp 解释器，879 物理行）由 `.env` 配置模型一次性转换为单文件 C++（`target.cpp`），并经模型一次结构化自审判为 `NO-REPAIR-IDENTIFIED`，无自修轮。**目标代码已由第三方 Controller 真实编译通过**：双侧 comparison capsule 于 2026-09-28 经直连 Controller HTTP（`http://192.168.101.250:8443`，`POST /api/jobs`）提交，jobId=`eval-20260928-033750-71724720`，`jobStatus=COMPLETED`；真实回传证据落于 [`04-evaluation/job-01-dual-build/returned-evidence/`](04-evaluation/job-01-dual-build/returned-evidence/)。目标侧 `g++ -std=c++17 -DFE_STANDALONE target.cpp -o program` 的 build `status=completed, exitCode=0, durationMs=1794`、stderr 空——本阶段据此判**编译=通过（PASS）**。Controller 另返回 `behaviorVerdict=matched`（output 维度，覆盖率 1/1），但编译质量阶段不评功能、不设 oracle，功能仅作信息记录。模型自审不是语法结论——C01 先例中自审通过仍被第三方 MinGW 定位到 `min` 未声明；本例的差异在于 build **真实通过**。
 
 | 问题 | 结论 | 依据与边界 |
 |---|---|---|
 | 最终代码是否交付完整 | **已完成（交付完整单文件）** | [`target.cpp`](target.cpp) 为完整单文件，无截断/省略/Markdown 围栏；与生成稿 [`02-conversion/target.gen.cpp`](02-conversion/target.gen.cpp) 同一 sha256（`304f7d2e…`），无自修 |
-| 语法/编译是否正确 | **未验证** | 仅模型静态自审 `NO-REPAIR-IDENTIFIED`（[`03-self-review/self-review-1.json`](03-self-review/self-review-1.json)）；未在任何工具链编译，标 `AWAITING-THIRD-PARTY-COMPILE` |
-| 功能是否一致 | **未验证** | 当前为编译质量阶段，无行为 oracle；未做双侧运行比较 |
+| 语法/编译是否正确 | **通过（PASS）** | Controller 真实回传：目标 build `status=completed, exitCode=0, stderr 空`（[`returned-evidence/evidence-target.json`](04-evaluation/job-01-dual-build/returned-evidence/evidence-target.json)）；工具链 Windows x64 MinGW/UCRT64 `g++ -std=c++17`，runner `windows-vm-agent-x64`；源侧 C11 对照基线亦 `exitCode=0` |
+| 功能是否一致 | **未计分（信息记录：matched）** | 本阶段为编译质量阶段，不设行为 oracle、不计入功能率；Controller comparison 返回 `behaviorVerdict=matched`、`codeVerdict=passed`、覆盖率 1/1（[`returned-evidence/evaluation_report.json`](04-evaluation/job-01-dual-build/returned-evidence/evaluation_report.json)），仅作信息记录 |
 
 ## 任务与最终交付
 
@@ -25,11 +25,11 @@
 ## 验证依据与覆盖范围
 
 - **静态**：Agent 全文件核对 + 模型结构化自审已做，分别记录在本报告与 [`03-self-review/`](03-self-review/)。
-- **编译**：`未验证`。双侧 comparison capsule 已按 Controller 契约组装待提交（[`04-evaluation/job-01-dual-build/`](04-evaluation/job-01-dual-build/README.md)），尚未回传 build 证据，不在本机编译。语法结论须由匹配工具链（Windows x64 MinGW/UCRT64 `g++ -std=c++17`）编译后由 Controller 真实报告回填。
-- **运行/功能**：`未验证`。本阶段无行为 oracle；双侧运行仅为迁就 comparison capsule 契约，结果不计入功能率。
+- **编译**：`通过（PASS）`。双侧 comparison capsule 已于 2026-09-28 提交 Controller（jobId=`eval-20260928-033750-71724720`，`COMPLETED`），真实回传证据存于 [`04-evaluation/job-01-dual-build/returned-evidence/`](04-evaluation/job-01-dual-build/returned-evidence/)：目标侧 build `status=completed, exitCode=0, durationMs=1794`、stderr 空，源侧对照基线 build `exitCode=0`。工具链 Windows x64 MinGW/UCRT64 `g++ -std=c++17`，runner `windows-vm-agent-x64`（VM `windows-eval`，snapshot `CC-Eval-Windows-8Lang-R7`）。本机未编译。
+- **运行/功能**：`未计分`。本阶段无行为 oracle；双侧运行仅为迁就 comparison capsule 契约。Controller 返回 `behaviorVerdict=matched`、覆盖率 1/1，仅作信息记录，不计入功能率、不外推等价。
 
 ## 未决问题与下一步
 
-1. 按既定渠道向恒就绪且已授权的 Controller（MinGW/UCRT64）提交已组装的 comparison capsule（[`04-evaluation/job-01-dual-build/`](04-evaluation/job-01-dual-build/README.md)）做双侧 build，据真实回传证据回填 `thirdPartyCompileStatus` 与 `executionApproved`；在实际提交并回传证据前 `evaluator_manifest.json` 保持 `executionApproved=false`。
-2. 自审列出的 6 项风险须以真实工具链编译（及必要时运行）确认，尤其 `union` type-punning 与整数→指针转换在目标 C++17/ABI 下的实现定义行为；本次未把源已有语义静默改写。
-3. 若编译失败，仅将可定位诊断交回 `.env` 模型做 ≤2 轮 `REPAIR_AFTER_EVAL`，保留原始稿，不盲改。
+1. 编译门槛已达成（Controller 真实回传 build 通过），本 run 进入 `EVALUATED`/`CLOSED`。后续若重跑，仍按既定渠道向恒就绪且已授权的 Controller 提交双侧 capsule，据真实回传证据回填。
+2. 自审列出的 6 项风险中，`union` type-punning、整数→指针 reinterpret、`char` 符号性、`NULL`/`nullptr`、`setjmp`/`longjmp` 与析构交互在本次目标工具链（MinGW/UCRT64 `g++ -std=c++17`）下均**未触发编译错误**；其运行期实现定义行为不在本编译质量阶段判定。
+3. 本次无编译失败，未触发 `REPAIR_AFTER_EVAL`。若将来重跑失败，仅将可定位诊断交回 `.env` 模型做 ≤2 轮修订，保留原始稿，不盲改。

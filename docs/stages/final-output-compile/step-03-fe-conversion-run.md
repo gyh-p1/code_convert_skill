@@ -1,6 +1,6 @@
 # step-03：为 fe 开 C → C++ 转换 run，取双侧 build 证据
 
-> 状态：已生成并自审（`GENERATED` → `SELF_REVIEWED`=`NO-REPAIR-IDENTIFIED`，无自修轮）；双侧 comparison capsule 已组装（`output/no-rag/run-01/04-evaluation/job-01-dual-build/`，`READY-TO-SUBMIT`），编译 `UNVERIFIED` 待 Controller 回传 build 证据（2026-09-28）
+> 状态：已完成（`GENERATED` → `SELF_REVIEWED`=`NO-REPAIR-IDENTIFIED` → `EVALUATION_READY` → `EVALUATED`；`SELF_REPAIRED` 与 `REPAIR_AFTER_EVAL` 均未触发）。双侧 comparison capsule 于 2026-09-28 提交 Controller（`output/no-rag/run-01/04-evaluation/job-01-dual-build/`），jobId `eval-20260928-033750-71724720`，`COMPLETED`；目标 C++17 build `exitCode=0`（stderr 空）→ 编译 **PASS**，源侧 C11 对照基线 build `exitCode=0`。真实证据存 `returned-evidence/`
 > 类型：转换 run 执行（含配置模型生成 + 有限修订；执行按**本项目既定的双侧执行授权**，Controller/隔离 VM 恒就绪，到评估步骤直接提交）
 > 归属阶段：[最终交付编译质量与 Skill 拓展](阶段方案.md)
 
@@ -51,3 +51,11 @@
 - 确无隔离能力或无匹配 capsule 契约 → 停，标 `UNVERIFIED`，不改用本机编译，不在边界外擅自运行。（注：本项目 Controller/隔离 VM 恒就绪，此条仅在 Controller 真实返回基础设施/环境故障时按分流①适用——记环境失败、恢复后重提，不改用本机编译。）
 - 源侧 C 基线就编不过 → 记 `源端 build 失败`，先查源/环境/工具链，不算作转换引入缺陷。
 - 工具链噪音（如为进入某分支伪造编译器宏）须单独记为探查，不写成 MSVC/其它工具链的成功或失败。
+
+## 执行结果（2026-09-28）
+
+- **生成/自审**：`.env`=`deepseek-flash` 一次生成 `target.gen.cpp`（`finish=stop`，与源逐行 diff 仅 6 处 C++ 必需 `void*` 显式转换）；一次结构化自审 `NO-REPAIR-IDENTIFIED`，无自修轮。`target.cpp` 与生成稿同 sha256。
+- **提交与执行**：双侧 comparison capsule 经直连 Controller HTTP（`http://192.168.101.250:8443`，`POST /api/jobs` multipart，`curl.exe -F`；本机 `192.168.101.105` 与 Controller 同 /24 段直达 8443，无需 SSH 隧道）提交，jobId `eval-20260928-033750-71724720`，轮询至 `COMPLETED`，证据回传保存于 `04-evaluation/job-01-dual-build/returned-evidence/`。
+- **真实 build 证据（唯一逐例编译结论）**：目标 `g++ -std=c++17 -DFE_STANDALONE target.cpp -o program` → `build.status=completed, exitCode=0, durationMs=1794`，stderr 空 → **编译 PASS**；源侧对照基线 `gcc -std=c11 -DFE_STANDALONE fe.c` → `exitCode=0, durationMs=2370`。runner `windows-vm-agent-x64`（VM `windows-eval`，snapshot `CC-Eval-Windows-8Lang-R7`），preflight/cleanup PASSED、未污染。
+- **功能（不计分，信息记录）**：Controller comparison 返回 `codeVerdict=passed`、`runVerdict=runnable`、`behaviorVerdict=matched`、output 维度覆盖 1/1；本阶段不设行为 oracle、不计入功能率、不外推等价。
+- **Skill 回补**：本 run 无编译失败，无可归因失败转规则；自审所列 6 项风险（`union` type-punning、整数→指针 reinterpret、`char` 符号性、`NULL`/`nullptr`、`setjmp`/`longjmp` 与析构、C 标准头全局名）在本目标工具链下均未触发编译错误。Controller 连接与提交适配已保存于 [references/remote-controller-adapter.md](../../../references/remote-controller-adapter.md)。

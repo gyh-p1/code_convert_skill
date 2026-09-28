@@ -46,13 +46,14 @@
     }
   ],
   "x_adapter": {
-    "note": "run-01 无 RAG 探索：目标由 .env 配置模型一次生成并经一次结构化自审（NO-REPAIR-IDENTIFIED，无自修轮）。双侧 comparison capsule 输入已按现役 Controller 契约组装于 04-evaluation/job-01-dual-build/（READY-TO-SUBMIT）。远端 Controller/隔离 VM 按本项目既定政策恒就绪且已授权，到评估步骤直接提交、不逐次确认可达性；本 Claude Code 会话无对接 Controller 的提交工具，实际 POST 与证据回传经既定提交渠道进行。executionApproved 仍为 false，待真实提交并回传 build 证据后置真并回填结论，本阶段只读 build 证据。",
-    "status": "generated-self-reviewed-capsule-ready-to-submit",
-    "executionApproved": false,
+    "note": "run-01 无 RAG 探索：目标由 .env 配置模型一次生成并经一次结构化自审（NO-REPAIR-IDENTIFIED，无自修轮）。双侧 comparison capsule 已于 2026-09-28 经直连 Controller HTTP（http://192.168.101.250:8443，POST /api/jobs multipart，本机 192.168.101.105 与 Controller 同网段可直达 8443）提交并执行完毕，jobId=eval-20260928-033750-71724720，jobStatus=COMPLETED。真实回传证据落于 04-evaluation/job-01-dual-build/returned-evidence/。源侧 C11 与目标侧 C++17 build 均 exitCode=0（目标 build durationMs=1794，stderr 空）；本阶段只据 build 证据判编译=PASS。Controller 另返回 behaviorVerdict=matched（output 维度），仅作信息记录，本阶段不评功能、不设 oracle。",
+    "status": "evaluated-build-passed",
+    "jobId": "eval-20260928-033750-71724720",
+    "executionApproved": true,
     "explorationOnly": true,
     "producedBy": {
       "conversion": "configured external model via .env (deepseek-flash), orchestrated by the Agent per conversion-evaluation-loop.md",
-      "compileAndRun": "pending an authorized isolated Windows VM Controller; dual source/target build and run",
+      "compileAndRun": "executed by the authorized isolated Windows VM Controller (jobId eval-20260928-033750-71724720, COMPLETED); dual source/target build and run on windows-vm-agent-x64",
       "thisRepo": "static source analysis, target text, structured self-review orchestration, temporary handoff manifest"
     },
     "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\01-frozen\\frozen-inputs.md",
@@ -74,12 +75,19 @@
     "modelSelfReviewMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\03-self-review\\self-review-1.model.json",
     "repairRecommended": false,
     "selfRepairRounds": 0,
-    "thirdPartyCompileStatus": "AWAITING-THIRD-PARTY-COMPILE",
-    "syntaxVerdict": "UNVERIFIED",
-    "behaviorVerdict": "UNVERIFIED",
+    "thirdPartyCompileStatus": "THIRD-PARTY-COMPILE-PASSED",
+    "syntaxVerdict": "PASS",
+    "behaviorVerdict": "matched (informational; 编译质量阶段不评功能、不设 oracle)",
     "evaluationCapsuleDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build",
+    "returnedEvidenceDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build\\returned-evidence",
+    "buildEvidence": {
+      "source": { "status": "completed", "exitCode": 0, "durationMs": 2370, "stderrEmpty": true, "toolchain": "gcc -std=c11 -DFE_STANDALONE fe.c -o program" },
+      "target": { "status": "completed", "exitCode": 0, "durationMs": 1794, "stderrEmpty": true, "toolchain": "g++ -std=c++17 -DFE_STANDALONE target.cpp -o program" },
+      "runner": "windows-vm-agent-x64 (VM windows-eval, snapshot CC-Eval-Windows-8Lang-R7)",
+      "note": "语法结论 PASS 仅据目标侧 build 证据（exitCode=0、stderr 空）。source build 为对照基线。"
+    },
     "thirdPartyEvaluatorHandoffReady": true,
-    "thirdPartyEvaluatorHandoffNote": "双侧 comparison capsule 输入已按 Controller 契约组装（04-evaluation/job-01-dual-build/：comparison_manifest.json + input_profile.json + metadata.json + source/target run_case.py，zip 组装清单见该目录 README）。Controller/隔离 VM 恒就绪且已授权，直接提交执行。模型自审 NO-REPAIR-IDENTIFIED 只是提交门槛，绝非语法结论（C01 先例：自审通过仍被 MinGW 定位到 min 未声明）；syntaxVerdict 只从 Controller 真实 build 证据回填。本会话无对接 Controller 的提交工具，POST 与证据回传经既定渠道进行。",
+    "thirdPartyEvaluatorHandoffNote": "双侧 comparison capsule 已于 2026-09-28 提交 Controller（jobId=eval-20260928-033750-71724720）并 COMPLETED，真实证据回传于 returned-evidence/。syntaxVerdict=PASS 仅从目标 build 证据回填（C01 先例：自审通过仍被 MinGW 定位到 min 未声明——本例 build 真实通过）。behaviorVerdict=matched 为 Controller comparison 信息记录，本阶段不计入功能率、不设行为 oracle。",
     "compileCommands": {
       "sourceBaseline": "gcc -std=c11 -DFE_STANDALONE fe.c -o program",
       "target": "g++ -std=c++17 -DFE_STANDALONE target.cpp -o program",
@@ -90,9 +98,9 @@
       "sourcePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\fe\\fe.h",
       "note": "编译必需，C++ 下可直接编译，须与目标文件同目录提交，不并入 target.cpp。"
     },
-    "plannedToolchain": "Windows x64 MinGW/UCRT64 g++ C++17（精确版本以获批 Controller 为准）",
+    "plannedToolchain": "Windows x64 MinGW/UCRT64 g++ C++17（本次实测由 Controller windows-vm-agent-x64 执行）",
     "prerequisites": [
-      "远端 Controller/隔离 VM 恒就绪且已授权；到评估步骤直接提交 comparison capsule，executionApproved 于实际提交后置真。",
+      "远端 Controller/隔离 VM 恒就绪且已授权；本 run 已于评估步骤直接提交并执行完毕，executionApproved=true。",
       "capsule 按 04-evaluation/job-01-dual-build/README 组装：source/ 放 fe.c+fe.h+run_case.py，target/ 放 target.cpp+fe.h+run_case.py，双侧 runCommand 以 -DFE_STANDALONE 链接为可执行程序。",
       "本阶段只读 build 证据；execution/comparison 结果不计入功能率，不设行为 oracle。"
     ],

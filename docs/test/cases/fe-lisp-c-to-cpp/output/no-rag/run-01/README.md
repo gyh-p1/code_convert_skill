@@ -8,7 +8,7 @@
 |---|---|
 | `target.cpp` | 最终交付稿（= `02-conversion/target.gen.cpp`，同 sha256，无自修轮） |
 | `result.md` | 交付说明：完成范围、模型自审、编译状态与未决项 |
-| `evaluator_manifest.json` | 移交清单；路径指针指向本布局实际落点；`executionApproved=false`（未提交隔离 VM） |
+| `evaluator_manifest.json` | 移交清单；路径指针指向本布局实际落点；`executionApproved=true`（已提交并回传真实证据） |
 | `01-frozen/frozen-inputs.md` | 冻结输入记录（源快照哈希、形态 B、工具链、模型参数） |
 | `02-conversion/target.gen.*` | 配置模型生成稿及其请求/原始响应/元数据 |
 | `03-self-review/self-review-1.*` | 一次结构化自审的请求、原始响应、结构化结论与调用元数据 |
@@ -22,13 +22,13 @@
 | 模型转换 | `.env` 配置的外部模型 | `02-conversion/target.gen.cpp` → run 根 `target.cpp` |
 | 结构化自审 | `.env` 配置的外部模型 | `03-self-review/self-review-1.json`（`NO-REPAIR-IDENTIFIED`） |
 | 交付与移交 | 转换 Agent | `result.md`、`evaluator_manifest.json` |
-| 编译、运行、oracle 判定 | 待获批隔离第三方 VM | 双侧 capsule 已组装于 `04-evaluation/job-01-dual-build/`（`READY-TO-SUBMIT`）；未提交前 `executionApproved=false`，编译 `AWAITING-THIRD-PARTY-COMPILE` |
+| 编译、运行、oracle 判定 | 已获批隔离第三方 VM Controller | 双侧 capsule 已提交（jobId `eval-20260928-033750-71724720`，`COMPLETED`），真实证据存于 `04-evaluation/job-01-dual-build/returned-evidence/`；`executionApproved=true`，编译 `THIRD-PARTY-COMPILE-PASSED` |
 
 模型转换与自审请求使用了 C→C++、长单文件、头文件/宏、类型/ABI 的知识上下文；RAG 关闭。自审不是第三方语法评估。
 
 ## 当前状态
 
-- 阶段进度：`FROZEN` → `GENERATED` → `SELF_REVIEWED`(`NO-REPAIR-IDENTIFIED`) 已完成；`SELF_REPAIRED` 未触发；`EVALUATION_READY` 完成——双侧 comparison capsule 已按 Controller 契约组装于 `04-evaluation/job-01-dual-build/`（`READY-TO-SUBMIT`），待经既定渠道提交并回传 build 证据。远端 Controller 恒就绪且已授权；本 Claude Code 会话无对接 Controller 的提交工具，实际 POST 经既定渠道进行。
+- 阶段进度：`FROZEN` → `GENERATED` → `SELF_REVIEWED`(`NO-REPAIR-IDENTIFIED`) → `EVALUATION_READY` → `EVALUATED`(`THIRD-PARTY-COMPILE-PASSED`) 已完成；`SELF_REPAIRED` 与 `REPAIR_AFTER_EVAL` 均未触发（无编译失败）。双侧 comparison capsule 已于 2026-09-28 经直连 Controller HTTP（`http://192.168.101.250:8443`，`POST /api/jobs`）提交，jobId=`eval-20260928-033750-71724720`，`COMPLETED`，真实回传证据存于 `04-evaluation/job-01-dual-build/returned-evidence/`。
 - 生成稿与源逐行 diff 仅 6 处，全部为 C++ 所需 `void*` 显式转换；解释器语义保留。详见 `result.md`。
-- 模型自审覆盖 30 个公开函数、`FE_STANDALONE` 入口与全部分支，0 转换引入缺陷，另列 6 项需第三方编译确认的风险。该结论不是语法 verdict。
-- 本机未编译、未运行源码/目标代码/构建脚本；一切编译与运行均待获授权的隔离第三方 VM 回传证据。不记录 API 密钥。
+- 模型自审覆盖 30 个公开函数、`FE_STANDALONE` 入口与全部分支，0 转换引入缺陷，另列 6 项需第三方编译确认的风险——本次目标工具链编译**未触发**其中任何一项的编译错误。该自审结论不是语法 verdict；语法 verdict `PASS` 从 Controller 真实 build 证据回填。
+- 本机未编译、未运行源码/目标代码/构建脚本；编译与运行由已授权隔离第三方 VM Controller 执行并回传证据。不记录 API 密钥。
