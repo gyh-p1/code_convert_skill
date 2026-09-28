@@ -22,6 +22,7 @@
 | [step-06 取消固定四例并整理资料](step-06-cancel-four-case-cleanup.md) | 已完成 | 用户已取消 C01–C04 固定四例无 RAG/RAG 专项；[取消记录](../four-case-cancellation.md)已建立。C02–C04 仅规格目录及旧专项阶段文档/矩阵已移除，长文件 fixture 移至 `docs/test/candidates/`，七份共享源的[用途索引](../../test/sources/README.md)已建立；463 个本地链接扫描无新增缺链，C01 历史证据保留 |
 | [step-07 真实攻防源码首轮准入](step-07-real-scenario-source-screen.md) | 已完成 | [静态审阅](../../test/candidates/real-scenario-source-review.md)旧候选 `ApiSetMap.c`、`ReflectiveLoader.c`、`http_upload.c`：三者均不宜直接冻结为下一转换 run；记录了各自的来源/改写/安全及观察缺口，HTTP 上传义务草案已写，未执行样本 |
 | [step-08 联网筛选上游真实场景](step-08-upstream-scenario-search.md) | 已完成 | [上游候选对照](../../test/candidates/upstream-scenario-search.md)已选 Red Canary Chain Reactor 网络模块作下一步功能契约设计候选：固定提交、MIT、559 行与哈希已核；示例公网目标、Linux 专有分支和 same-runner 取证限制已登记。未开启转换 run |
+| [step-09 Chain Reactor 网络模块候选契约](step-09-chain-reactor-network-contract.md) | 已完成 | [候选契约](../../test/candidates/chain-reactor-network-contract.md)已列主文件/伴随依赖、受控连接的正常/拒绝/源异常路径和观察边界；纠正“必然发送 512 字节”及 Linux same-runner 已实测的误读。未导入源或执行样本 |
 
 后续候选：按 step-04 的可归因事实审阅现有 filesystem 与 C→C++ Skill 改动；为可追溯真实攻防样例冻结行为义务与隔离条件。Controller same-runner 基础设施缺陷留在旧仓库单独修复，先完成实际选入场景的功能判据审阅，不在本阶段建设本地运行时。
 
@@ -34,6 +35,6 @@
 
 ## 下一动作与中断恢复
 
-**当前执行项**：无（step-08 上游搜索已完成，下一步骤需冻结 Chain Reactor 场景契约与隔离条件）。
+**当前执行项**：无（step-09 已完成；待规划旧仓库同机 Controller 无害诊断与源快照冻结）。
 
-step-08 已收口，下一动作是以[Chain Reactor 网络模块候选](../../test/candidates/upstream-scenario-search.md)冻结受控 loopback 输入、伴随依赖、正常/拒绝路径与必需证据；先解决同机 Controller 的取证缺陷，再决定是否为该源建立正式快照和转换 run。还需审阅 filesystem/C→C++ Skill 修改的证据等级。恢复时读本 index → [step-08 记录](step-08-upstream-scenario-search.md) → [候选区](../../test/candidates/README.md)。
+step-09 已收口。下一动作：以[候选契约](../../test/candidates/chain-reactor-network-contract.md)为输入，在旧仓库设计并执行**无害** same-runner 故障范围诊断，明确 Linux 路径是否受影响、修复前后验收和功能证据契约；之后再决定是否为此候选冻结源快照/开启配置模型转换 run。不能为绕过同机故障直接引入跨 OS 变量。filesystem/C→C++ Skill 的证据等级审阅仍待后续。恢复时读本 index → [step-09 记录](step-09-chain-reactor-network-contract.md) → [候选区](../../test/candidates/README.md)。
