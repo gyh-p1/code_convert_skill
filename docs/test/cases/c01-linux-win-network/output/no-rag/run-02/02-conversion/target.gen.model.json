@@ -11,7 +11,7 @@
   "sourceSha256": "81400c369e02ffd116aafd2922ca4266f8c826f06fad20aa4d1a6f41a04e8583",
   "contextFiles": [
     "SKILL.md",
-    "references/safety-boundary.md",
+    "references/framework/safety-boundary.md",
     "skills/workflows/long-file-conversion/SKILL.md",
     "skills/directions/c-to-cpp/SKILL.md",
     "skills/scenes/network-io/SKILL.md",

@@ -24,5 +24,5 @@ Controller 在各侧目录内执行 `buildCommand` 再 `runCommand`，故 `fe.h`
 ## 提交与回填（已完成）
 
 - 远端 Controller/隔离 VM 按本项目既定政策**恒就绪且已授权**：本 run 已于评估步骤直接提交。
-- **本会话经直连 HTTP 8443 提交**：本机 `192.168.101.105` 与 Controller `192.168.101.250` 同 `/24` 段可直达，用 `curl.exe -F` 完成 multipart `POST /api/jobs`（`file=@capsule.zip`、`caseId=fe-lisp-c-to-cpp-run-01`、`targetOs=windows`、`targetLang=cpp`），轮询至 `COMPLETED`。连接与提交适配详见 [references/remote-controller-adapter.md](../../../../../../../../../references/remote-controller-adapter.md)。
+- **本会话经直连 HTTP 8443 提交**：本机 `192.168.101.105` 与 Controller `192.168.101.250` 同 `/24` 段可直达，用 `curl.exe -F` 完成 multipart `POST /api/jobs`（`file=@capsule.zip`、`caseId=fe-lisp-c-to-cpp-run-01`、`targetOs=windows`、`targetLang=cpp`），轮询至 `COMPLETED`。连接与提交适配详见 [references/adapter/controller/remote-controller-adapter.md](../../../../../../../../../references/adapter/controller/remote-controller-adapter.md)。
 - Controller 返回件已落 `returned-evidence/`：`job-id.txt`、`state.json`、`evaluation_report.json`/`.md`、`evidence-source.json`、`evidence-target.json`、`comparison.json`、`controller.log`。据其 **build 证据**已回填 run 根 `evaluator_manifest.json`（`executionApproved=true`、`thirdPartyCompileStatus=THIRD-PARTY-COMPILE-PASSED`、`syntaxVerdict=PASS`）与 `result.md` 三项结论。语法/行为结论只从真实报告回填，未由 Agent 或模型自评臆造。

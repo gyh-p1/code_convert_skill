@@ -27,4 +27,4 @@
 - 源文件本身包含 POSIX 和 Windows 两个平台实现。当前目标稿复用其现成 Windows 分支，存在目标实现泄漏，不足以证明独立 POSIX→Win32 移植能力。
 - `pthread`/Win32 thread 与 POSIX/Win32 path 的对应规则现已有专门初稿，但均未经过本项目转换验证。
 - `source-analysis.md` 列出的路径检查、共享线程状态、创建失败路径等风险仍未解决；不静默修复，也不据此授权执行。
-- `evaluator_manifest.example.json` 的通用模板位于仓库 `references/evaluator_manifest.example.json`；当前 run 的实际清单是本目录 `evaluator_manifest.json`。
+- `evaluator_manifest.example.json` 的通用模板位于仓库 `references/framework/evaluator_manifest.example.json`；当前 run 的实际清单是本目录 `evaluator_manifest.json`。

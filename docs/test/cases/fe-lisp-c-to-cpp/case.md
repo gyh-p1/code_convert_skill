@@ -13,7 +13,7 @@
 - 场景：无网络、无文件系统写、无进程/命令执行；`fe.c` 逻辑密集（`union`、函数指针、宏、指针算术、聚合初始化）——这些是最可能暴露 C→C++ 编译差异的构造。
 - ATT&CK tactic/technique：`none`。
 - RAG：关闭。
-- 目标文件命名与落点：按[交付契约 §2.2](../../../../references/delivery-handoff-contract.md)（`01-frozen/`、`02-conversion/target.gen.*`、`03-self-review/`、`04-evaluation/`）。
+- 目标文件命名与落点：按[交付契约 §2.2](../../../../references/framework/delivery-handoff-contract.md)（`01-frozen/`、`02-conversion/target.gen.*`、`03-self-review/`、`04-evaluation/`）。
 
 ## 2. 目标工具链（拟冻结，待确认具体能力）
 

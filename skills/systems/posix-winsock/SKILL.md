@@ -72,4 +72,4 @@ description: Use as the source-OS -> target-OS layer when converting socket code
 - [Microsoft Winsock 参考](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/)：`WSAStartup`、`SOCKET`/`INVALID_SOCKET`/`SOCKET_ERROR`、`closesocket`、`ioctlsocket`、`WSAGetLastError`、`recv`/`send` 签名、`setsockopt`（`SO_RCVTIMEO`）。
 - [Porting Socket Applications to Winsock](https://learn.microsoft.com/en-us/windows/win32/winsock/porting-socket-applications-to-winsock) 与 [WSAPoll](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll)：跨平台移植差异与 `WSAPoll` 行为说明。
 
-以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/safety-boundary.md)。
+以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/framework/safety-boundary.md)。

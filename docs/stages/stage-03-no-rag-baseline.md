@@ -5,7 +5,7 @@
 
 ## 目标
 
-用人工选择/显式加载的现有 Skill 和基础提示跑通四例转换流程，不使用 RAG，不设置准确率通过门槛；按 `references/conversion-evaluation-loop.md` 固定自审、自修预算、评估前置条件、第三方结果分流和有限 repair 规则，完整记录每例数据，形成阶段 04 的冻结基线。源代码和各组目标文件/结果说明均保存在 `docs/test/cases/<case-id>/`，按 `source/`、`output/no-rag/`、`output/rag/` 区分。流程跑通不等于目标正确。
+用人工选择/显式加载的现有 Skill 和基础提示跑通四例转换流程，不使用 RAG，不设置准确率通过门槛；按 `references/workflow/conversion-evaluation-loop.md` 固定自审、自修预算、评估前置条件、第三方结果分流和有限 repair 规则，完整记录每例数据，形成阶段 04 的冻结基线。源代码和各组目标文件/结果说明均保存在 `docs/test/cases/<case-id>/`，按 `source/`、`output/no-rag/`、`output/rag/` 区分。流程跑通不等于目标正确。
 
 ## 固定与记录
 

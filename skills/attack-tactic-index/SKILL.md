@@ -14,7 +14,7 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 1. 从战术只用于**定位关注点**:知道代码大致用途后,仍必须从源码**实际行为**判断语义场景,不按战术标签假定隐藏行为(判断口径见根 [通用 Skill 入口](../../SKILL.md) §选择适用知识)。
 2. 再加载与真实行为匹配的知识:语言方向 + 语义场景(+ 系统方向,若跨 OS)。战术标签本身不进入转换产出。
 3. 表中标"暂无对应 Skill"的,说明该行为维度当前没有知识,须按缺口处理并在交付中报告,不用相近规则冒充。
-4. 严守 [安全边界](../../references/safety-boundary.md):索引用于组织知识,不用于新增监听/外联、规避、凭证窃取等能力。
+4. 严守 [安全边界](../../references/framework/safety-boundary.md):索引用于组织知识,不用于新增监听/外联、规避、凭证窃取等能力。
 
 ## 战术 → 转换知识映射（含覆盖缺口）
 

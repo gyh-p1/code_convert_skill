@@ -25,7 +25,7 @@
 
 数字 2 是本探索工作流的默认上限，不是质量保证；正式试验在冻结契约中可另定相同的两组预算。任何模型请求不完整均不计为有效的”无问题”判断；为恢复传输可按相同输入重试一次，并保存失败尝试和实际参数，不能偷偷换模型或将失败重试当作 repair 成功。
 
-各阶段产物的固定落点与命名（`01-frozen/`、`02-conversion/`、`03-self-review/`、`04-evaluation/job-<NN>-<用途>/`，以及 `target.gen` / `target.self-repair-<N>` / `target.eval-repair-<N>` 版本命名）见[交付与移交契约 §2.2](delivery-handoff-contract.md)，本文件不重复。
+各阶段产物的固定落点与命名（`01-frozen/`、`02-conversion/`、`03-self-review/`、`04-evaluation/job-<NN>-<用途>/`，以及 `target.gen` / `target.self-repair-<N>` / `target.eval-repair-<N>` 版本命名）见[交付与移交契约 §2.2](../framework/delivery-handoff-contract.md)，本文件不重复。
 
 ## 3. 第三方结果分流
 

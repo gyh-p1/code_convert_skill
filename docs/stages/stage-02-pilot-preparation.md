@@ -31,4 +31,4 @@ C01/C02 可复用同一个 uhttpd 源快照作为两个方向任务；这仍只�
 
 ## 完成信号
 
-至少两份不同的长源样例完成静态安全审阅、许可/来源记录和 oracle；No-RAG 基线须按 `references/conversion-evaluation-loop.md` 固定预检/有限 repair/第三方分流工作流；范围内样例不少于 600 有效 LOC 且不超过 700 物理行；uhttpd 超限压力例单独标注；每例 oracle 可判定；OS/toolchain 与隔离配置可用且获准。只有此时才逐例标记 `approved-for-trial` 并进入阶段 03。试点结论仅适用于四例，不外推整体准确率或 700 行支持能力。
+至少两份不同的长源样例完成静态安全审阅、许可/来源记录和 oracle；No-RAG 基线须按 `references/workflow/conversion-evaluation-loop.md` 固定预检/有限 repair/第三方分流工作流；范围内样例不少于 600 有效 LOC 且不超过 700 物理行；uhttpd 超限压力例单独标注；每例 oracle 可判定；OS/toolchain 与隔离配置可用且获准。只有此时才逐例标记 `approved-for-trial` 并进入阶段 03。试点结论仅适用于四例，不外推整体准确率或 700 行支持能力。

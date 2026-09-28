@@ -2,7 +2,7 @@
 
 本文件在 C 源依赖“隐式可见”的名字、而目标 C++ 构建下这些名字需要显式包含或限定时读取（典型触发：`min` / `max`，以及其他经平台头文件间接引入的宏或声明）。它是**规则与风险说明**，不保证目标代码可编译或行为等价；名字的真实来源头文件因 C 库/平台而异，须逐例核对源构建的实际包含链，不靠猜测补 `#include`。
 
-> **依据分层（重要）**：`std::min` / `std::max` 位于 `<algorithm>` 是语言标准事实；本条目的**触发证据**来自 C01 单例——模型自评给出 `NO-REPAIR-IDENTIFIED`，第三方 MinGW/UCRT64 `g++ -std=c++17` 后来仍定位到 `min` 未声明（见[闭环工作流 §4](../../../../references/conversion-evaluation-loop.md)）。这是“单例 + 语言标准”，不外推为普遍编译通过率。
+> **依据分层（重要）**：`std::min` / `std::max` 位于 `<algorithm>` 是语言标准事实；本条目的**触发证据**来自 C01 单例——模型自评给出 `NO-REPAIR-IDENTIFIED`，第三方 MinGW/UCRT64 `g++ -std=c++17` 后来仍定位到 `min` 未声明（见[闭环工作流 §4](../../../../references/workflow/conversion-evaluation-loop.md)）。这是“单例 + 语言标准”，不外推为普遍编译通过率。
 
 ## 1. 识别触发：C 隐式可见、C++ 需显式
 
@@ -38,6 +38,6 @@
 
 - [S1：WG21 N4950，C++23 最终工作草案](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf)：`[algorithm.syn]`、`[alg.min.max]`（`std::min` / `std::max` 在 `<algorithm>`）。目标是其他 C++ 版本时须核对相应标准。
 - **S2：Windows SDK 头 `minwindef.h`（`<windows.h>` 经 `windef.h` 间接包含）** 定义 `min` / `max` 宏与 `NOMINMAX` 开关——以本机 SDK 头实际内容为准逐例核对，不同 SDK 版本可能不同；社区问答仅作发现线索，不作权威依据。
-- **触发证据**：C01 单例，见[闭环工作流 §4](../../../../references/conversion-evaluation-loop.md)。单例不证明普遍模式。
+- **触发证据**：C01 单例，见[闭环工作流 §4](../../../../references/workflow/conversion-evaluation-loop.md)。单例不证明普遍模式。
 
 `<sys/param.h>` 的 `min` / `max` 属平台/实现扩展，非 ISO C；来源与是否为宏须按源实际 C 库与平台文档逐例核对。以上是语言与平台规则依据，不是特定编译结果的验证记录。

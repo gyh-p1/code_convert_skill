@@ -47,7 +47,7 @@
     }
   ],
   "x_adapter": {
-    "note": "C01 文本级探索稿的临时移交清单；schema 形状与字段来源见 references/delivery-handoff-contract.md。不得作为执行授权或转换正确性证明。",
+    "note": "C01 文本级探索稿的临时移交清单；schema 形状与字段来源见 references/framework/delivery-handoff-contract.md。不得作为执行授权或转换正确性证明。",
     "status": "exploratory-text-output-complete-pending-oracle-and-case-approval",
     "executionApproved": false,
     "producedBy": {

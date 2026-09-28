@@ -6,7 +6,7 @@
 
 ## 目标
 
-把 C01 已记录的一条可归因失败落成 c-to-cpp 的一条有依据规则：模型自评给出 `NO-REPAIR-IDENTIFIED`，但第三方 MinGW/UCRT64 `g++ -std=c++17` 后来定位到 `min` 未声明（见 [conversion-evaluation-loop §4](../../../references/conversion-evaluation-loop.md)）。这属于“头文件/宏可用性”缺口：C 侧隐式可见的名字，到 C++ 侧需要显式包含或改写。
+把 C01 已记录的一条可归因失败落成 c-to-cpp 的一条有依据规则：模型自评给出 `NO-REPAIR-IDENTIFIED`，但第三方 MinGW/UCRT64 `g++ -std=c++17` 后来定位到 `min` 未声明（见 [conversion-evaluation-loop §4](../../../references/workflow/conversion-evaluation-loop.md)）。这属于“头文件/宏可用性”缺口：C 侧隐式可见的名字，到 C++ 侧需要显式包含或改写。
 
 ## 纳入范围
 

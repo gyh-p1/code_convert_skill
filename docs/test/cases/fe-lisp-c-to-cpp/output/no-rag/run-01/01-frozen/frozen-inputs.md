@@ -29,11 +29,11 @@
 
 - 模型、API 地址、温度由根目录 `.env` 提供；密钥不写入任何交付文件、manifest 或请求正文。
 - **提交前先验证 `.env` 模型可用**（已知风险：C01 run-02 曾因当前模型名被 API 拒绝）；不可用则如实记录、按相同输入最多重试一次，不换模型、不伪造自评或代写模型产物。
-- 模型请求上下文：长单文件工作流 + C→C++ 方向 + [header-macro 规则](../../../../../../skills/directions/c-to-cpp/references/header-macro.md) + [type-abi 专题](../../../../../../skills/directions/c-to-cpp/references/type-abi.md)；无网络/文件/并发场景（fe 不触发）。
+- 模型请求上下文：长单文件工作流 + C→C++ 方向 + [header-macro 规则](../../../../../../../../skills/directions/c-to-cpp/references/header-macro.md) + [type-abi 专题](../../../../../../../../skills/directions/c-to-cpp/references/type-abi.md)；无网络/文件/并发场景（fe 不触发）。
 - 输出约束：完整单文件 `target.cpp`，无 Markdown fence/解释/省略号；保留解释器语义（mark-sweep GC、tagged `union`、宏求值次数、指针算术、聚合初始化）；`FE_STANDALONE` 入口保留；不新增进程执行/外联/权限/隐蔽能力；不把未编译/未运行结果说成通过或等价。
 
 ## 5. 授权与落点
 
 - 执行形态按**本项目既定的双侧执行授权**：在获批隔离 VM 做双侧构建+运行，不再逐例询问形态。本 case 的逐例安全前提已确认——源为低风险、无网络/无 exec、无文件写；隔离/工具链/清理仍随本 case、本工具链核对，安全前提确认不扩展到其它样例。`executionApproved` 在实际向隔离 VM 提交 capsule 后才置 `true`。
-- 产物落点按[交付契约 §2.2](../../../../../../references/delivery-handoff-contract.md)：本 `01-frozen/` + `02-conversion/target.gen.*` + `03-self-review/` + `04-evaluation/job-<NN>-<用途>/`；run 根 `target.cpp` = 最终交付版本。
+- 产物落点按[交付契约 §2.2](../../../../../../../../references/framework/delivery-handoff-contract.md)：本 `01-frozen/` + `02-conversion/target.gen.*` + `03-self-review/` + `04-evaluation/job-<NN>-<用途>/`；run 根 `target.cpp` = 最终交付版本。
 - 无匹配契约/授权时停在文本交付并标 `UNVERIFIED`，不在本机编译或运行。

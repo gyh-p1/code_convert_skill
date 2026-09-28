@@ -2,7 +2,7 @@
 
 本目录保存 2026-09-26 通过仓库 `.env` 配置模型调度生成的第二份文本转换结果。它是独立于 `run-01` 的探索 run，不是正式 No-RAG 基线。
 
-本 run 的产物已按[交付与移交契约 §2.2](../../../../../../../references/delivery-handoff-contract.md) 的阶段布局归位（run 根只放最终交付物，过程产物进阶段子目录）；此前的扁平命名（`target.pre-repair.cpp`、`model-self-review-*.json`、`third-party-evaluator-adapter/remote-*|pocc-*|repair-01-*` 等）已迁移到下表位置。
+本 run 的产物已按[交付与移交契约 §2.2](../../../../../../../references/framework/delivery-handoff-contract.md) 的阶段布局归位（run 根只放最终交付物，过程产物进阶段子目录）；此前的扁平命名（`target.pre-repair.cpp`、`model-self-review-*.json`、`third-party-evaluator-adapter/remote-*|pocc-*|repair-01-*` 等）已迁移到下表位置。
 
 ## 目录布局
 

@@ -54,4 +54,4 @@
 3. 获批的一次性隔离 VM、出网限制和逐例执行审批；
 4. 决定是否接受上游已含目标 Windows 分支的样例泄漏；若要评估独立跨 OS 迁移能力，应另做不泄漏目标实现的输入设计。
 
-目前没有生成语法通过、行为通过或等价结论。移交模板为 `references/evaluator_manifest.example.json`；当前 run 状态见 [`evaluator_manifest.json`](evaluator_manifest.json)。
+目前没有生成语法通过、行为通过或等价结论。移交模板为 `references/framework/evaluator_manifest.example.json`；当前 run 状态见 [`evaluator_manifest.json`](evaluator_manifest.json)。

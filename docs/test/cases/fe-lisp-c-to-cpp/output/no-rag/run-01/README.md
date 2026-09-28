@@ -1,6 +1,6 @@
 # fe · rxi Lisp · configured-model run-01
 
-本目录保存 2026-09-28 通过仓库 `.env` 配置模型（`deepseek-flash`）调度生成的 `fe.c` → C++ 文本转换结果。这是无 RAG 探索 run，不是正式 No-RAG 基线。产物按[交付与移交契约 §2.2](../../../../../../../references/delivery-handoff-contract.md) 的阶段布局归位（run 根只放最终交付物，过程产物进阶段子目录）。
+本目录保存 2026-09-28 通过仓库 `.env` 配置模型（`deepseek-flash`）调度生成的 `fe.c` → C++ 文本转换结果。这是无 RAG 探索 run，不是正式 No-RAG 基线。产物按[交付与移交契约 §2.2](../../../../../../../references/framework/delivery-handoff-contract.md) 的阶段布局归位（run 根只放最终交付物，过程产物进阶段子目录）。
 
 ## 目录布局
 

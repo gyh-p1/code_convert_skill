@@ -54,10 +54,10 @@ description: Use for single-file code conversion when a source file is large or 
 5. 相关场景规则要求保留的输入输出、协议/字节、文件/进程副作用是否有对应实现；
 6. 每项未实现、降级或不确定的源行为是否在交付说明中指出。
 
-模型转换后可按 [C → C++ Skill](../../directions/c-to-cpp/SKILL.md) 做自评与 repair 预判；这只是非独立预检，用于发现疑点，不作语法正确性结论。后续进入[转换—自审—第三方评估闭环](../../../references/conversion-evaluation-loop.md)，由 Agent 按受限自修、预检门槛、第三方诊断分流与失败停止条件调度。按用户约定，语法结论由第三方评估机构在匹配工具链下编译回填；只有在获批且适用的评估环境中执行。语法结果与行为 oracle 结果分别报告；编译通过不代表行为等价。
+模型转换后可按 [C → C++ Skill](../../directions/c-to-cpp/SKILL.md) 做自评与 repair 预判；这只是非独立预检，用于发现疑点，不作语法正确性结论。后续进入[转换—自审—第三方评估闭环](../../../references/workflow/conversion-evaluation-loop.md)，由 Agent 按受限自修、预检门槛、第三方诊断分流与失败停止条件调度。按用户约定，语法结论由第三方评估机构在匹配工具链下编译回填；只有在获批且适用的评估环境中执行。语法结果与行为 oracle 结果分别报告；编译通过不代表行为等价。
 
 ## 5. 交付
 
 提供完整目标文件或明确指出未完成部分。长单文件同时保存 `source-analysis.md`（源/目标配置、证据化标签、ATT&CK 判断、所选 Skill、源码地图与未决项），便于复核 Skill 选择。简要报告：实际完成范围、需要确认的假设、未映射/降级行为、语法与行为检查分别是否执行及结果。未运行或无 oracle 时写明“未验证/无法判断”，不宣称功能等价。源文件较大时可附函数/符号覆盖摘要，但不要用摘要替代用户要求的目标文件。
 
-run 目录只放当前交付物（`target.<ext>`、`source-analysis.md`、`result.md`、`evaluator_manifest.json`），各步骤产物按阶段进 `01-frozen/`、`02-conversion/`、`03-self-review/`、`04-evaluation/` 子目录，版本命名用 `target.gen` / `target.self-repair-<N>` / `target.eval-repair-<N>` 与同 stem 元数据、`job-<NN>-<用途>/` 证据目录。固定产物集合、目录布局与命名规则见[转换交付与移交契约 §2.2](../../../references/delivery-handoff-contract.md)，本文件不重复。
+run 目录只放当前交付物（`target.<ext>`、`source-analysis.md`、`result.md`、`evaluator_manifest.json`），各步骤产物按阶段进 `01-frozen/`、`02-conversion/`、`03-self-review/`、`04-evaluation/` 子目录，版本命名用 `target.gen` / `target.self-repair-<N>` / `target.eval-repair-<N>` 与同 stem 元数据、`job-<NN>-<用途>/` 证据目录。固定产物集合、目录布局与命名规则见[转换交付与移交契约 §2.2](../../../references/framework/delivery-handoff-contract.md)，本文件不重复。
