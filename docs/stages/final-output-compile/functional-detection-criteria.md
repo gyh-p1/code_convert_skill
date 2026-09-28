@@ -1,6 +1,6 @@
 # 功能检测判据草案：Controller 变更前的设计输入
 
-> 状态：功能判据设计草案，未批准为功能正确率口径。旧仓库 Agent 身份哈希排序已在独立分支本地修正，**未部署**；本草案不改变功能 Collector。当前阶段仍只统计最终交付目标代码的编译结果。
+> 状态：本 Skill 仓库的历史阶段性草案，仅用于解释当时如何选择可观察样例；**已确认的最终产品目标规范**目前写在旧评估系统仓库的活动 Worktree `docs/architecture/功能检测与证据指标设计.md`，尚未合并或完成产品验收。旧仓库 Agent 身份哈希排序已在独立分支本地修正，**未部署**；当前阶段仍只统计最终交付目标代码的编译结果。
 > 依据：只读审阅旧仓库 `E:/桌面文档/Code_Convert` 的 `input-profile.schema.json`、`evaluation_core/evidence_comparator.py`、`vm_agent/app/observations.py` 与身份哈希路径；旧实现和旧报告不直接继承为本项目的验收结果。RC4 的后续排序根因见[Controller 适配记录](../../../references/adapter/controller/remote-controller-adapter.md)。
 
 ## 1. 先定义可观察义务，再选样例和 Collector
