@@ -13,9 +13,9 @@
 
 后续具体代码转换由 Agent 读取根目录 `.env` 的 `CODE_TRANSLATOR_BASE_URL`、`CODE_TRANSLATOR_MODEL`、`CODE_TRANSLATOR_TEMPERATURE` 和 `OPENAI_API_KEY`，将只读源码与按画像选中的 Skill 发送给配置模型；Agent 只负责调度、静态审阅、交付和必要的同模型修订。不得把密钥写入文档、manifest 或请求正文；配置模型不可用时不得自行代写并冒称模型产物。本项目不增加独立转换运行时或测试框架。
 
-C01 已有独立的 [run-02 配置模型探索稿](docs/test/cases/c01-linux-win-network/output/no-rag/run-02/README.md)，与先前 run-01 区分；两者均未编译或运行。
+C01 已有独立的 [run-02 配置模型探索稿](docs/test/cases/c01-linux-win-network/output/no-rag/run-02/README.md)，与先前 run-01 区分；run-02 后来经用户逐例授权，在隔离第三方 VM 完成探索性编译、运行和一次模型驱动修订。只有修订后的版本通过有限的五个 loopback HTTP 请求输出比较，不是正式 No-RAG 基线。
 ## 当前边界
 
-Skill 给出转换决策依据，不替代编译器、隔离环境或人工确认。当前已批准后续对四例经筛选候选做无 RAG 基线与 RAG 配对探索，不设最低准确率门槛但逐例记录指标；C01 目前只有两份文本探索稿，正式试验尚未开始。Codex 入口只是发现适配，不是独立代码转换程序。
+Skill 给出转换决策依据，不替代编译器、隔离环境或人工确认。当前实施[最终交付编译质量与 Skill 拓展](docs/stages/final-output-compile/阶段方案.md)：只把最终交付代码在声明的目标工具链下编译通过作为本阶段“语法正确”的操作性判据，中间失败/修订用于开发诊断，功能正确性暂不统计。四例无 RAG/RAG 专项比较保留但暂缓。Codex 入口只是发现适配，不是独立代码转换程序。
 
-业务与能力真源：[项目业务文档和能力边界](docs/项目业务文档和能力边界.md)。协作规范：[项目开发规范](docs/项目开发规范.md) · [Skill 编写规范](docs/Skill编写规范.md) · [安全边界](docs/安全边界.md)。阶段安排见 [docs/stages](docs/stages/README.md)：先准备长文件工作流与四例，再做无 RAG 基线和 RAG 对照；是否采用 RAG 由结果决定。旧仓库是候选资料，不代表本项目已实现同样能力。通过初筛的测试候选和所有转换草稿统一放在 [docs/test](docs/test/README.md)；未获逐例批准的候选不会编译或执行。C01 的 uhttpd `run-01/target.cpp` 与 `run-02/target.cpp` 现为文本级探索稿，并非冻结的 No-RAG 基线；没有编译或执行该服务，语法与行为均未验证。
+业务与能力真源：[项目业务文档和能力边界](docs/项目业务文档和能力边界.md)。协作规范：[项目开发规范](docs/项目开发规范.md) · [Skill 编写规范](docs/Skill编写规范.md) · [安全边界](docs/安全边界.md)。阶段安排见 [docs/stages](docs/stages/README.md)。旧仓库是候选资料，不代表本项目已实现同样能力。通过初筛的测试候选和所有转换草稿统一放在 [docs/test](docs/test/README.md)；未获逐例批准的候选不会编译或执行。现有第三方 comparison 会运行源和目标两侧；获逐例执行授权时可只读取其 build 证据作为当前编译结论，不能把该接口当成 compile-only 授权。

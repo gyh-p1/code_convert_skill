@@ -18,7 +18,7 @@ description: Use when converting C source code to C++ while preserving observabl
 
 ## 按需专题
 
-遇到共享头文件、C ABI、结构体/整数布局、`void*` 或指定成员初始化时，读取 [类型、接口与 C ABI](references/type-abi.md)。若源码实际执行 socket 或协议 I/O，再共同阅读 [网络 I/O 场景](../../scenes/network-io/SKILL.md)；其中套接字调用还跨越 Linux/POSIX 与 Windows 时，加读 [POSIX ↔ Winsock 套接字系统方向](../../systems/posix-winsock/SKILL.md)。源码确有文件系统操作时，共同阅读 [文件 I/O 场景](../../scenes/file-io/SKILL.md)。这里只保留入口提醒，具体适用条件和依据在专题文件中。
+遇到共享头文件、C ABI、结构体/整数布局、`void*` 或指定成员初始化时，读取 [类型、接口与 C ABI](references/type-abi.md)。遇到 C 侧隐式可见的名字（如经平台头间接获得的 `min` / `max` 宏）在 C++ 侧报“未声明”、需要显式包含或限定时，读取 [头文件与宏可用性](references/header-macro.md)。若源码实际执行 socket 或协议 I/O，再共同阅读 [网络 I/O 场景](../../scenes/network-io/SKILL.md)；其中套接字调用还跨越 Linux/POSIX 与 Windows 时，加读 [POSIX ↔ Winsock 套接字系统方向](../../systems/posix-winsock/SKILL.md)。源码确有文件系统操作时，共同阅读 [文件 I/O 场景](../../scenes/file-io/SKILL.md)。这里只保留入口提醒，具体适用条件和依据在专题文件中。
 
 ## 常见映射的决策条件
 

@@ -1,8 +1,8 @@
 # 四例跨 OS × 场景候选与检查依据
 
-> 状态：已选入一个公开上游长源候选（未批准编译/执行）；C01/C02 复用该源，C03/C04 仍为规格  
-> 更新：2026-09-25  
-> 共同语言方向：C → C++；目标计划为 ≥600 有效 LOC，物理文件 ≤700 行；uhttpd 是已确认的超限探索例
+> 状态：已选入一个公开上游长源候选；C01 run-02 经逐例授权完成隔离探索评估，四例正式比较暂缓；C02 复用该源，C03/C04 仍为规格。第二份独立长源已为**当前编译质量阶段**选入并冻结：rxi/fe（见下 §1）
+> 更新：2026-09-27
+> 共同语言方向：C → C++；四例试点计划为 ≥600 有效 LOC、物理文件 ≤700 行；uhttpd 是已确认的超限探索例。当前编译质量阶段将物理行放宽到 ~900（见[阶段方案](../stages/final-output-compile/阶段方案.md)）
 
 ## 1. 旧仓库筛选结果与当前选择
 
@@ -23,7 +23,13 @@
 
 用户确认采用 [PJO2/uhttpd 的 uhttpd.c](cases/c01-linux-win-network/case.md)。固定源快照位于 [`sources/uhttpd/`](sources/uhttpd/source.md)，Commit `59d17b86ec9f2a70ce1f4369b4c148824be55155`，保留 GPL-2.0-or-later `LICENSE` 和对应 `UPSTREAM-README.md`。它是可独立启动的单文件跨平台 HTTP 服务，可在明确 loopback 与临时 docroot 后观察 HTTP 响应。文件 1,317 物理行，超过 700 行计划上限；仅作为用户确认的**超限探索候选**，不证明 700 行范围。
 
-同一个源快照可用于 C01 Linux C → Windows C++ 和 C02 Windows C → Linux C++ 两个方向任务，但这只是一个独立长源样例；“至少两份不同长源”的要求仍未满足。C01 现有 run-01 智能体稿与 run-02 配置模型稿两份文本级 C++ 输出，尚未编译或执行；它们不表示基线冻结或转换试验获批。
+同一个源快照可用于 C01 Linux C → Windows C++ 和 C02 Windows C → Linux C++ 两个方向任务，但这只是一个独立长源样例；“至少两份不同长源”的要求仍未满足。C01 现有 run-01 智能体稿与 run-02 配置模型稿两份探索性 C++ 输出；run-02 后续经用户逐例授权完成隔离探索评估和一次修订，仅修订稿在有限 oracle 下匹配。它们都不是正式冻结的基线，也不代表其他样例获批。
+
+### 当前编译质量阶段选入：fe（第二份独立长源，已冻结）
+
+用户为[最终交付编译质量与 Skill 拓展](../stages/final-output-compile/阶段方案.md)阶段选定 rxi/fe 的 `src/fe.c` 作为第二份独立长源，源快照冻结于 [`sources/fe/`](sources/fe/source.md)，Commit `3efa075`（2020-04-05；40 位全 SHA 因 API 限流未解析，改以文件 sha256 固定完整性），MIT 许可，保留 `LICENSE` 与 `UPSTREAM-README.md`。它是一个自包含的小型 Lisp 解释器：`fe.c` 879 物理行（配 `fe.h` 61 行），**无任何平台 `#ifdef` 分支**，仅含 `<string.h>` + 标准头，无 `system`/`exec`/`socket`/`unlink`/`remove`，无网络（唯一 `fopen` 在可选的 `#ifdef FE_STANDALONE` REPL 中读取脚本路径）。
+
+fe 与 uhttpd 是两份**不同的独立长源**，就此满足此前记录的“第二份独立长源”缺口（uhttpd 只算一份且超 700 行）。fe 的用途是当前阶段的**编译证据**（本阶段只读 build 证据，不要求运行、不设行为 oracle）；它尚未纳入四例跨 OS × 场景试点的某个格子。默认按翻译单元编译（无 `FE_STANDALONE`），双侧 build 命令与目标工具链/标准/隔离授权在开具体转换 run 时冻结，`sources/fe/source.md` 只记快照，不代表已获编译授权或已验证。
 
 ## 2. 四格候选与执行状态
 

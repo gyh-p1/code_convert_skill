@@ -1,6 +1,6 @@
 # C01：uhttpd Linux → Windows（候选）
 
-> 状态：candidate（文本级探索稿已生成；oracle 未冻结；未批准编译/执行）  
+> 状态：candidate（文本级探索稿已生成；run-02 经逐例授权完成一次隔离探索性编译/执行与修订；正式 oracle 未冻结）
 > 共享源样例：[`../../sources/uhttpd/uhttpd.c`](../../sources/uhttpd/uhttpd.c)  
 > 上游来源与许可：[source.md](../../sources/uhttpd/source.md) 与随附 GPL-2.0-or-later `LICENSE`
 
@@ -10,14 +10,14 @@
 - 目标：C++；Windows x64。MSVC-compatible C++17 是文本探索假设，尚未冻结工具链。
 - 场景：`network-io`、`file-io`、`concurrency`；HTTP 静态服务、socket accept/并发线程、docroot 文件读取、GET/HEAD 和错误响应。
 - ATT&CK：tactic/technique `none`；仅凭 HTTP/socket 服务不足以推断对抗行为。
-- 输出：[`run-01/target.cpp`](output/no-rag/run-01/target.cpp) 为此前智能体文本探索稿；[`run-02/target.cpp`](output/no-rag/run-02/target.cpp) 由根 `.env` 配置模型生成并经同模型修订。oracle/输入尚未冻结，两者都不是正式 No-RAG 基线。
+- 输出：[`run-01/target.cpp`](output/no-rag/run-01/target.cpp) 为此前智能体文本探索稿；[`run-02/target.cpp`](output/no-rag/run-02/target.cpp) 由根 `.env` 配置模型生成并经同模型修订。run-02 的修订稿在获批隔离评估中通过五个固定 loopback HTTP 请求的输出比较；oracle/输入尚未冻结，两者都不是正式 No-RAG 基线。
 - 尺寸：1,317 物理行，约 1,092 LOC；**超过 700 物理行计划上限**。这是用户确认的超限探索候选，不计入 ≤700 行边界验证。
 
 ## 可观察运行边界
 
 获批执行时只用一次性隔离环境；启动参数固定为 loopback `127.0.0.1`、临时高位端口和本 case 空临时 docroot。必须显式传 `-i 127.0.0.1`、`-p <隔离端口>`、`-d <case临时目录>`；不得用默认监听配置、真实内容目录或公网接口。客户端仅请求本地固定路径，不发送任意路径/压力流量。结束后停止服务并销毁临时目录。
 
-当前阶段仅有文本探索稿；**不得编译或运行**，直至单例来源/许可、工具链、oracle 与隔离环境逐项批准。
+此前 run-02 已获一次逐例隔离执行授权，见其 `04-evaluation/` 证据；该授权不扩展到新的 run、样例或工具链。当前阶段关注最终交付代码的编译结果，功能 oracle 计划暂缓；任何新的编译/运行仍按对应执行契约重新核对授权与隔离条件。
 
 ## 行为 oracle 草案
 
