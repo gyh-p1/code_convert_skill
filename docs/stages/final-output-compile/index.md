@@ -21,6 +21,7 @@
 | [step-05 数据集归档与真实攻防样例筛选](step-05-dataset-and-realistic-cases.md) | 已完成 | 七个有 run 的 case 已移入 `docs/test/dataset/`；方向索引、旧候选索引和[功能判据草案](functional-detection-criteria.md)已建立。445 个本地 Markdown 链接扫描与 16 份活动 JSON 解析完成，原始证据未执行或改写；范围与限制见步骤记录 |
 | [step-06 取消固定四例并整理资料](step-06-cancel-four-case-cleanup.md) | 已完成 | 用户已取消 C01–C04 固定四例无 RAG/RAG 专项；[取消记录](../four-case-cancellation.md)已建立。C02–C04 仅规格目录及旧专项阶段文档/矩阵已移除，长文件 fixture 移至 `docs/test/candidates/`，七份共享源的[用途索引](../../test/sources/README.md)已建立；463 个本地链接扫描无新增缺链，C01 历史证据保留 |
 | [step-07 真实攻防源码首轮准入](step-07-real-scenario-source-screen.md) | 已完成 | [静态审阅](../../test/candidates/real-scenario-source-review.md)旧候选 `ApiSetMap.c`、`ReflectiveLoader.c`、`http_upload.c`：三者均不宜直接冻结为下一转换 run；记录了各自的来源/改写/安全及观察缺口，HTTP 上传义务草案已写，未执行样本 |
+| [step-08 联网筛选上游真实场景](step-08-upstream-scenario-search.md) | 已完成 | [上游候选对照](../../test/candidates/upstream-scenario-search.md)已选 Red Canary Chain Reactor 网络模块作下一步功能契约设计候选：固定提交、MIT、559 行与哈希已核；示例公网目标、Linux 专有分支和 same-runner 取证限制已登记。未开启转换 run |
 
 后续候选：按 step-04 的可归因事实审阅现有 filesystem 与 C→C++ Skill 改动；为可追溯真实攻防样例冻结行为义务与隔离条件。Controller same-runner 基础设施缺陷留在旧仓库单独修复，先完成实际选入场景的功能判据审阅，不在本阶段建设本地运行时。
 
@@ -33,6 +34,6 @@
 
 ## 下一动作与中断恢复
 
-**当前执行项**：无（step-07 首轮审查已完成，下一轮需另选可追溯上游源并冻结功能观察条件）。
+**当前执行项**：无（step-08 上游搜索已完成，下一步骤需冻结 Chain Reactor 场景契约与隔离条件）。
 
-step-07 已收口：旧目录中这三份样例没有同时满足来源、完整场景和取证条件，不导入 `sources/`。下一动作是另找许可和固定版本可核的真实 C 攻防源，为其定义可观察成功/失败路径；Windows 同 OS 的 Controller same-runner 修复另在旧仓库规划，先确定选入场景的功能判据。还需审阅 filesystem/C→C++ Skill 修改的证据等级。恢复时读本 index → [step-07 记录](step-07-real-scenario-source-screen.md) → [候选审阅](../../test/candidates/real-scenario-source-review.md)。
+step-08 已收口，下一动作是以[Chain Reactor 网络模块候选](../../test/candidates/upstream-scenario-search.md)冻结受控 loopback 输入、伴随依赖、正常/拒绝路径与必需证据；先解决同机 Controller 的取证缺陷，再决定是否为该源建立正式快照和转换 run。还需审阅 filesystem/C→C++ Skill 修改的证据等级。恢复时读本 index → [step-08 记录](step-08-upstream-scenario-search.md) → [候选区](../../test/candidates/README.md)。
