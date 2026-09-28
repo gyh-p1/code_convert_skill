@@ -1,7 +1,7 @@
 # step-03：为 fe 开 C → C++ 转换 run，取双侧 build 证据
 
-> 状态：已生成并自审（`GENERATED` → `SELF_REVIEWED`=`NO-REPAIR-IDENTIFIED`，无自修轮）；编译 `UNVERIFIED`，待可达的获批隔离 VM 取双侧 build 证据（2026-09-28）
-> 类型：转换 run 执行（含配置模型生成 + 有限修订；执行按**本项目既定的双侧执行授权**，确无隔离能力则停在文本交付标 `UNVERIFIED`）
+> 状态：已生成并自审（`GENERATED` → `SELF_REVIEWED`=`NO-REPAIR-IDENTIFIED`，无自修轮）；双侧 comparison capsule 已组装（`output/no-rag/run-01/04-evaluation/job-01-dual-build/`，`READY-TO-SUBMIT`），编译 `UNVERIFIED` 待 Controller 回传 build 证据（2026-09-28）
+> 类型：转换 run 执行（含配置模型生成 + 有限修订；执行按**本项目既定的双侧执行授权**，Controller/隔离 VM 恒就绪，到评估步骤直接提交）
 > 归属阶段：[最终交付编译质量与 Skill 拓展](阶段方案.md)
 
 ## 目标
@@ -28,7 +28,7 @@
 ## 依赖与前置
 
 - 已具备：step-02（fe 已冻结）、step-01（header-macro 规则可被模型/审阅引用）。
-- **必须先取得**：确认的目标工具链 + 获批隔离 VM（本项目既定双侧执行授权）+ 匹配的 comparison capsule 契约。确无隔离能力 → 停在文本交付、标 `UNVERIFIED`，不本机编译或运行。
+- **前提（常备，不逐次确认/询问）**：远端 Controller/隔离 VM 恒就绪且已授权（本项目既定双侧执行授权）；目标工具链 Windows x64 MinGW/UCRT64 g++ C++17 已冻结；到评估步骤直接组装并提交匹配的 comparison capsule 执行。仅当 Controller 真实返回基础设施故障才记环境失败并恢复后重提；任何情况不本机编译或运行。
 - 已知风险：C01 run-02 曾因 `.env` 当前模型名被 API 拒绝导致模型自评未完成；本 run 须先验证模型可用，不可用则如实记录、不伪造自评。
 
 ## 预计改动文件
@@ -48,6 +48,6 @@
 
 - 模型不可用或返回截断/空 → 记录，按相同输入最多重试一次，不换模型、不伪造自评。
 - 自审 2 轮仍有可定位转换缺陷 → `SELF_REVIEW_UNRESOLVED`，停止，不无限循环。
-- 确无隔离能力或无匹配 capsule 契约 → 停，标 `UNVERIFIED`，不改用本机编译，不在边界外擅自运行。
+- 确无隔离能力或无匹配 capsule 契约 → 停，标 `UNVERIFIED`，不改用本机编译，不在边界外擅自运行。（注：本项目 Controller/隔离 VM 恒就绪，此条仅在 Controller 真实返回基础设施/环境故障时按分流①适用——记环境失败、恢复后重提，不改用本机编译。）
 - 源侧 C 基线就编不过 → 记 `源端 build 失败`，先查源/环境/工具链，不算作转换引入缺陷。
 - 工具链噪音（如为进入某分支伪造编译器宏）须单独记为探查，不写成 MSVC/其它工具链的成功或失败。

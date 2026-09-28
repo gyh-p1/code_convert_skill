@@ -22,13 +22,13 @@
 | 模型转换 | `.env` 配置的外部模型 | `02-conversion/target.gen.cpp` → run 根 `target.cpp` |
 | 结构化自审 | `.env` 配置的外部模型 | `03-self-review/self-review-1.json`（`NO-REPAIR-IDENTIFIED`） |
 | 交付与移交 | 转换 Agent | `result.md`、`evaluator_manifest.json` |
-| 编译、运行、oracle 判定 | 待获批隔离第三方 VM | 未提交；`executionApproved=false`，编译 `AWAITING-THIRD-PARTY-COMPILE` |
+| 编译、运行、oracle 判定 | 待获批隔离第三方 VM | 双侧 capsule 已组装于 `04-evaluation/job-01-dual-build/`（`READY-TO-SUBMIT`）；未提交前 `executionApproved=false`，编译 `AWAITING-THIRD-PARTY-COMPILE` |
 
 模型转换与自审请求使用了 C→C++、长单文件、头文件/宏、类型/ABI 的知识上下文；RAG 关闭。自审不是第三方语法评估。
 
 ## 当前状态
 
-- 阶段进度：`FROZEN` → `GENERATED` → `SELF_REVIEWED`(`NO-REPAIR-IDENTIFIED`) 已完成；`SELF_REPAIRED` 未触发；`EVALUATION_READY` 待可达的获批隔离 VM。
+- 阶段进度：`FROZEN` → `GENERATED` → `SELF_REVIEWED`(`NO-REPAIR-IDENTIFIED`) 已完成；`SELF_REPAIRED` 未触发；`EVALUATION_READY` 完成——双侧 comparison capsule 已按 Controller 契约组装于 `04-evaluation/job-01-dual-build/`（`READY-TO-SUBMIT`），待经既定渠道提交并回传 build 证据。远端 Controller 恒就绪且已授权；本 Claude Code 会话无对接 Controller 的提交工具，实际 POST 经既定渠道进行。
 - 生成稿与源逐行 diff 仅 6 处，全部为 C++ 所需 `void*` 显式转换；解释器语义保留。详见 `result.md`。
 - 模型自审覆盖 30 个公开函数、`FE_STANDALONE` 入口与全部分支，0 转换引入缺陷，另列 6 项需第三方编译确认的风险。该结论不是语法 verdict。
-- 本机未编译、未运行源码/目标代码/构建脚本；一切编译与运行均待获授权的隔离第三方 VM。不记录 API 密钥。
+- 本机未编译、未运行源码/目标代码/构建脚本；一切编译与运行均待获授权的隔离第三方 VM 回传证据。不记录 API 密钥。

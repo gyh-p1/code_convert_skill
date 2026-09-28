@@ -75,7 +75,7 @@
 
 - **(A) 转换结果类——据实填**：`files[].relativePath`、`sourcePath`、`translatedCodePath`、`artifacts.hasTranslatedCode`、`files[].success`。其中 `success` 表示“该文件转换产物已就绪可交评测”，**不表示验证通过**；目标代码未产出前为 `false`。
 - **(B) 任务输入类——从冻结输入/任务契约抄**：`languagePair`、`taskMetadata`（`sourceLang`/`targetLang`/`sourceOs`/`targetOs`/`sourceArch`/`targetArch`/`sceneTags`/`attackTactic`/`riskLevel`）、`targetDir`、隔离启动参数。不凭函数名或战术标签推断；契约未给的标为待确认。
-- **(C) 审批·执行·验证类——据实记录，不凭自评宣称**：`executionApproved` 反映**本项目既定的双侧执行授权**——默认 `false`，**实际向获批隔离 VM 提交 comparison capsule 后**置 `true`，同时记录授权依据、job ID 和证据路径；未提交或确无隔离能力时保持 `false`。语法与行为结果必须按第三方真实报告回填，不能凭 Agent 或模型自评宣称；`plannedResultPath`/`plannedReportPath`/`plannedEvaluatorOutputPath` 只是“计划落点”而非已有结果；`evidenceMode`/`supportLevel` 按契约填，缺省 `experimental`。
+- **(C) 审批·执行·验证类——据实记录，不凭自评宣称**：`executionApproved` 反映**本项目既定的双侧执行授权**——远端 Controller/隔离 VM **恒就绪且已授权**，到评估步骤直接提交执行、不逐次确认其可达性；字段默认 `false`，**实际向隔离 VM 提交 comparison capsule 后**置 `true`，同时记录 job ID 和证据路径，实际提交前保持 `false`。语法与行为结果必须按第三方真实报告回填，不能凭 Agent 或模型自评宣称；`plannedResultPath`/`plannedReportPath`/`plannedEvaluatorOutputPath` 只是“计划落点”而非已有结果；`evidenceMode`/`supportLevel` 按契约填，缺省 `experimental`。
 
 ## 4. manifest 形状（临时，对齐外部控制器）
 

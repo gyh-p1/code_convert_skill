@@ -46,8 +46,8 @@
     }
   ],
   "x_adapter": {
-    "note": "run-01 无 RAG 探索：目标由 .env 配置模型一次生成并经一次结构化自审（NO-REPAIR-IDENTIFIED，无自修轮）。尚未提交任何编译/运行；本文件为移交清单，非可直接提交的 capsule。执行形态按本项目既定的双侧执行授权，待获批隔离 VM READY 后交 comparison capsule 双侧构建并运行，本阶段只读 build 证据。",
-    "status": "generated-self-reviewed-awaiting-vm-acceptance",
+    "note": "run-01 无 RAG 探索：目标由 .env 配置模型一次生成并经一次结构化自审（NO-REPAIR-IDENTIFIED，无自修轮）。双侧 comparison capsule 输入已按现役 Controller 契约组装于 04-evaluation/job-01-dual-build/（READY-TO-SUBMIT）。远端 Controller/隔离 VM 按本项目既定政策恒就绪且已授权，到评估步骤直接提交、不逐次确认可达性；本 Claude Code 会话无对接 Controller 的提交工具，实际 POST 与证据回传经既定提交渠道进行。executionApproved 仍为 false，待真实提交并回传 build 证据后置真并回填结论，本阶段只读 build 证据。",
+    "status": "generated-self-reviewed-capsule-ready-to-submit",
     "executionApproved": false,
     "explorationOnly": true,
     "producedBy": {
@@ -77,8 +77,9 @@
     "thirdPartyCompileStatus": "AWAITING-THIRD-PARTY-COMPILE",
     "syntaxVerdict": "UNVERIFIED",
     "behaviorVerdict": "UNVERIFIED",
-    "thirdPartyEvaluatorHandoffReady": false,
-    "thirdPartyEvaluatorHandoffNote": "无可达的获批隔离 Controller；未提交双侧 build。模型自审 NO-REPAIR-IDENTIFIED 只是提交门槛，绝非语法结论（C01 先例：自审通过仍被 MinGW 定位到 min 未声明）。",
+    "evaluationCapsuleDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build",
+    "thirdPartyEvaluatorHandoffReady": true,
+    "thirdPartyEvaluatorHandoffNote": "双侧 comparison capsule 输入已按 Controller 契约组装（04-evaluation/job-01-dual-build/：comparison_manifest.json + input_profile.json + metadata.json + source/target run_case.py，zip 组装清单见该目录 README）。Controller/隔离 VM 恒就绪且已授权，直接提交执行。模型自审 NO-REPAIR-IDENTIFIED 只是提交门槛，绝非语法结论（C01 先例：自审通过仍被 MinGW 定位到 min 未声明）；syntaxVerdict 只从 Controller 真实 build 证据回填。本会话无对接 Controller 的提交工具，POST 与证据回传经既定渠道进行。",
     "compileCommands": {
       "sourceBaseline": "gcc -std=c11 -DFE_STANDALONE fe.c -o program",
       "target": "g++ -std=c++17 -DFE_STANDALONE target.cpp -o program",
@@ -91,8 +92,8 @@
     },
     "plannedToolchain": "Windows x64 MinGW/UCRT64 g++ C++17（精确版本以获批 Controller 为准）",
     "prerequisites": [
-      "取得可达的获批隔离 Windows VM/Controller 后，才把 executionApproved 置真并提交 comparison capsule。",
-      "capsule 须含 fe.c、target.cpp 与同目录 fe.h，双侧 runCommand 以 -DFE_STANDALONE 链接为可执行程序。",
+      "远端 Controller/隔离 VM 恒就绪且已授权；到评估步骤直接提交 comparison capsule，executionApproved 于实际提交后置真。",
+      "capsule 按 04-evaluation/job-01-dual-build/README 组装：source/ 放 fe.c+fe.h+run_case.py，target/ 放 target.cpp+fe.h+run_case.py，双侧 runCommand 以 -DFE_STANDALONE 链接为可执行程序。",
       "本阶段只读 build 证据；execution/comparison 结果不计入功能率，不设行为 oracle。"
     ],
     "isolationLaunchArgs": [

@@ -2,7 +2,7 @@
 
 ## 结论速览
 
-本次把 `fe.c`（rxi/fe Lisp 解释器，879 物理行）由 `.env` 配置模型一次性转换为单文件 C++（`target.cpp`），并经模型一次结构化自审判为 `NO-REPAIR-IDENTIFIED`，无自修轮。**目标代码尚未经任何编译验证**：当前会话无可达的获批隔离 Controller，双侧 build 未提交，语法与功能结论均为 `未验证`。模型自审不是语法结论——C01 先例中自审通过仍被第三方 MinGW 定位到 `min` 未声明。
+本次把 `fe.c`（rxi/fe Lisp 解释器，879 物理行）由 `.env` 配置模型一次性转换为单文件 C++（`target.cpp`），并经模型一次结构化自审判为 `NO-REPAIR-IDENTIFIED`，无自修轮。**目标代码尚未经编译验证**：双侧 comparison capsule 已按 Controller 契约组装（[`04-evaluation/job-01-dual-build/`](04-evaluation/job-01-dual-build/README.md)，`READY-TO-SUBMIT`），但尚未回传 build 证据，语法与功能结论均为 `未验证`。远端 Controller 恒就绪且已授权；本 Claude Code 会话无对接 Controller 的提交工具，实际 POST 经既定渠道进行。模型自审不是语法结论——C01 先例中自审通过仍被第三方 MinGW 定位到 `min` 未声明。
 
 | 问题 | 结论 | 依据与边界 |
 |---|---|---|
@@ -25,11 +25,11 @@
 ## 验证依据与覆盖范围
 
 - **静态**：Agent 全文件核对 + 模型结构化自审已做，分别记录在本报告与 [`03-self-review/`](03-self-review/)。
-- **编译**：`未验证`。当前会话无可达的获批隔离 Controller，未向任何工具链提交双侧 build，不在本机编译。语法结论须由匹配工具链（计划 Windows x64 MinGW/UCRT64 `g++ -std=c++17`）编译后回填。
+- **编译**：`未验证`。双侧 comparison capsule 已按 Controller 契约组装待提交（[`04-evaluation/job-01-dual-build/`](04-evaluation/job-01-dual-build/README.md)），尚未回传 build 证据，不在本机编译。语法结论须由匹配工具链（Windows x64 MinGW/UCRT64 `g++ -std=c++17`）编译后由 Controller 真实报告回填。
 - **运行/功能**：`未验证`。本阶段无行为 oracle；双侧运行仅为迁就 comparison capsule 契约，结果不计入功能率。
 
 ## 未决问题与下一步
 
-1. 取得可达的获批隔离 VM/Controller（MinGW/UCRT64）后，按冻结命令提交 comparison capsule 做双侧 build，回填 `thirdPartyCompileStatus` 与 `executionApproved`；在此之前 `evaluator_manifest.json` 保持 `executionApproved=false`。
+1. 按既定渠道向恒就绪且已授权的 Controller（MinGW/UCRT64）提交已组装的 comparison capsule（[`04-evaluation/job-01-dual-build/`](04-evaluation/job-01-dual-build/README.md)）做双侧 build，据真实回传证据回填 `thirdPartyCompileStatus` 与 `executionApproved`；在实际提交并回传证据前 `evaluator_manifest.json` 保持 `executionApproved=false`。
 2. 自审列出的 6 项风险须以真实工具链编译（及必要时运行）确认，尤其 `union` type-punning 与整数→指针转换在目标 C++17/ABI 下的实现定义行为；本次未把源已有语义静默改写。
 3. 若编译失败，仅将可定位诊断交回 `.env` 模型做 ≤2 轮 `REPAIR_AFTER_EVAL`，保留原始稿，不盲改。
