@@ -2,6 +2,8 @@
 
 > 状态：工作流规则；不证明转换效果，不提供本地构建许可。适用于已有目标代码、配置模型和获准第三方评估渠道的转换任务。业务边界以 `docs/项目业务文档和能力边界.md` 为准。片段任务无独立运行义务；单文件做功能比较时另需冻结行为 oracle。当前仅评估最终交付代码编译质量的阶段见 `docs/stages/final-output-compile/阶段方案.md`。
 
+> **标准执行形态（本项目既定，不再逐次询问）**：所有转换 run 统一采用**双侧执行**——由 Agent 读取本工作流并严格按阶段门槛调度，用 `.env` 配置模型完成转换，交获批隔离 VM（loopback／无真实外联／可回滚快照）用 comparison capsule 构建并运行源、目标两侧，源侧 build 作对照基线。源无可运行入口（如库翻译单元无 `main`）时，**默认补写最小入口／驱动**使其可运行，并在冻结记录中标注补写内容；不再逐次询问 compile-only／comparison 或是否补入口。隔离与外联安全边界不变；本阶段只把 **build 证据**计入指标，execution／comparison 结果不用于功能正确率。
+
 ## 1. 确定性边界与冻结输入
 
 确定的是**阶段顺序、输入快照、重试上限、分流和证据判读**，不是大模型逐 token 输出或跨平台语义等价。在首次请求前记录：源码快照与哈希、语言/OS/ABI、实际条件编译分支、目标编译器与 SDK/标准、已选 Skill 的内容快照、提示主体、`.env` 的非敏感模型标识/API host/温度及请求参数、RAG 开关、目标文件命名、可观察 oracle、隔离/审批范围。密钥不进入提示、日志或交付。
@@ -16,7 +18,7 @@
 | `GENERATED` | 保存原始响应及参数/用量；检查是否截断、是否完整单文件、关键符号/分支是否缺失 | 响应完整才进入自审；空响应、`finish_reason=length`、解析失败不能冒充自审通过 |
 | `SELF_REVIEWED` | 将源/目标、任务契约和已选知识交给配置模型做一次结构化自审；每个问题需位置、来源（转换引入/源已存在/工具链未知）、证据、建议修改 | 只有**没有未解决、可定位的转换引入缺陷**且响应完整，才能作为“可交第三方”的内部预检；不是语法 verdict |
 | `SELF_REPAIRED` | 把明确缺陷、约束和同一 run 的上一稿交回配置模型；保存完整新稿或可机械应用的确定性补丁及差异，再重新自审 | 默认最多 **2 次自修轮**；同一问题重复、产生无法解释的新副作用、模型持续矛盾/截断或仍有明确缺陷则停止，报告 `SELF_REVIEW_UNRESOLVED`，不无限循环。仅有“可能问题”但无定位时保留为风险，不伪造缺陷 |
-| `EVALUATION_READY` | 预检状态可交评估后，确认逐例执行授权、VM/runner READY、评估契约、源码/目标哈希、冻结编译命令、限时与清理；功能比较另确认最小行为 oracle；生成独立评估输入 | 门槛缺失则 `BLOCKED`；模型声称“无问题”只是提交门槛，绝非第三方结果 |
+| `EVALUATION_READY` | 预检状态可交评估后，确认本项目既定的双侧执行授权、隔离 VM/runner READY、评估契约、源码/目标哈希、冻结编译命令（含为可运行而补写的入口/驱动）、限时与清理；功能比较另确认最小行为 oracle；生成独立评估输入 | 门槛缺失则 `BLOCKED`；模型声称“无问题”只是提交门槛，绝非第三方结果 |
 | `EVALUATED` | 保存 Controller job ID、canonical report、source/target build 和 execution、comparison、清理/环境状态；优先从**build 证据**读取编译结论，再读行为证据 | 区分环境/工具链失败、代码编译失败、执行失败、行为差异与不确定；每个结论附到准确版本与工具链 |
 | `REPAIR_AFTER_EVAL` | 仅将可定位的代码诊断/行为差异连同工具链、oracle 交回配置模型；生成新变体，重复内部自审，再在**相同冻结工具链和 oracle**上重新提交获准评估 | 默认最多 **2 次外部失败 repair 轮**。若失败无变化、证据不足、超预算或安全边界变化，停止并回报；不得反复盲投或把变体通过归给原稿 |
 | `CLOSED` | 交付最终稿、原始稿/失败稿、模型自审与修订记录、第三方证据和分层结论 | 当前阶段只按最终交付版本统计编译结果；中间诊断供 Skill 改进。行为未评估时写 `UNVERIFIED`；环境、完整性与安全未覆盖部分分别记录 |
@@ -34,9 +36,9 @@
 5. **build 成功而运行失败或行为有差异**：不能退化为“语法错误”；依行为 oracle 找出输入、观察维度、差异位置，区分源已有问题与转换引入的问题后再决定 repair。
 6. **所有适用维度匹配**：只报告实际覆盖的输入与维度；`1/1 output` 不等于网络、文件、进程、安全或完整行为等价。
 
-`evaluator_manifest.json` 是本项目的移交/记录清单，不是旧 Controller 可直接提交的 capsule。Controller 实际 `/api/jobs` 使用 `comparison_manifest.json`、`input_profile.json`、`metadata.json` 与 source/target 树，要求双侧 `runCommand`，故会运行两侧；不能把 comparison 当成 compile-only。若用户仅批准 compile-only，不能借该接口执行，需先获取相应契约。capsule 输入与报告均须保留，且不能把启动参数写入只供说明的字段后假定 Runner 会执行。
+`evaluator_manifest.json` 是本项目的移交/记录清单，不是旧 Controller 可直接提交的 capsule。Controller 实际 `/api/jobs` 使用 `comparison_manifest.json`、`input_profile.json`、`metadata.json` 与 source/target 树，要求双侧 `runCommand`，故会运行两侧——这正是本项目既定的双侧执行形态。本阶段只从其返回中读取 **build 证据**作为编译结论，execution/comparison 结果不计入功能率；不因“只看 build”就把它当成 compile-only 接口或省略双侧 `runCommand`。capsule 输入与报告均须保留，且不能把启动参数写入只供说明的字段后假定 Runner 会执行。
 
-当前编译质量阶段不要求行为比较。获批的 compile-only 隔离契约可直接提供编译证据；若样例另获逐例执行授权，也可提交现有 comparison capsule，并只取其 build 证据作为当前指标，execution/comparison 结果不用于功能正确率。没有匹配契约或授权时停在文本交付并写 `UNVERIFIED`，不改用本机编译，也不借 comparison 擅自运行样本。行为差异与 RAG 配对步骤仅在相应专项重新启动时适用。
+当前编译质量阶段不要求行为比较，但标准执行形态统一为**双侧执行**（见文首）：交获批隔离 VM 的 comparison capsule 构建并运行源、目标两侧，只取其 **build 证据**作为当前指标，execution/comparison 结果不用于功能正确率。源无可运行入口时默认补写最小入口/驱动并在冻结记录标注，不再询问是否补入口或改用 compile-only。隔离与外联安全边界不变；确无隔离能力时才停在文本交付并写 `UNVERIFIED`，不改用本机编译，也不在边界外擅自运行样本。行为差异与 RAG 配对步骤仅在相应专项重新启动时适用。
 
 ## 4. 自审提示词的最小契约
 

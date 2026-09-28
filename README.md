@@ -18,4 +18,4 @@ C01 已有独立的 [run-02 配置模型探索稿](docs/test/cases/c01-linux-win
 
 Skill 给出转换决策依据，不替代编译器、隔离环境或人工确认。当前实施[最终交付编译质量与 Skill 拓展](docs/stages/final-output-compile/阶段方案.md)：只把最终交付代码在声明的目标工具链下编译通过作为本阶段“语法正确”的操作性判据，中间失败/修订用于开发诊断，功能正确性暂不统计。四例无 RAG/RAG 专项比较保留但暂缓。Codex 入口只是发现适配，不是独立代码转换程序。
 
-业务与能力真源：[项目业务文档和能力边界](docs/项目业务文档和能力边界.md)。协作规范：[项目开发规范](docs/项目开发规范.md) · [Skill 编写规范](docs/Skill编写规范.md) · [安全边界](docs/安全边界.md)。阶段安排见 [docs/stages](docs/stages/README.md)。旧仓库是候选资料，不代表本项目已实现同样能力。通过初筛的测试候选和所有转换草稿统一放在 [docs/test](docs/test/README.md)；未获逐例批准的候选不会编译或执行。现有第三方 comparison 会运行源和目标两侧；获逐例执行授权时可只读取其 build 证据作为当前编译结论，不能把该接口当成 compile-only 授权。
+业务与能力真源：[项目业务文档和能力边界](docs/项目业务文档和能力边界.md)。协作规范：[项目开发规范](docs/项目开发规范.md) · [Skill 编写规范](docs/Skill编写规范.md) · [安全边界](docs/安全边界.md)。阶段安排见 [docs/stages](docs/stages/README.md)。旧仓库是候选资料，不代表本项目已实现同样能力。通过初筛的测试候选和所有转换草稿统一放在 [docs/test](docs/test/README.md)；未通过来源/许可初筛的候选不会编译或执行。**标准执行形态统一为双侧执行**：交获批隔离 VM 的 comparison capsule 构建并运行源、目标两侧，源侧作对照基线，本阶段只读取其 **build 证据**作为当前编译结论，execution/comparison 不计入功能率；源无可运行入口时默认补写最小入口/驱动，不再逐次询问执行形态。确无隔离能力时停在文本交付标 `UNVERIFIED`，不在本机编译或运行。

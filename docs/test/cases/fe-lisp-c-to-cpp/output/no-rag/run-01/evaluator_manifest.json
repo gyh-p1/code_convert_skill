@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "kind": "third-party-evaluator-manifest",
+  "generatedBy": "code_convert-temporary-controller-adapter (hand-authored, configured-model run)",
+  "languagePair": {
+    "sourceLang": "c",
+    "targetLang": "cpp"
+  },
+  "taskMetadata": {
+    "sourceLanguage": "c",
+    "targetLanguage": "cpp",
+    "attackTactic": "none",
+    "sceneTags": [
+      "interpreter",
+      "filesystem-read-only"
+    ],
+    "sourceOs": "windows",
+    "targetOs": "windows",
+    "sourceArch": "x64",
+    "targetArch": "x64",
+    "riskLevel": "low",
+    "evidenceMode": "static-and-runtime",
+    "supportLevel": "experimental"
+  },
+  "targetDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01",
+  "summaryPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\fe_batch_summary.json",
+  "batchReportPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\fe_batch_report.md",
+  "replayArtifactDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\replay",
+  "plannedResultPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\fe_batch_result.json",
+  "plannedReportPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\fe_evaluator_report.md",
+  "files": [
+    {
+      "relativePath": "fe.c",
+      "sourcePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\fe\\fe.c",
+      "translatedCodePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\target.cpp",
+      "evaluationNotesPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\result.md",
+      "replayArtifactPath": null,
+      "success": true,
+      "artifacts": {
+        "hasSource": true,
+        "hasTranslatedCode": true,
+        "hasEvaluationNotes": true,
+        "hasReplayArtifact": false
+      },
+      "plannedEvaluatorOutputPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\fe_evaluator_result.json"
+    }
+  ],
+  "x_adapter": {
+    "note": "run-01 无 RAG 探索：目标由 .env 配置模型一次生成并经一次结构化自审（NO-REPAIR-IDENTIFIED，无自修轮）。尚未提交任何编译/运行；本文件为移交清单，非可直接提交的 capsule。执行形态按本项目既定的双侧执行授权，待获批隔离 VM READY 后交 comparison capsule 双侧构建并运行，本阶段只读 build 证据。",
+    "status": "generated-self-reviewed-awaiting-vm-acceptance",
+    "executionApproved": false,
+    "explorationOnly": true,
+    "producedBy": {
+      "conversion": "configured external model via .env (deepseek-flash), orchestrated by the Agent per conversion-evaluation-loop.md",
+      "compileAndRun": "pending an authorized isolated Windows VM Controller; dual source/target build and run",
+      "thisRepo": "static source analysis, target text, structured self-review orchestration, temporary handoff manifest"
+    },
+    "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\01-frozen\\frozen-inputs.md",
+    "modelMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\02-conversion\\target.gen.model.json",
+    "selectedSkills": [
+      "long-file-conversion",
+      "c-to-cpp",
+      "c-to-cpp/header-macro",
+      "c-to-cpp/type-abi"
+    ],
+    "attackClassification": {
+      "status": "reviewed-no-supported-mapping",
+      "tactics": [],
+      "techniques": [],
+      "rationale": "fe 是内存内 Lisp 解释器；静态无 system/exec/socket/unlink/remove，standalone 仅按命令行参数只读 fopen 脚本。无对抗性 ATT&CK 行为。"
+    },
+    "modelSelfReviewStatus": "NO-REPAIR-IDENTIFIED",
+    "modelSelfReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\03-self-review\\self-review-1.json",
+    "modelSelfReviewMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\fe-lisp-c-to-cpp\\output\\no-rag\\run-01\\03-self-review\\self-review-1.model.json",
+    "repairRecommended": false,
+    "selfRepairRounds": 0,
+    "thirdPartyCompileStatus": "AWAITING-THIRD-PARTY-COMPILE",
+    "syntaxVerdict": "UNVERIFIED",
+    "behaviorVerdict": "UNVERIFIED",
+    "thirdPartyEvaluatorHandoffReady": false,
+    "thirdPartyEvaluatorHandoffNote": "无可达的获批隔离 Controller；未提交双侧 build。模型自审 NO-REPAIR-IDENTIFIED 只是提交门槛，绝非语法结论（C01 先例：自审通过仍被 MinGW 定位到 min 未声明）。",
+    "compileCommands": {
+      "sourceBaseline": "gcc -std=c11 -DFE_STANDALONE fe.c -o program",
+      "target": "g++ -std=c++17 -DFE_STANDALONE target.cpp -o program",
+      "note": "fe.h 与 fe.c/target.cpp 同目录；保持 #include \"fe.h\" 不并入。"
+    },
+    "companionHeader": {
+      "relativePath": "fe.h",
+      "sourcePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\fe\\fe.h",
+      "note": "编译必需，C++ 下可直接编译，须与目标文件同目录提交，不并入 target.cpp。"
+    },
+    "plannedToolchain": "Windows x64 MinGW/UCRT64 g++ C++17（精确版本以获批 Controller 为准）",
+    "prerequisites": [
+      "取得可达的获批隔离 Windows VM/Controller 后，才把 executionApproved 置真并提交 comparison capsule。",
+      "capsule 须含 fe.c、target.cpp 与同目录 fe.h，双侧 runCommand 以 -DFE_STANDALONE 链接为可执行程序。",
+      "本阶段只读 build 证据；execution/comparison 结果不计入功能率，不设行为 oracle。"
+    ],
+    "isolationLaunchArgs": [
+      "<无参数：stdin 立即 EOF，REPL 空跑后 EXIT_SUCCESS>",
+      "<或一份 case 私有的无害 Lisp 脚本路径（只读）>"
+    ],
+    "runBoundary": "无联网、无外部命令、不读敏感文件；结束即销毁临时件。",
+    "sourceSha256": "sha256:3fc7466e9ae2c114e6fdf36410fc8804a20c83d5c21babcaf664567af6276807",
+    "translatedTargetSha256": "sha256:304f7d2eb54cc0328b4e1af34850b44d703cebe905dd97c26f06a1d77deab9d8",
+    "targetEqualsGenerated": "run 根 target.cpp 与 02-conversion/target.gen.cpp 同一 sha256；无自修轮。"
+  }
+}

@@ -1,6 +1,6 @@
 # 转换交付与移交契约：收尾产物与 evaluator_manifest.json
 
-本文件在**任一转换任务收尾时**读取，规定交付产物集合、目录布局，以及交给编译/运行环境的 `evaluator_manifest.json` 如何填写。它是**过程纪律与字段来源规则**，不是“转换正确”或“功能等价”的证明。本项目不在本机编译或运行；经用户逐例授权后，可以把 comparison capsule 交给隔离第三方评估环境，语法与行为结论仍只能由该环境的真实证据回填。manifest 形状对齐外部控制器、属**临时适配**，权威 schema 以现役控制器为准。
+本文件在**任一转换任务收尾时**读取，规定交付产物集合、目录布局，以及交给编译/运行环境的 `evaluator_manifest.json` 如何填写。它是**过程纪律与字段来源规则**，不是“转换正确”或“功能等价”的证明。本项目不在本机编译或运行；按**本项目既定的双侧执行授权**，把 comparison capsule 交给获批隔离 VM 构建并运行源、目标两侧，本阶段只读取其 build 证据，语法与行为结论仍只能由该环境的真实证据回填。manifest 形状对齐外部控制器、属**临时适配**，权威 schema 以现役控制器为准。
 
 它与转换本身的维度分开：语言方向/场景/系统方向 Skill 管映射与应保留行为，长单文件工作流管防偏移，本契约只管**收口与移交**，不重复它们的内容。
 
@@ -75,7 +75,7 @@
 
 - **(A) 转换结果类——据实填**：`files[].relativePath`、`sourcePath`、`translatedCodePath`、`artifacts.hasTranslatedCode`、`files[].success`。其中 `success` 表示“该文件转换产物已就绪可交评测”，**不表示验证通过**；目标代码未产出前为 `false`。
 - **(B) 任务输入类——从冻结输入/任务契约抄**：`languagePair`、`taskMetadata`（`sourceLang`/`targetLang`/`sourceOs`/`targetOs`/`sourceArch`/`targetArch`/`sceneTags`/`attackTactic`/`riskLevel`）、`targetDir`、隔离启动参数。不凭函数名或战术标签推断；契约未给的标为待确认。
-- **(C) 审批·执行·验证类——智能体无权自行授予**：`executionApproved` 默认是 `false`；只有用户逐例明确授权并确实向隔离环境提交后，才可改为 `true`，同时记录授权上下文、job ID 和证据路径。语法与行为结果必须按第三方真实报告回填，不能凭 Agent 或模型自评宣称；`plannedResultPath`/`plannedReportPath`/`plannedEvaluatorOutputPath` 只是“计划落点”而非已有结果；`evidenceMode`/`supportLevel` 按契约填，缺省 `experimental`。
+- **(C) 审批·执行·验证类——据实记录，不凭自评宣称**：`executionApproved` 反映**本项目既定的双侧执行授权**——默认 `false`，**实际向获批隔离 VM 提交 comparison capsule 后**置 `true`，同时记录授权依据、job ID 和证据路径；未提交或确无隔离能力时保持 `false`。语法与行为结果必须按第三方真实报告回填，不能凭 Agent 或模型自评宣称；`plannedResultPath`/`plannedReportPath`/`plannedEvaluatorOutputPath` 只是“计划落点”而非已有结果；`evidenceMode`/`supportLevel` 按契约填，缺省 `experimental`。
 
 ## 4. manifest 形状（临时，对齐外部控制器）
 

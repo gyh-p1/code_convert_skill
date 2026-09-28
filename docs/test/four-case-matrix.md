@@ -29,7 +29,7 @@
 
 用户为[最终交付编译质量与 Skill 拓展](../stages/final-output-compile/阶段方案.md)阶段选定 rxi/fe 的 `src/fe.c` 作为第二份独立长源，源快照冻结于 [`sources/fe/`](sources/fe/source.md)，Commit `3efa075`（2020-04-05；40 位全 SHA 因 API 限流未解析，改以文件 sha256 固定完整性），MIT 许可，保留 `LICENSE` 与 `UPSTREAM-README.md`。它是一个自包含的小型 Lisp 解释器：`fe.c` 879 物理行（配 `fe.h` 61 行），**无任何平台 `#ifdef` 分支**，仅含 `<string.h>` + 标准头，无 `system`/`exec`/`socket`/`unlink`/`remove`，无网络（唯一 `fopen` 在可选的 `#ifdef FE_STANDALONE` REPL 中读取脚本路径）。
 
-fe 与 uhttpd 是两份**不同的独立长源**，就此满足此前记录的“第二份独立长源”缺口（uhttpd 只算一份且超 700 行）。fe 的用途是当前阶段的**编译证据**（本阶段只读 build 证据，不要求运行、不设行为 oracle）；它尚未纳入四例跨 OS × 场景试点的某个格子。默认按翻译单元编译（无 `FE_STANDALONE`），双侧 build 命令与目标工具链/标准/隔离授权在开具体转换 run 时冻结，`sources/fe/source.md` 只记快照，不代表已获编译授权或已验证。
+fe 与 uhttpd 是两份**不同的独立长源**，就此满足此前记录的“第二份独立长源”缺口（uhttpd 只算一份且超 700 行）。fe 的用途是当前阶段的**编译证据**（本阶段只读 build 证据，不要求运行、不设行为 oracle）；它尚未纳入四例跨 OS × 场景试点的某个格子。默认按翻译单元编译（无 `FE_STANDALONE`），双侧 build 命令与目标工具链/标准/隔离授权在开具体转换 run 时冻结，`sources/fe/source.md` 只记快照，不代表已获编译授权或已验证。step-03 的转换 run 登记于 [`cases/fe-lisp-c-to-cpp/case.md`](cases/fe-lisp-c-to-cpp/case.md)（当前编译质量阶段用，非四例格子）。
 
 ## 2. 四格候选与执行状态
 
