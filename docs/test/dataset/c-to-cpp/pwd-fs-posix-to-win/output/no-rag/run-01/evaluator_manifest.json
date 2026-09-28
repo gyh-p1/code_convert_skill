@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "kind": "third-party-evaluator-manifest",
+  "generatedBy": "code_convert-temporary-controller-adapter (hand-authored, configured-model run)",
+  "languagePair": {
+    "sourceLang": "c",
+    "targetLang": "cpp"
+  },
+  "taskMetadata": {
+    "sourceLanguage": "c",
+    "targetLanguage": "cpp",
+    "attackTactic": "none",
+    "sceneTags": [
+      "filesystem-read-only",
+      "posix-to-windows",
+      "working-directory-report"
+    ],
+    "sourceOs": "linux",
+    "targetOs": "windows",
+    "sourceArch": "x64",
+    "targetArch": "x64",
+    "riskLevel": "low",
+    "evidenceMode": "static-and-runtime",
+    "supportLevel": "experimental"
+  },
+  "targetDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01",
+  "files": [
+    {
+      "relativePath": "pwd.c",
+      "sourcePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\freebsd-pwd\\pwd.c",
+      "translatedCodePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\target.cpp",
+      "evaluationNotesPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\result.md",
+      "replayArtifactPath": null,
+      "success": true,
+      "artifacts": {
+        "hasSource": true,
+        "hasTranslatedCode": true,
+        "hasEvaluationNotes": true,
+        "hasReplayArtifact": false
+      }
+    }
+  ],
+  "x_adapter": {
+    "note": "run-01 无 RAG 探索：目标由 .env 配置模型一次生成，首轮结构化自审判 REPAIR-RECOMMENDED（2 项 transform-introduced：声明顺序阻断点 + st_ino 守卫），经一轮自修（SELF_REPAIRED round 1）后修复后复审判 NO-REPAIR-IDENTIFIED，交付件为自修稿。跨 OS 双侧 comparison capsule 已于 2026-09-28 经直连 Controller HTTP（http://192.168.101.250:8443，POST /api/jobs multipart，本机 192.168.101.105 与 Controller 同网段可直达 8443）提交并执行完毕，jobId=eval-20260928-064021-653f5ee9，jobStatus=COMPLETED。真实回传证据落于 04-evaluation/job-01-dual-build/returned-evidence/。源侧 C11（Linux）build exitCode=0（durationMs=549，stderr 空），目标侧 C++17（Windows MinGW/UCRT64）build exitCode=0（durationMs=3418，stderr 空）；本阶段只据目标 build 证据判编译=PASS。Controller 综合报告 codeVerdict=failed、behaviorVerdict=mismatched，唯一 diff 为 output 维度 stdout 长度（源 75 vs 目标 82），源于打印当前工作目录的绝对路径文本随 OS 不同（分隔符 + 路径），退出码（0=0）与 stderr（空=空）两侧一致——属冻结时即预告的按设计跨 OS 差异，仅作信息记录，本阶段不评功能、不设 oracle，不改变编译=PASS。",
+    "status": "evaluated-build-passed",
+    "jobId": "eval-20260928-064021-653f5ee9",
+    "supersededJobId": null,
+    "executionApproved": true,
+    "explorationOnly": true,
+    "crossOsDualBuild": true,
+    "consumerOf": "skills/systems/posix-windows-filesystem",
+    "producedBy": {
+      "conversion": "configured external model via .env (deepseek-flash), orchestrated by the Agent per conversion-evaluation-loop.md; one self-repair round",
+      "compileAndRun": "executed by the authorized isolated VM Controller (jobId eval-20260928-064021-653f5ee9, COMPLETED); source C11 build+run on linux-vm-agent-x64, target C++17 build+run on windows-vm-agent-x64",
+      "thisRepo": "static source analysis, target text, structured self-review + self-repair orchestration, temporary handoff manifest"
+    },
+    "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\01-frozen\\frozen-inputs.md",
+    "modelMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\02-conversion\\target.repair-1.model.json",
+    "selectedSkills": [
+      "c-to-cpp",
+      "c-to-cpp/header-macro",
+      "c-to-cpp/type-abi",
+      "systems/posix-windows-filesystem"
+    ],
+    "attackClassification": {
+      "status": "reviewed-no-supported-mapping",
+      "tactics": [],
+      "techniques": [],
+      "rationale": "pwd(1) 是只读打印当前工作目录工具（getcwd/_getcwd + getenv(\"PWD\") + stat 身份校验），无网络、无文件写、无进程/命令执行。无对抗性 ATT&CK 行为。"
+    },
+    "modelSelfReviewStatus": "REPAIR-RECOMMENDED -> (SELF_REPAIRED round 1) -> NO-REPAIR-IDENTIFIED",
+    "modelSelfReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\03-self-review\\self-review-1.json",
+    "modelReReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\03-self-review\\self-review-2.json",
+    "repairRecommended": true,
+    "selfRepairRounds": 1,
+    "selfRepairArtifactPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\02-conversion\\target.repair-1.cpp",
+    "thirdPartyCompileStatus": "THIRD-PARTY-COMPILE-PASSED",
+    "syntaxVerdict": "PASS",
+    "behaviorVerdict": "mismatched (informational; 编译质量阶段不评功能、不设 oracle；唯一 diff 为 output 维度 stdout 长度 75 vs 82，源于打印当前工作目录的绝对路径文本随 OS 不同——分隔符+路径，属按设计跨 OS 差异，非转换缺陷)",
+    "frameworkCodeVerdict": "failed (仅由 output 维度 stdout 长度差异驱动，非编译失败；本阶段不据此判定)",
+    "evaluationCapsuleDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build",
+    "returnedEvidenceDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\pwd-fs-posix-to-win\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build\\returned-evidence",
+    "buildEvidence": {
+      "source": { "status": "completed", "exitCode": 0, "durationMs": 549, "stderrEmpty": true, "toolchain": "cc -std=c11 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -D__dead2= pwd.c -o program", "runner": "linux-vm-agent-x64 (VM linux-eval, snapshot CC-Eval-Linux-8Lang-R7)" },
+      "target": { "status": "completed", "exitCode": 0, "durationMs": 3418, "stderrEmpty": true, "toolchain": "g++ -std=c++17 target.cpp -o program", "runner": "windows-vm-agent-x64 (VM windows-eval, snapshot CC-Eval-Windows-8Lang-R7)" },
+      "note": "语法结论 PASS 仅据目标侧 build 证据（exitCode=0、stderr 空）。source build 为跨 OS 对照基线。自修消除的声明顺序阻断点（pwd_optind/pwd_optpos 上移到 main 之前、单次定义）未在目标侧复现为编译错误——目标 C++17 build 干净通过。self-review 列作 toolchain-unknown 的风险（<sys/stat.h> 是否在 __STRICT_ANSI__ 下暴露 struct stat/st_ino、_getcwd(NULL,0) 自动分配语义）实测均未触发编译错误。"
+    },
+    "runtimeEvidence": {
+      "source": { "exitCode": 0, "stdoutLen": 75, "stderrLen": 0 },
+      "target": { "exitCode": 0, "stdoutLen": 82, "stderrLen": 0 },
+      "comparison": "behaviorVerdict=mismatched；唯一 diff 为 output.stream.structuredValue（stdout 长度 75 vs 82，criticality major，rule json-structural）。退出码与 stderr 两侧一致。差异源于默认物理模式下打印当前工作目录得到的绝对路径文本随 OS 不同（Linux /…/workspace/source vs Windows C:\\…\\workspace\\target）。信息记录，不计入功能率。"
+    },
+    "thirdPartyEvaluatorHandoffReady": true,
+    "thirdPartyEvaluatorHandoffNote": "跨 OS 双侧 comparison capsule 已于 2026-09-28 提交 Controller（jobId=eval-20260928-064021-653f5ee9）并 COMPLETED，真实证据回传于 returned-evidence/。syntaxVerdict=PASS 仅从目标 build 证据回填。综合报告 codeVerdict=failed/behaviorVerdict=mismatched 完全由 output 维度 stdout 长度差异驱动（按设计跨 OS 路径文本差异），本阶段不计入功能率、不设行为 oracle，不改变编译=PASS。经一轮自修（声明顺序阻断点消除、st_ino 守卫记录为已知平台差异）后交付。",
+    "compileCommands": {
+      "sourceBaseline": "cc -std=c11 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE -D__dead2= pwd.c -o program",
+      "target": "g++ -std=c++17 target.cpp -o program",
+      "note": "pwd 无伴随本地头；source/ 与 target/ 各仅含其 artifact + run_case.py。源侧 -D__dead2= 中和 FreeBSD <sys/cdefs.h> 惯用法，-D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE 暴露 POSIX/BSD 符号，源码不改。"
+    },
+    "companionHeader": null,
+    "plannedToolchain": "源侧 Linux x64 cc C11；目标侧 Windows x64 MinGW/UCRT64 g++ C++17（本次实测由 Controller 双 runner 执行）",
+    "prerequisites": [
+      "远端 Controller/隔离 VM 恒就绪且已授权；本 run 已于评估步骤直接提交并执行完毕，executionApproved=true。",
+      "跨 OS 双侧：Controller 须同时匹配到 READY 的 Linux runner 与 Windows runner；若 runner 未就绪返回 INFRA_ERROR，如实记录、恢复后重提。",
+      "capsule 按 04-evaluation/job-01-dual-build/README 组装：source/ 放 pwd.c+run_case.py，target/ 放 target.cpp+run_case.py（无伴随本地头）。",
+      "本阶段只读 build 证据；execution/comparison 结果不计入功能率，不设行为 oracle。output 维度 stdout 长度差异属按设计跨 OS 路径文本差异。"
+    ],
+    "isolationLaunchArgs": [
+      "<无参数、无操作数：默认物理模式 → 打印当前工作目录一条绝对路径、exit 0>"
+    ],
+    "runBoundary": "无联网、无外部命令、不读敏感文件、只读打印当前工作目录；结束即销毁临时件。",
+    "sourceSha256": "sha256:cf8b57f4b95abf55f7c64446686126202756411b64370751ffb21f0de93d3f68",
+    "companionHeaderSha256": null,
+    "translatedTargetSha256": "sha256:8690433e84a87eab984eb9e29d8e554b3e64a615285d441e7e265f43051e19d6",
+    "targetEqualsGenerated": "run 根 target.cpp 与 02-conversion/target.repair-1.cpp 同一 sha256（8690433e…）；经一轮自修，非生成稿（生成稿 target.gen.cpp 见 02-conversion/）。"
+  }
+}

@@ -15,12 +15,12 @@
 
 - **No platform branches**: no `_WIN32` / `__linux__` / `__BSD__` conditionals. `fe.c` includes only `<string.h>` and `"fe.h"`; `fe.h` includes `<stdlib.h>` and `<stdio.h>`. This keeps the C → C++ compile signal free of target-OS-branch leakage (the defect that made C01/uhttpd unsuitable as a clean first datapoint).
 - **High logic density**: heavy use of `union`, function pointers, macros, pointer arithmetic and aggregate initialization — the C constructs most likely to surface real C → C++ compile deltas (implicit conversions, `void*`, initialization forms).
-- **Independent second long source**: distinct from uhttpd; fills the "second independent long source" gap recorded in `../../four-case-matrix.md`.
+- **Independent long source**: distinct from uhttpd and used by the [fe C→C++ compile run](../../dataset/c-to-cpp/fe-lisp-c-to-cpp/case.md). At 879 physical lines it does not validate the 700-line planned upper bound; the former four-case sample quota was cancelled.
 
 ## Build context and safety boundary
 
-- Standalone program vs translation unit: a `main` exists only under `#ifdef FE_STANDALONE` (a REPL that also includes `<setjmp.h>`). Without that macro, `fe.c` compiles as a **library translation unit**. Either mode is a valid compile target; the current stage reads build evidence only, so a REPL entry point is not required.
+- Standalone program vs translation unit: a `main` exists only under `#ifdef FE_STANDALONE` (a REPL that also includes `<setjmp.h>`). Without that macro, `fe.c` compiles as a **library translation unit**. The actual run used `FE_STANDALONE` for both sides of the authorized comparison capsule; its result is recorded in the case, not inferred from this source note.
 - Static safety boundary: no `system` / `exec` / `popen` / `socket` / `unlink` / `remove`; **no network**. The only `fopen` is inside the optional standalone REPL, reading a script path given on the command line. Low risk; nothing external is contacted.
-- Dual-side build (to be frozen per-case when submitted to an approved isolated capability): source side compiles as C (e.g. `cc -std=c11 -c fe.c`), target side compiles the converted file as C++ (e.g. `g++ -std=c++17 -c fe.cpp`), each with `fe.h` present. Exact target OS/arch, compiler/SDK, C++ standard, isolation and per-case execution/compile authorization are recorded at freeze time in the case file, not here. **No build was run here.**
+- Dual-side build details, toolchain and returned evidence are recorded in the [fe case](../../dataset/c-to-cpp/fe-lisp-c-to-cpp/case.md) and its run. This source snapshot itself was only fetched and archived; no code is executed by reading this directory.
 
-Do not modify this source snapshot. Case-specific conversion instructions, frozen toolchain and any behavior oracle belong in a dedicated case file when a conversion run is opened; this directory only holds the frozen upstream snapshot.
+Do not modify this source snapshot. Case-specific instructions and evidence belong in the dedicated case; this directory holds the frozen upstream source and license.

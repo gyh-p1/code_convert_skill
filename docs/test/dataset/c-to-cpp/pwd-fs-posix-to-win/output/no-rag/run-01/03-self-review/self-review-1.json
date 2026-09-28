@@ -1,0 +1,38 @@
+{
+  "target_complete": true,
+  "coverage": {
+    "declarations": "单文件完整，无省略号/占位/Markdown 围栏；保留 BSD 许可与 `#if 0` 版权块。前向声明齐全：getcwd_logical、getcwd_physical、pwd_getopt、set_progname、usage、err_exit 均在 main 之前声明；但自定义 getopt 的全局状态变量 `pwd_optind`（及 `pwd_optpos`）只在文件后部定义，main 之前没有声明，见 issues[0]。",
+    "entry": "`int main(int argc, char *argv[])` 存在，流程为 set_progname(argv[0]) → 选项循环 → `argc -= pwd_optind; argv += pwd_optind;` → 操作数检查 → 逻辑/物理路径选择 → `printf(\"%s\\n\", p)` 或 `err_exit(1, \".\")` → `exit(0)`，与源入口结构一致。",
+    "branches": "`physical` 默认 1（源 `physical = 1`）；`-L`→0、`-P`→1、`'?'`/default→usage()；`argc != 0`→usage()；`(!physical && (p = getcwd_logical()) != NULL) || (p = getcwd_physical()) != NULL` 的短路求值顺序与源一致；失败 `err_exit(1, \".\")`；usage 打印到 stderr 后 exit(1)。逻辑分支的判定条件被改写（st_ino 守卫），见 issues[1]。",
+    "public_functions": "usage、err_exit、getcwd_logical、getcwd_physical、pwd_getopt、set_progname、main 均有完整定义；`__dead2` 改为 `[[noreturn]]`；`err`/`getcwd`/`getopt`/`__progname` 各自由 err_exit、_getcwd(含回退)、pwd_getopt、set_progname 承接。"
+  },
+  "issues": [
+    {
+      "location": "main 内 `argc -= pwd_optind;` / `argv += pwd_optind;`（约在选项 while 循环之后）与文件后部 `static int pwd_optind = 1;`（位于 getcwd_logical() 之后、pwd_getopt() 之前）",
+      "origin": "transform-introduced",
+      "category": "declaration-order",
+      "evidence": "main 在 `argc -= pwd_optind; argv += pwd_optind;` 处引用 `pwd_optind`，而该变量（连同 `static int pwd_optpos = 1;`）的声明/定义出现在 main 与 getcwd_logical() 之后；main 之前只有 `pwd_getopt` 的函数前向声明，没有 `pwd_optind` 的声明。源程序用的是 `<unistd.h>` 里的 `optind`（编译单元外声明），转换时替换为自定义静态变量但未把声明前置。",
+      "suggested_fix": "把 `static int pwd_optind = 1;` 与 `static int pwd_optpos = 1;` 两行整体上移到 main 之前的前向声明区（紧随 `static int pwd_getopt(...);` 之后，或紧随 `static const char *progname = \"pwd\";` 之后）；或保留原定义位置，但在 main 之前补 `static int pwd_optind;`（定义仍在原处，只初始化一次）。",
+      "risk": "C++ 中没有隐式函数/变量声明，main 内出现未声明的 `pwd_optind` 会直接导致编译失败（'pwd_optind' was not declared in this scope / 'pwd_optind' undeclared）；这是本转换引入的必然编译阻断点，与平台头无关。"
+    },
+    {
+      "location": "getcwd_logical() 中 `if (lg.st_ino != 0 && lg.st_dev == phy.st_dev && lg.st_ino == phy.st_ino)` 一行",
+      "origin": "transform-introduced",
+      "category": "platform-condition",
+      "evidence": "源为 `if (lg.st_dev == phy.st_dev && lg.st_ino == phy.st_ino) return (pwd);`；目标额外加入 `lg.st_ino != 0 &&` 守卫。文件头注释把该改写记载为 KNOWN PLATFORM DIFFERENCE：Windows 上 stat() 的 st_ino 恒为 0、st_dev 仅为卷号，故守卫使身份校验永不成立，`-L` 恒回落物理 `getcwd`。这改变了源程序在该平台上的可观察行为：源式判定在 st_ino 同为 0 时会“成功”并打印 $PWD，目标则不会。",
+      "suggested_fix": "两种可机械应用的选项之一：(a) 若必须严格对齐任务契约“逻辑校验成功打印 $PWD 否则退回物理 getcwd”的源语义，删除 `lg.st_ino != 0 &&` 守卫，恢复与源逐字一致的判定；(b) 若保留“Windows 上身份校验不可用则不打印未经校验的 $PWD”这一安全政策，则保持本行不动，并在交付说明/契约偏差记录中显式登记 `-L` 在 Windows 恒等价于 `-P`。仅当引入 `GetFileInformationByHandle()`（卷序列号+文件索引）替代时，才可同时满足两者。",
+      "risk": "当 $PWD 与物理路径字符串不同（例如 $PWD 带正斜杠、经符号链接、8.3 短名或大小写差异）时，`pwd -L` 输出与源程序在该平台上的输出不同；本行同时依赖 MinGW/UCRT64 的 `struct stat` 是否确有 `st_ino` 成员及其宽度（见 risks[0]）。"
+    }
+  ],
+  "risks": [
+    "toolchain-unknown：MinGW-w64/UCRT64 在 `g++ -std=c++17`（严格 ANSI）下，`<sys/stat.h>` 是否无条件暴露 POSIX 名 `stat()` 与 `struct stat`（以及其中的 `st_ino`/`st_dev` 字段）未在本机核实；若这些名被 `_POSIX_C_SOURCE`/`__STRICT_ANSI__` 门控，则 getcwd_logical() 的 stat 调用点需要改为 `_stat64` 并相应改结构体名（这是编译面风险，不能据此断言必然失败）。",
+    "toolchain-unknown：`_getcwd(NULL, 0)` 在 UCRT 上是否按“自动分配”语义工作未经本机验证；代码已带 malloc+ERANGE 增长回退，故最坏情形只是首次调用失败后走回退分支，但若某实现把 NULL 缓冲的失败 errno 设为非 ERANGE，回退循环第一次失败即 `errno != ERANGE` 返回，err_exit 报告的原因可能不同于源 `getcwd` 的 ENOMEM/EINVAL。",
+    "源/目标 stderr 差异（非契约项）：glibc getopt 对未知短选项会额外打印 `pwd: invalid option -- 'x'`，pwd_getopt 只返回 '?' 由 usage() 打印 usage 行；任务契约只要求 usage 行，但若比对完整 stderr 文本需注意。",
+    "源/目标参数排列差异（非契约项）：glibc getopt 会做 argv 重排，`pwd -L foo` 与 `pwd foo -L` 在源侧的处理路径不同；本实现不做重排，两者都以 usage() 结束，最终退出码与允许的操作数结果一致，但中间诊断顺序可能不同。",
+    "`getcwd_physical()` 成功返回的缓冲区来自 `_getcwd(NULL,0)`/`malloc`，main 打印后既不 free 也不影响退出；与源 `getcwd(NULL,0)` 同样“泄漏”，属源已有行为，不构成新缺陷，但若将来把该函数复用到长生命周期程序中需补释放约定。",
+    "`err_exit` 以非字面量 `fmt` 调 `vfprintf`，部分 GCC 配置下产生 -Wformat-nonliteral 警告（非错误）；本程序唯一调用点 `err_exit(1, \".\")` 无格式说明符，行为等价于 BSD `err`。",
+    "`usage`/`err_exit` 的 `[[noreturn]]` 只写在首次声明上（定义处无该属性）。按 C++ 规则属性由首声明决定，GCC/MinGW 视为一致；若换用对属性一致性要求更严的实现，可能出现诊断。"
+  ],
+  "verdict": "REPAIR-RECOMMENDED",
+  "notes": "目标为完整单文件，无截断或占位，入口与全部函数齐备；`__dead2`→`[[noreturn]]`、`err`→err_exit、`getopt/optind`→pwd_getopt/pwd_optind、`getcwd`→`_getcwd(<direct.h>)` 的替换方向与已选 POSIX↔Windows 知识一致。阻断性缺陷是可定位的声明顺序问题：main 在 pwd_optind 定义之前引用它，C++ 无隐式声明，须把两个静态计数器上移或补前置声明。第二项为平台语义偏差（st_ino==0 守卫使 `-L` 在 Windows 恒回落物理路径），已由目标注释显式记载，但相对源语义确实改变了可观察行为，需按契约取舍后登记。本审阅是静态自审，不含编译结果；所有结论待第三方在 Windows x64 MinGW/UCRT64 `g++ -std=c++17` 上编译确认（AWAITING-THIRD-PARTY-COMPILE / UNVERIFIED）。"
+}

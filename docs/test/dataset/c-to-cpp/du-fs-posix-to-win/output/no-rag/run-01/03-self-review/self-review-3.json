@@ -1,0 +1,52 @@
+{
+  "target_complete": true,
+  "coverage": {
+    "declarations": "目标文件完整，包含顶部已知差异注释、du_off_t/全局状态、warnx/errx/err/usage/expand_number/getbsize/prthumanval/fnmatch_impl/ignoreadd/ignorep/process_path 与 main。",
+    "entry": "main 位于文件末尾，手动解析源选项并调用 process_path 遍历。",
+    "branches": "选项分支、目录/文件分支、-a/-s/-c/-d/-t/-x/-L/-H/-I 及 --si 均已覆盖；部分模拟选项存在独立项指出的行为偏离。",
+    "public_functions": "源静态函数均已重写或内联；linkchk/siginfo 被移除并在文件头注释登记为已知差异。"
+  },
+  "prior_issues_resolution": [
+    {
+      "round2_issue": "fnmatch 字符类首字符 `]` 不作范围起始",
+      "status": "resolved",
+      "evidence": "fnmatch_impl 中已加入 `bool at_first = first;` 并在范围分支条件中使用 `!(at_first && *p == ']')`，首字符 `]` 不再进入范围分支。"
+    },
+    {
+      "round2_issue": "directory_iterator 在 follow 时传 follow_directory_symlink",
+      "status": "resolved",
+      "evidence": "process_path 中 `std::filesystem::directory_options opts = follow ? std::filesystem::directory_options::follow_directory_symlink : std::filesystem::directory_options::none;` 并传给 directory_iterator 构造函数。"
+    },
+    {
+      "round2_issue": "`--si` 接受唯一前缀",
+      "status": "resolved",
+      "evidence": "main 长选项解析中 `if (len > 0 && strncmp(longopt, \"si\", len) == 0)` 接受 `--s` 和 `--si`，拒绝其他长度前缀。"
+    }
+  ],
+  "issues": [
+    {
+      "location": "fnmatch_impl 字符类范围分支，约第 270 行附近：`else if (!(at_first && *p == ']') && p[1] == '-' && p[2] != '\\0' && p[2] != ']')`",
+      "origin": "transform-introduced",
+      "category": "behavior",
+      "evidence": "第 2 轮修复为避免首字符 `]` 被误作范围起始，加入了 `at_first && *p == ']'` 禁止条件。但 POSIX fnmatch 允许首字符 `]` 同时作为字面量和范围起始（例如模式 `[]-a]` 表示从 `]` 到 `a` 的范围）。当前实现使首字符 `]` 直接走字面量分支，指针后移，后续 `-` 因不再满足 `p[1] == '-'` 的条件而无法被识别为范围操作符，导致字符类只匹配 `]`、`-`、`a` 三个字面量，丢失范围语义。",
+      "suggested_fix": "撤销对首字符 `]` 的范围禁止，将范围分支条件恢复为 `p[1] == '-' && p[2] != '\\0' && p[2] != ']'`。原条件中的 `p[2] != ']'` 已排除闭合歧义，且 `if (*p == ']' && !first)` 在首字符时因 `first` 为 true 不会误闭合；范围匹配本身已覆盖 `]` 自身。",
+      "risk": "使用 `-I` 并指定形如 `[]-a]` 的掩码时，目标程序与源 du 的匹配集合不同，可能少匹配 `^`、`_`、`` ` `` 等字符。"
+    }
+  ],
+  "risks": [
+    "std::filesystem 在较老 GCC 的 MinGW/UCRT64 下仍可能需要额外链接 -lstdc++fs，当前构建命令未包含该库。",
+    "硬链接去重被移除，多个硬链接文件会被重复计数；已在文件头登记但无法在 Windows 上完全等价。",
+    "-x 仅比较盘符，不处理同一盘符上的挂载卷/reparse point；已在文件头登记。",
+    "目录循环检测缺失，符号链接/重解析点造成的循环可能导致递归未终止；源 FTS 有 FTS_DC 处理。",
+    "-n/UF_NODUMP 无效果；已在文件头登记。",
+    "directory_iterator 枚举顺序与 fts 不同，可能改变输出顺序。",
+    "humanize_number 的完整舍入/本地化行为未完全复现，极端数值或 SI 输出可能与 BSD 不同。",
+    "getbsize 对 BLOCKSIZE 小于 512 的值直接回退 512，源 getbsize 的边界处理可能不同。",
+    "expand_number 的负数溢出检查 value < LLONG_MIN / factor 在负值边界可能过度拒绝，源边界行为需第三方确认。",
+    "Windows 窄字符 API 与路径编码可能影响非 ANSI 路径，源 POSIX 路径语义无法机械等价。",
+    "std::error_code 需 <system_error>，<filesystem> 是否保证包含待第三方编译确认。",
+    "intmax_t 在全局命名空间的可用性依赖 MinGW 头链，未显式包含 <cinttypes>。"
+  ],
+  "verdict": "REPAIR-RECOMMENDED",
+  "notes": "第 2 轮 3 项 transform-introduced 均已按建议解决；第 1 轮已解决项经核对未回退（全文无裸 off_t，buf[32]，expand_number 溢出检查，err 保存 errno+progname，-B/-d 用 atoi，setlocale，getbsize/BLOCKSIZE，fnmatch 反斜杠结尾/`[]]`，directory_iterator 显式递增异常处理均保留）。但本版修复 fnmatch 首字符 `]` 时过度限制，导致 `[]-a]` 等范围语义丢失，属新引入 transform-introduced 行为缺陷，因此 verdict 为 REPAIR-RECOMMENDED。"
+}

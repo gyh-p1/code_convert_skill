@@ -1,0 +1,45 @@
+{
+  "target_complete": true,
+  "coverage": {
+    "declarations": "完整单文件，无省略号/占位/围栏/截断。头文件块（errno.h、limits.h、stdarg.h、stdio.h、stdlib.h、string.h、io.h）与 PATH_MAX 回退宏（#ifndef PATH_MAX → _MAX_PATH → 260）齐全；progname、set_progname、warn、realpath、usage（前置 [[noreturn]] 声明 + 定义）、main 均有声明且有定义，无悬空声明。",
+    "entry": "int main(int argc, char *argv[]) 存在（约 L145-L193），出口保留：正常路径 exit(rval)，usage() 内 exit(1)。",
+    "branches": "与源一一对应：-q 置位；捆绑短选项（-qq）；-- 终止选项处理；单独 - 视为操作数；未知选项走 default → usage() → exit(1)；无操作数时 path 取 \".\"；do/while 遍历全部操作数；失败分支 warn + rval=1；成功分支打印规范化路径；最终 exit(rval)。",
+    "public_functions": "除 main 外全部为 static（含新增 shim：set_progname、warn、realpath），usage 保持 void(void) 签名；无对外 ABI 变化，无新增能力（无网络/写入/进程执行）。"
+  },
+  "issues": [
+    {
+      "location": "L132-L141（static char * realpath(const char *path, char *resolved) 定义）与 L185 调用 p = realpath(path, buf)",
+      "origin": "transform-introduced",
+      "category": "api",
+      "evidence": "转换在全局命名空间引入了一个与 POSIX/CRT 同名、语义上应具外部链接的名字 realpath（此处以 static 定义）。若目标 SDK（mingw-w64/UCRT64 的 stdlib.h/io.h 包含链）已声明外部链接的 realpath，则该 static 定义会触发 GCC 诊断 static declaration of 'realpath' follows non-static declaration（硬错误）；当前无法在本机读取目标头文件，故声明是否存在为工具链侧不确定。",
+      "suggested_fix": "把该 shim 与调用点改名为 x_realpath：定义为 static char * x_realpath(const char *path, char *resolved)，并把 p = realpath(path, buf) 改为 p = x_realpath(path, buf)；其余代码不变。",
+      "risk": "不改名时：若头链确有 realpath 声明则编译失败；改名是零语义风险的消歧，可同时避免与 POSIX 同名符号在重载/链接层面的歧义。"
+    },
+    {
+      "location": "L159-L179（while (argi < argc && argv[argi] != NULL && argv[argi][0] == '-' && argv[argi][1] != 0) 选项解析块）",
+      "origin": "transform-introduced",
+      "category": "api",
+      "evidence": "用自写循环替换 getopt(3) 丢了两项可观察语义：(1) 源侧基线用 glibc getopt，默认对 argv 做参数置换，故 realpath <path> -q 与 realpath -q <path> 等价；目标侧 argi 顺序扫描，遇到首个非选项即停止，realpath <path> -q 会把 -q 当操作数，于是要么 -q 不生效、要么对 -q 追加一次 warn，并把退出码变为 1。(2) 对未知选项，glibc getopt 会先自行向 stderr 输出一行无效选项诊断（形如 progname: invalid option -- 'x'），源代码随后才调用 usage()；目标侧 default: 分支直接调用 usage()，少了这一行 stderr 输出。",
+      "suggested_fix": "(1) 若要恢复置换等价：去掉 argv[argi][0] == '-' && argv[argi][1] != 0 造成的提前终止，先遍历全部 argv 抽出选项并记录非选项操作数，再按原顺序处理操作数（等价做法是把非选项前移后重排 argc/argv）。(2) 在 default: 分支 usage() 之前补一句 fprintf(stderr, ...) 按 glibc 消息格式（progname、冒号、无效选项提示、选项字符）输出该行。若明确接受这两处偏差，则保持代码不动，但必须在交付说明中记为已知行为差异。",
+      "risk": "(1) 对 realpath <path> -q 这类输入，源/目标的标准输出与退出码不同，超出契约要求的语义等价；(2) 仅 stderr 文本差异，风险低。"
+    },
+    {
+      "location": "L132-L141 realpath shim（_fullpath + _access）与 L71-L77 的 #ifndef PATH_MAX / _MAX_PATH 回退块",
+      "origin": "transform-introduced",
+      "category": "platform-condition",
+      "evidence": "POSIX realpath 要求路径解析成功并解析符号链接；目标实现用 _fullpath 只做绝对化/词法规范化（不解析 symlink/reparse point），存在性由 _access(resolved, 0) 补足。后果：(a) 对符号链接/junction 输入，源侧打印链接目标，目标侧打印链接自身路径；(b) 输出分隔符由正斜杠变为反斜杠；(c) 缓冲区上限由 Linux PATH_MAX(4096) 退化到 _MAX_PATH(260)，长度超过 260 的合法路径在目标侧 _fullpath 失败（errno 与输出均与源不同）。",
+      "suggested_fix": "CRT 内无等价 API，本次保持现状（不引入 CreateFileW + GetFinalPathNameByHandleW，那超出“最小改动”授权，须先批准）；至少在交付说明中把“不解析符号链接/junction、分隔符差异、260 长度上限”列为已知语义差异。",
+      "risk": "仅当输入含符号链接/junction 或长度超过 260 时与源行为不等价；普通文件/目录与短路径场景下契约列出的可观察行为一致。"
+    }
+  ],
+  "risks": [
+    "目标用 -std=c++17（隐含 __STRICT_ANSI__），mingw-w64/UCRT64 头是否仍无条件声明 _fullpath（stdlib.h）与 _access（io.h）、_access 是否带 deprecated 属性，需第三方编译器确认（本机无法定位头文件）。",
+    "PATH_MAX 是否可能被目标头链（limits.h/stdlib.h）以非 260 的值预定义，从而改变 char buf[PATH_MAX] 尺寸与 _fullpath 的尺寸参数，需确认。",
+    "[[noreturn]] 只出现在前置声明（约 L143），定义处（约 L195）未重复；C++ 标准只要求首次声明带该属性，GCC 通常接受，但个别实现/警告设置下是否报诊断需确认。",
+    "warn shim 的 strerror 文本来自 UCRT（受语言/本地化影响），与 glibc 的英文文本可能不同，属平台必然差异，未做固定文本处理。",
+    "mingw-w64 实际在 libmingwex 提供 getopt/optind（需 getopt.h），即改用系统 getopt 也比源侧 glibc 的置换/诊断细节不同；是否进一步对齐取决于对 stderr 文本与置换语义的要求。",
+    "set_progname 依 argv[0] 取 basename，与 glibc program_invocation_short_name 在 argv[0] 为空、以分隔符结尾等边界情形可能有差异；属可观察诊断前缀，未做逐案验证。"
+  ],
+  "verdict": "REPAIR-RECOMMENDED",
+  "notes": "本次仅为静态自审，不构成编译通过或行为等价结论；第三方编译证据缺失，状态为 AWAITING-THIRD-PARTY-COMPILE / UNVERIFIED。判定 REPAIR-RECOMMENDED 的依据是两条可定位的 transform-introduced 缺陷：(1) 自定义全局函数 realpath 与可能存在的 SDK 声明冲突（可机械改名为 x_realpath）；(2) getopt 替换丢失参数置换与未知选项诊断（有具体输入下的输出/退出码偏差）。此外 realpath→_fullpath+_access 的符号链接/长路径语义差异在本工具链内不可机械修复，只能记录为已知差异。源侧已有的写法（argv[argc] 为 NULL 后的 argv++、do/while 结构）按原样保留，未作改写。"
+}

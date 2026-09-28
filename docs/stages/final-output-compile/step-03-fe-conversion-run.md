@@ -11,7 +11,7 @@
 ## 纳入范围
 
 - **FROZEN**：登记源快照哈希、源 OS/ABI 假设、目标编译器/SDK/标准、所选 Skill 内容快照（含 step-01 的 header-macro 规则）、提示主体、`.env` 非敏感模型标识与参数、RAG=off、目标文件命名、隔离/授权范围。
-- **已确认目标方向**：fe 无平台分支，为隔离“C→C++ 语言对”本身的编译信号，取**同一目标 OS**（不做跨 OS 迁移），源按 **C11** → 目标按 **C++17**。为统一走双侧执行且源默认翻译单元无 `main`，**采用形态 B：定义 `FE_STANDALONE` 补入 REPL `main`**，两侧链接为可运行程序。具体 OS/标准/编译器已在 [case.md](../../test/cases/fe-lisp-c-to-cpp/case.md) 与 [frozen-inputs.md](../../test/cases/fe-lisp-c-to-cpp/output/no-rag/run-01/01-frozen/frozen-inputs.md) 冻结。
+- **已确认目标方向**：fe 无平台分支，为隔离“C→C++ 语言对”本身的编译信号，取**同一目标 OS**（不做跨 OS 迁移），源按 **C11** → 目标按 **C++17**。为统一走双侧执行且源默认翻译单元无 `main`，**采用形态 B：定义 `FE_STANDALONE` 补入 REPL `main`**，两侧链接为可运行程序。具体 OS/标准/编译器已在 [case.md](../../test/dataset/c-to-cpp/fe-lisp-c-to-cpp/case.md) 与 [frozen-inputs.md](../../test/dataset/c-to-cpp/fe-lisp-c-to-cpp/output/no-rag/run-01/01-frozen/frozen-inputs.md) 冻结。
 - **GENERATED → SELF_REVIEWED → SELF_REPAIRED（≤2）**：用 `.env` 配置模型把 `fe.c` 转为单个 `.cpp`；模型自评/repair 预判只作提交门槛，**不是语法结论**，不贴 `syntaxPassed`。保存各稿与差异。
 - **编译证据获取路径（统一双侧执行）**：交获批隔离 VM 的 comparison capsule，用 `-DFE_STANDALONE` 构建并运行源侧（C11 基线）与目标侧（C++17）；本阶段只读取其 **build 证据**，execution/comparison 结果不计入功能率、不设行为 oracle。capsule 内以固定无害输入启动（无参数 stdin 立即 EOF 或 case 私有无害脚本），结束即销毁。
 - **EVALUATED**：按[三方结果分流](../../../references/workflow/conversion-evaluation-loop.md)（基础设施 / 工具链不匹配 / 源端 build 失败 / 目标 build 失败 / build 成功但运行 / 全匹配）读结论，优先读 build 证据；每个结论附到准确版本与工具链。
@@ -22,7 +22,7 @@
 
 - 不在本机编译、运行、调用构建脚本或触发代码生成。
 - 不评功能正确率、不设/不比对行为 oracle；不把 build 通过说成功能或安全正确。
-- fe 不占四例跨 OS × 场景试点格子；不把本 run 结果倒填为 C01 或任何正式基线。
+- fe 是独立编译质量 run；不把本 run 结果倒填为 C01 或任何正式基线。旧四例专项随后[取消](../four-case-cancellation.md)。
 - 不为凑“通过”把修订稿成功回写成原始生成稿成功。
 
 ## 依赖与前置
@@ -33,8 +33,8 @@
 
 ## 预计改动文件
 
-- 新建 case 目录 `docs/test/cases/fe-lisp-c-to-cpp/`：`case.md`（冻结条件与目标声明）+ `output/no-rag/run-01/`（各稿、诊断、`result.md`）+ 按 §2.2 的子目录。
-- `docs/test/four-case-matrix.md`：把 fe 关联到该 case（登记，不改其“非四例格子”定性）。
+- case 原建于 `docs/test/cases/fe-lisp-c-to-cpp/`，现按 step-05 归档到 `docs/test/dataset/c-to-cpp/fe-lisp-c-to-cpp/`：`case.md`（冻结条件与目标声明）+ `output/no-rag/run-01/`（各稿、诊断、`result.md`）+ 按 §2.2 的子目录。原始 capsule 中的旧路径属历史快照。
+- 当时的四例矩阵曾登记 fe 与 C01 是不同独立源；该矩阵后随专项取消而移除，实际结果仍见[fe case](../../test/dataset/c-to-cpp/fe-lisp-c-to-cpp/case.md)。
 - `docs/stages/final-output-compile/index.md`：更新进度。
 
 ## 验收依据（人工检查）

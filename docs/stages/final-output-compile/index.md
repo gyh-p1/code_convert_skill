@@ -1,32 +1,37 @@
 # 阶段执行：最终交付编译质量与 Skill 拓展
 
-> 状态：ACTIVE（本阶段执行步骤与进展的唯一真源）
+> 状态：ACTIVE（本阶段执行进度唯一真源）
 > 更新：2026-09-28
-> 关系：阶段 WHAT / 为什么见 [阶段方案](阶段方案.md)；本目录只承载“每一步怎么做、做到哪了”。步骤规则见 [项目开发规范 §6](../../项目开发规范.md)。
+> 关系：阶段目标见[阶段方案](阶段方案.md)；步骤约束见[项目开发规范 §6](../../项目开发规范.md)。
 
-## 已确认前提（2026-09-27 讨论决定）
+## 已确认前提
 
-1. **编译证据用 comparison capsule 双侧 build**：同时构建源侧与目标侧，源侧 build 作基线，用于归因“源本身就编不过”与“转换引入的编译失败”。本阶段只把 **build 证据**计入指标；execution/comparison 的行为结果不计入功能率（功能 oracle 仍暂缓）。跑双侧属运行代码，按**本项目既定的双侧执行授权**在隔离 VM（已确认有 VM + 可回滚快照）进行，不再逐例询问执行形态；源无可运行入口时默认补写最小入口/驱动。**远端 Controller/隔离 VM 恒就绪且已授权**，到评估步骤直接提交、不逐次确认可达性也不询问是否评估（2026-09-28 确认）。
-2. **计分样源放宽**：物理行放宽到 ~900、许可清晰、必须是真正的 C 源（C→C++ 方向）。允许攻击性行为（VM + 快照兜住运行安全），但网络固定 loopback/实验网，不打真实外部目标、不用真实凭证——快照回滚不了已外发的包。
-3. **uhttpd 不作首例判据**：1,317 行仍超 ~900 且源自带 Windows 分支（目标分支泄漏），只当超限探索例，不作干净的编译判据首例；仍需一份新的独立 C 源。
+1. 当前只统计**最终交付目标代码**在声明工具链下的 build 证据。双侧 comparison capsule 在已授权隔离 VM 运行；源 build 用于归因，行为 comparison 目前不计功能率。本机不编译或运行样本。
+2. 实样须有来源、许可、冻结的源/目标语言与 OS、工具链、隔离边界。允许真实攻防行为作为候选，但真实目标、真实凭证和未受控外联不进入试验。
+3. 700 个物理源代码行仍是计划上限，fe 879 行和 uhttpd 1,317 行都是超限探索，不能据其编译结果宣称计划上限已验收。
 
 ## 步骤清单
 
-| 步骤 | 方向 | 状态 | 依赖 | 当前证据 / 下一步 |
-|---|---|---|---|---|
-| [step-01 头文件/宏可用性规则](step-01-header-macro-rule.md) | c-to-cpp Skill 增补 | 已完成 | 无（用 C01 已有证据） | 已新增 `skills/directions/c-to-cpp/references/header-macro.md` 并在 SKILL「按需专题」加入口；依据分层标注 C01 单例 + 语言标准 |
-| [step-02 选定并冻结第二份独立 C 源](step-02-source-freeze.md) | 样例 / 冻结 | 已完成 | 与 step-01 无强依赖 | 用户选定 rxi/fe（`src/fe.c`，879 行，MIT，零平台分支），已冻结于 `docs/test/sources/fe/`（source.md + LICENSE + UPSTREAM-README + fe.c/fe.h），四例矩阵已登记 |
-| [step-03 为 fe 开 C→C++ 转换 run，取双侧 build 证据](step-03-fe-conversion-run.md) | 转换 run 执行 | 已完成（`EVALUATED`，编译 `THIRD-PARTY-COMPILE-PASSED`） | step-01、step-02 | `GENERATED`（`.env`=`deepseek-flash` 一次生成，`finish=stop`；与源 diff 仅 6 处 `void*` 显式转换）→ `SELF_REVIEWED`（`NO-REPAIR-IDENTIFIED`，无自修）→ 双侧 comparison capsule 于 2026-09-28 提交 Controller（jobId `eval-20260928-033750-71724720`，`COMPLETED`）。真实回传：目标 build `exitCode=0`（durationMs=1794，stderr 空），源侧对照基线 build `exitCode=0`；语法 verdict **PASS**。证据 `04-evaluation/job-01-dual-build/returned-evidence/` |
+| 步骤 | 状态 | 证据与结果 |
+|---|---|---|
+| [step-01 头文件/宏可用性规则](step-01-header-macro-rule.md) | 已完成 | C→C++ header-macro 专题已落盘，C01 单例和语言依据分层 |
+| [step-02 选定并冻结第二份独立 C 源](step-02-source-freeze.md) | 已完成 | rxi/fe 879 行源快照及来源/许可已冻结 |
+| [step-03 fe C→C++ run](step-03-fe-conversion-run.md) | 已完成 | 最终目标 Windows C++17 build PASS，源基线 PASS；功能未计分 |
+| [step-04 POSIX→Windows 文件系统批次](step-04-multisystem-filesystem-batch.md) | 已完成 | stest、realpath、pwd 最终目标 build PASS；du 源基线缺 `libutil.h`，目标跳过、INCONCLUSIVE。该**文件系统批次**的四个 run 均已记录终态，功能未计分；与已取消的 C01–C04 固定四例专项不同 |
+| [step-05 数据集归档与真实攻防样例筛选](step-05-dataset-and-realistic-cases.md) | 已完成 | 七个有 run 的 case 已移入 `docs/test/dataset/`；方向索引、旧候选索引和[功能判据草案](functional-detection-criteria.md)已建立。445 个本地 Markdown 链接扫描与 16 份活动 JSON 解析完成，原始证据未执行或改写；范围与限制见步骤记录 |
+| [step-06 取消固定四例并整理资料](step-06-cancel-four-case-cleanup.md) | 已完成 | 用户已取消 C01–C04 固定四例无 RAG/RAG 专项；[取消记录](../four-case-cancellation.md)已建立。C02–C04 仅规格目录及旧专项阶段文档/矩阵已移除，长文件 fixture 移至 `docs/test/candidates/`，七份共享源的[用途索引](../../test/sources/README.md)已建立；463 个本地链接扫描无新增缺链，C01 历史证据保留 |
 
-候选后续步骤（未建文件，进入执行时再创建）：
+后续候选：按 step-04 的可归因事实审阅现有 filesystem 与 C→C++ Skill 改动；为可追溯真实攻防样例冻结行为义务与隔离条件。Controller same-runner 基础设施缺陷留在旧仓库单独修复，先完成实际选入场景的功能判据审阅，不在本阶段建设本地运行时。
 
-- step-04：按失败类别更新 Skill，再逐次拓展语言/场景/系统维度。
+## 当前证据边界
 
-## 当前状态
+- **目标编译已证**：fe、stest、realpath、pwd，分别只适用于其记录的最终文件和工具链。C01 run-02 修订稿仅在 MinGW 探查工具链编译通过，非正式 No-RAG 基线。
+- **目标编译未知**：du 源基线在 Linux VM 首先失败于缺失 `libutil.h`，Controller 跳过目标；RC4 C→Go 同 OS 两次遇到 `baselineReference.artifactHash` 交接错误，目标从未构建。两者都不是目标代码编译失败。
+- **功能未知**：本阶段不计功能率。C01 的五个固定 loopback 请求匹配仅限该探索稿与已观测输出；其他 case 的 liveness matched/mismatched 不证明场景功能。
+- **样例代表性缺口**：当前编译 PASS 案例偏保守；不能外推到命令控制、外传、持久化、凭证访问等真实攻防流程。旧测试用例先作为候选池，逐文件核来源/许可与可观察性。
 
-- **当前执行项**：step-03 **已完成**（`EVALUATED`，编译 `THIRD-PARTY-COMPILE-PASSED`）。形态 = **B（`FE_STANDALONE` 可运行）**；`GENERATED` → `SELF_REVIEWED`(`NO-REPAIR-IDENTIFIED`) → `EVALUATION_READY` → `EVALUATED` 已完成，`SELF_REPAIRED` 与 `REPAIR_AFTER_EVAL` 均未触发（无编译失败）。
-- **已完成 / 剩余**：step-01、step-02、step-03 已完成；本阶段已取得首份最终交付版本的真实第三方编译通过证据。剩余为候选拓展 step-04。
-- **本会话已做（2026-09-28）**：按既定政策由本会话按 `.env` 发起出站调用——`generate.py` 生成 `02-conversion/target.gen.cpp`（`finish=stop`，与源 diff 仅 6 处 C++ 必需 `void*` 显式转换），`self_review.py` 取一次结构化自审（`03-self-review/self-review-1.json`，`NO-REPAIR-IDENTIFIED`）；随后经直连 Controller HTTP（`http://192.168.101.250:8443`，`POST /api/jobs` multipart，本机 `192.168.101.105` 同网段直达 8443）提交双侧 comparison capsule，jobId `eval-20260928-033750-71724720`，`COMPLETED`，真实证据落 `04-evaluation/job-01-dual-build/returned-evidence/`。run 根 `target.cpp`/`result.md`/`README.md`/`evaluator_manifest.json` 已据真实证据回填。密钥未写入任何文件。Controller 连接与提交适配已保存于 [references/adapter/controller/remote-controller-adapter.md](../../../references/adapter/controller/remote-controller-adapter.md)。
-- **真实回传结论**：目标 `g++ -std=c++17 -DFE_STANDALONE target.cpp` build `status=completed, exitCode=0, durationMs=1794`、stderr 空 → 语法 **PASS**；源侧 C11 对照基线 build `exitCode=0`。Controller comparison 另返回 `codeVerdict=passed`、`behaviorVerdict=matched`、覆盖率 1/1，仅作信息记录，本阶段不计入功能率。
-- **下一动作**：本例编译门槛达成。候选 step-04：按失败类别更新 Skill、逐次拓展语言/场景/系统维度（本例无失败可归因，暂无新增 Skill 规则触发）。
-- **中断恢复位置**：读本 `index.md` → step-03 `EVALUATED` 已完成 → 如需复核证据读 `04-evaluation/job-01-dual-build/returned-evidence/evaluation_report.json`。
+## 下一动作与中断恢复
+
+**当前执行项**：无（step-06 已完成，下一步骤待按真实攻防样例与 Skill 证据缺口立案）。
+
+step-06 已收口。下一动作是从[旧候选索引](../../test/dataset/legacy-candidates.md)逐文件核实一份真实攻防源码的上游身份、许可、改写差异与隔离观察面，另写新步骤方案和功能义务；并审阅 filesystem/C→C++ Skill 修改的证据等级。Controller same-runner 修复另在旧仓库规划。恢复时读本 index → [step-06 记录](step-06-cancel-four-case-cleanup.md) → [数据集入口](../../test/dataset/README.md)。

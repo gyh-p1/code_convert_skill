@@ -1,0 +1,23 @@
+{
+  "argv": [],
+  "comparisonPolicy": {
+    "output": {
+      "ignoredJsonPaths": [],
+      "stderrMode": "normalized-text",
+      "stdoutMode": "json-structural"
+    }
+  },
+  "environment": {},
+  "fixtures": [],
+  "kind": "codeconvert-input-profile",
+  "observationPolicy": {
+    "dimensions": [
+      "output"
+    ]
+  },
+  "profileId": "realpath-fs-posix-to-win-run-01",
+  "schemaVersion": "1.0",
+  "stdin": null,
+  "timeoutSeconds": 30,
+  "workingDirectory": "workspace"
+}

@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "kind": "third-party-evaluator-manifest",
+  "generatedBy": "code_convert-temporary-controller-adapter (hand-authored, configured-model run)",
+  "languagePair": {
+    "sourceLang": "c",
+    "targetLang": "cpp"
+  },
+  "taskMetadata": {
+    "sourceLanguage": "c",
+    "targetLanguage": "cpp",
+    "attackTactic": "none",
+    "sceneTags": [
+      "filesystem-read-only",
+      "posix-to-windows"
+    ],
+    "sourceOs": "linux",
+    "targetOs": "windows",
+    "sourceArch": "x64",
+    "targetArch": "x64",
+    "riskLevel": "low",
+    "evidenceMode": "static-and-runtime",
+    "supportLevel": "experimental"
+  },
+  "targetDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01",
+  "files": [
+    {
+      "relativePath": "stest.c",
+      "sourcePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\dmenu-stest\\stest.c",
+      "translatedCodePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\target.cpp",
+      "evaluationNotesPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\result.md",
+      "replayArtifactPath": null,
+      "success": true,
+      "artifacts": {
+        "hasSource": true,
+        "hasTranslatedCode": true,
+        "hasEvaluationNotes": true,
+        "hasReplayArtifact": false
+      }
+    }
+  ],
+  "x_adapter": {
+    "note": "run-01 无 RAG 探索：目标由 .env 配置模型一次生成并经一次结构化自审（NO-REPAIR-IDENTIFIED，无自修轮）。跨 OS 双侧 comparison capsule 已于 2026-09-28 经直连 Controller HTTP（http://192.168.101.250:8443，POST /api/jobs multipart，本机 192.168.101.105 与 Controller 同网段可直达 8443）提交并执行完毕，jobId=eval-20260928-053745-2a386af5，jobStatus=COMPLETED。真实回传证据落于 04-evaluation/job-02-dual-build/returned-evidence/。源侧 C11（Linux）build exitCode=0（durationMs=274，stderr 空），目标侧 C++17（Windows MinGW/UCRT64）build exitCode=0（durationMs=3059，stderr 空）；本阶段只据目标 build 证据判编译=PASS。Controller 另返回 behaviorVerdict=matched（output 维度），仅作信息记录，本阶段不评功能、不设 oracle。job-01（eval-20260928-053326-9a8ae00e）因源侧基线命令缺 POSIX 特性测试宏而 FAILED、未构建目标侧，其真实失败证据保留于 04-evaluation/job-01-dual-build/returned-evidence/，不倒填。",
+    "status": "evaluated-build-passed",
+    "jobId": "eval-20260928-053745-2a386af5",
+    "supersededJobId": "eval-20260928-053326-9a8ae00e",
+    "executionApproved": true,
+    "explorationOnly": true,
+    "crossOsDualBuild": true,
+    "firstConsumerOf": "skills/systems/posix-windows-filesystem",
+    "producedBy": {
+      "conversion": "configured external model via .env (deepseek-flash), orchestrated by the Agent per conversion-evaluation-loop.md",
+      "compileAndRun": "executed by the authorized isolated VM Controller (jobId eval-20260928-053745-2a386af5, COMPLETED); source C11 build+run on linux-vm-agent-x64, target C++17 build+run on windows-vm-agent-x64",
+      "thisRepo": "static source analysis, target text, structured self-review orchestration, temporary handoff manifest"
+    },
+    "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\01-frozen\\frozen-inputs.md",
+    "modelMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\02-conversion\\target.gen.model.json",
+    "selectedSkills": [
+      "c-to-cpp",
+      "c-to-cpp/header-macro",
+      "c-to-cpp/type-abi",
+      "systems/posix-windows-filesystem"
+    ],
+    "attackClassification": {
+      "status": "reviewed-no-supported-mapping",
+      "tactics": [],
+      "techniques": [],
+      "rationale": "stest 是 dmenu 的 stat 测试工具；只读文件系统遍历（stat/lstat/access/opendir/readdir/getline/S_IS*），无网络、无文件写、无进程/命令执行。无对抗性 ATT&CK 行为。"
+    },
+    "modelSelfReviewStatus": "NO-REPAIR-IDENTIFIED",
+    "modelSelfReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\03-self-review\\self-review-1.json",
+    "repairRecommended": false,
+    "selfRepairRounds": 0,
+    "thirdPartyCompileStatus": "THIRD-PARTY-COMPILE-PASSED",
+    "syntaxVerdict": "PASS",
+    "behaviorVerdict": "matched (informational; 编译质量阶段不评功能、不设 oracle)",
+    "evaluationCapsuleDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\04-evaluation\\job-02-dual-build",
+    "returnedEvidenceDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\04-evaluation\\job-02-dual-build\\returned-evidence",
+    "supersededCapsuleDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\stest-fs-posix-to-win\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build",
+    "buildEvidence": {
+      "source": { "status": "completed", "exitCode": 0, "durationMs": 274, "stderrEmpty": true, "toolchain": "cc -std=c11 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE stest.c -o program", "runner": "linux-vm-agent-x64 (VM linux-eval, snapshot CC-Eval-Linux-8Lang-R7)" },
+      "target": { "status": "completed", "exitCode": 0, "durationMs": 3059, "stderrEmpty": true, "toolchain": "g++ -std=c++17 target.cpp -o program", "runner": "windows-vm-agent-x64 (VM windows-eval, snapshot CC-Eval-Windows-8Lang-R7)" },
+      "note": "语法结论 PASS 仅据目标侧 build 证据（exitCode=0、stderr 空）。source build 为跨 OS 对照基线。自审预警的 ssize_t/dirent 可见性未在目标侧触发。"
+    },
+    "thirdPartyEvaluatorHandoffReady": true,
+    "thirdPartyEvaluatorHandoffNote": "跨 OS 双侧 comparison capsule 已于 2026-09-28 提交 Controller（jobId=eval-20260928-053745-2a386af5）并 COMPLETED，真实证据回传于 returned-evidence/。syntaxVerdict=PASS 仅从目标 build 证据回填。behaviorVerdict=matched 为 Controller comparison 信息记录，本阶段不计入功能率、不设行为 oracle。先前 job-01 因源基线命令缺 POSIX 特性测试宏 FAILED、dual-runner 未构建目标侧，已修正源命令后以 job-02 重取，job-01 失败证据不删除、不倒填。",
+    "compileCommands": {
+      "sourceBaseline": "cc -std=c11 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE stest.c -o program",
+      "target": "g++ -std=c++17 target.cpp -o program",
+      "note": "arg.h 与 stest.c/target.cpp 同目录；保持 #include \"arg.h\" 不并入。"
+    },
+    "companionHeader": {
+      "relativePath": "arg.h",
+      "sourcePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\dmenu-stest\\arg.h",
+      "note": "编译必需，C++ 下可直接编译，须与目标文件同目录提交，不并入 target.cpp。"
+    },
+    "plannedToolchain": "源侧 Linux x64 cc C11；目标侧 Windows x64 MinGW/UCRT64 g++ C++17（本次实测由 Controller 双 runner 执行）",
+    "prerequisites": [
+      "远端 Controller/隔离 VM 恒就绪且已授权；本 run 已于评估步骤直接提交并执行完毕，executionApproved=true。",
+      "跨 OS 双侧：Controller 须同时匹配到 READY 的 Linux runner 与 Windows runner；若 Linux runner 未就绪返回 INFRA_ERROR，如实记录、恢复后重提。",
+      "capsule 按 04-evaluation/job-02-dual-build/README 组装：source/ 放 stest.c+arg.h+run_case.py，target/ 放 target.cpp+arg.h+run_case.py。",
+      "本阶段只读 build 证据；execution/comparison 结果不计入功能率，不设行为 oracle。"
+    ],
+    "isolationLaunchArgs": [
+      "<无参数：stdin 立即 EOF，getline 立即 EOF → match=0 → 返回 1，正常退出>"
+    ],
+    "runBoundary": "无联网、无外部命令、不读敏感文件、只读遍历工作目录；结束即销毁临时件。",
+    "sourceSha256": "sha256:bb943c3e2c228398c592e873bb31abf18efba5c0f06c3bc39220443a7c7696bd",
+    "companionHeaderSha256": "sha256:99ca0b684fa83f2d21899345ccc33ec357cbbe48d09c56794e3292c2e28f21b0",
+    "translatedTargetSha256": "sha256:40a86f68bab9aa34e4608969e2a436aea4b922187b4b32e331446c6bd3f63ca3",
+    "targetEqualsGenerated": "run 根 target.cpp 与 02-conversion/target.gen.cpp 同一 sha256；无自修轮。"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "4b6579",
+    "bbf316e8d940af0ad3"
+  ],
+  "comparisonPolicy": {
+    "output": {
+      "ignoredJsonPaths": [],
+      "stderrMode": "normalized-text",
+      "stdoutMode": "json-structural"
+    }
+  },
+  "environment": {},
+  "fixtures": [],
+  "kind": "codeconvert-input-profile",
+  "observationPolicy": {
+    "dimensions": [
+      "output"
+    ]
+  },
+  "profileId": "rc4-c-to-go-run-01",
+  "schemaVersion": "1.0",
+  "stdin": null,
+  "timeoutSeconds": 30,
+  "workingDirectory": "workspace"
+}

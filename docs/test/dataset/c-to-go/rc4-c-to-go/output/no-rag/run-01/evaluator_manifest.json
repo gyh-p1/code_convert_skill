@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "third-party-evaluator-manifest",
+  "generatedBy": "code_convert-temporary-controller-adapter (hand-authored, configured-model run)",
+  "languagePair": {
+    "sourceLang": "c",
+    "targetLang": "go"
+  },
+  "taskMetadata": {
+    "sourceLanguage": "c",
+    "targetLanguage": "go",
+    "attackTactic": "none",
+    "sceneTags": [
+      "crypto",
+      "rc4-decrypt",
+      "read-only"
+    ],
+    "sourceOs": "windows",
+    "targetOs": "windows",
+    "sourceArch": "x64",
+    "targetArch": "x64",
+    "riskLevel": "low",
+    "evidenceMode": "static-and-runtime",
+    "supportLevel": "experimental"
+  },
+  "targetDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01",
+  "files": [
+    {
+      "relativePath": "target.go",
+      "sourcePaths": [
+        "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\wjcryptlib-rc4\\WjCryptLib_Rc4.c",
+        "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\wjcryptlib-rc4\\WjCryptLib_Rc4.h",
+        "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\sources\\wjcryptlib-rc4\\rc4_decrypt_cli.c"
+      ],
+      "translatedCodePath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01\\target.go",
+      "evaluationNotesPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01\\result.md",
+      "success": true,
+      "artifacts": {
+        "hasSource": true,
+        "hasTranslatedCode": true,
+        "hasEvaluationNotes": true,
+        "hasReplayArtifact": false
+      }
+    }
+  ],
+  "x_adapter": {
+    "note": "run-01 无 RAG 探索：目标由 .env 配置模型（deepseek-flash）一次生成并经一次结构化自审（NO-REPAIR-IDENTIFIED，无自修轮）。双侧 same-OS comparison capsule 于 2026-09-28 经直连 Controller HTTP（http://192.168.101.250:8443，POST /api/jobs multipart）提交两次，两次均终态 INFRA_ERROR：Controller 自动裁定 executionStrategy=same-runner（source/target 均 windows/x64，矩阵内仅一台 Windows runner windows-vm-agent-x64），在源侧（baseline）运行后向同一 runner 交接目标运行时，agent /run 以 INVALID_PACKAGE 拒绝（failure.type=AGENT_UNAVAILABLE，failure.category=environment，retryable=false）。目标侧从未构建（execution.performed=false，preflight/cleanup=SKIPPED），源侧虽 execution.performed=true 但 evidenceBundleRef=null 且 evidence 端点 404——两侧均无可回填的 build 证据。此为项目首个 same-OS/same-runner 提交（fe/du 均为跨 OS/different-runner，已 COMPLETED）；失败发生在同机 baseline 交接路径，不归因于 capsule 内容或 C→Go 转换本身。按恒就绪政策已用相同输入重试一次，确定性复现，不改用本机编译、不伪造任何 build 结论。",
+    "status": "blocked-infra-error",
+    "jobIds": [
+      "eval-20260928-092052-390487e9",
+      "eval-20260928-092721-a2e2311f"
+    ],
+    "executionApproved": true,
+    "explorationOnly": true,
+    "producedBy": {
+      "conversion": "configured external model via .env (deepseek-flash), orchestrated by the Agent per conversion-evaluation-loop.md",
+      "compileAndRun": "attempted on the authorized isolated Windows VM Controller; both submissions terminal INFRA_ERROR on the same-runner baseline-handoff path; NO build evidence produced for either side",
+      "thisRepo": "static source analysis, target text, structured self-review orchestration, temporary handoff manifest"
+    },
+    "inputContractPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01\\01-frozen\\frozen-inputs.md",
+    "modelMetadataPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01\\02-conversion\\target.gen.model.json",
+    "selectedSkills": [],
+    "selectedSkillsNote": "本 run 不注入 c-to-go Skill（该 Skill 由本 run 真实证据在 step-05 反哺创建，非本 run 输入）；模型请求上下文用 system 消息内联 C→Go 映射指引。",
+    "attackClassification": {
+      "status": "reviewed-no-supported-mapping",
+      "tactics": [],
+      "techniques": [],
+      "rationale": "RC4 模块 + 薄 CLI 驱动：按 hex key 解密一段 RC4 blob，写 stdout；静态无 socket/exec/文件写删/权限操作。无对抗性 ATT&CK 行为。"
+    },
+    "modelSelfReviewStatus": "NO-REPAIR-IDENTIFIED",
+    "modelSelfReviewPath": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01\\03-self-review\\self-review-1.json",
+    "repairRecommended": false,
+    "selfRepairRounds": 0,
+    "thirdPartyCompileStatus": "BLOCKED-INFRA-ERROR",
+    "thirdPartyCompileStatusNote": "非 AWAITING（已两次真实提交），非 PASSED/FAILED_COMPILE（目标从未构建）。Controller 在 build 之前于 same-runner baseline 交接阶段以环境类 INFRA_ERROR 阻断。",
+    "syntaxVerdict": "INCONCLUSIVE",
+    "syntaxVerdictNote": "目标侧 build 从未发生（execution.performed=false，preflight=SKIPPED），无 target build 证据，故语法结论不可判——既非 PASS 也非 FAIL。不得据模型自审 NO-REPAIR-IDENTIFIED 倒填 PASS（自审只是提交门槛，非语法结论）。",
+    "behaviorVerdict": "inconclusive (n/a — blocked before any run; 本阶段亦不评功能、不设 oracle)",
+    "evaluationCapsuleDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build",
+    "returnedEvidenceDir": "E:\\桌面文档\\Agents System\\code_convert\\docs\\test\\cases\\rc4-c-to-go\\output\\no-rag\\run-01\\04-evaluation\\job-01-dual-build\\returned-evidence",
+    "buildEvidence": {
+      "source": { "status": "no-bundle", "executionPerformed": true, "evidenceBundleRef": null, "evidenceEndpoint": "404 evidence_not_found", "lifecycle": "preflight PASSED, cleanup PASSED, environmentStatus clean, runnerStateAfter READY", "note": "源侧作为 baseline 运行了，但未持久化/暴露 build 证据 bundle；无 build.status/exitCode 可回填。" },
+      "target": { "status": "not-attempted", "executionPerformed": false, "preflight": "SKIPPED", "cleanup": "SKIPPED", "note": "目标从未构建；agent 在 baseline 交接阶段即拒绝。" },
+      "runner": "windows-vm-agent-x64 (VM windows-eval, snapshot CC-Eval-Windows-8Lang-R7)",
+      "note": "两侧均无 build 证据。不得据此判 PASS/FAIL。"
+    },
+    "infraError": {
+      "failureType": "AGENT_UNAVAILABLE",
+      "failureCategory": "environment",
+      "retryable": false,
+      "reason": "agent /run failed: INVALID_PACKAGE: baselineReference artifactHash does not match uploaded artifact",
+      "executionStrategy": "same-runner",
+      "runnerAssignments": { "source": "windows-vm-agent-x64", "target": "windows-vm-agent-x64" },
+      "submissions": [
+        { "jobId": "eval-20260928-092052-390487e9", "jobStatus": "INFRA_ERROR", "note": "首次提交" },
+        { "jobId": "eval-20260928-092721-a2e2311f", "jobStatus": "INFRA_ERROR", "note": "恒就绪政策下的相同输入单次重试；确定性复现同一错误" }
+      ],
+      "diagnosis": "项目首个 same-OS/same-runner 提交。Controller 在源侧 baseline 运行后向同一 runner 交接目标运行时，以 baselineReference.artifactHash 校验上传 artifact 失败。适配契约（remote-controller-adapter.md）中提交方 manifest 无 artifactHash/baselineReference 字段——该校验是 Controller/agent 在 same-runner 路径的内部机制。跨 OS/different-runner 路径（fe/du）不走此交接，均 COMPLETED。故判为 same-runner 路径的基础设施缺陷，非 capsule 内容或 C→Go 转换缺陷。",
+      "attribution": "infrastructure (Controller same-runner baseline-handoff); NOT conversion, NOT capsule content, NOT source portability"
+    },
+    "runBoundary": "以固定只读参数 program 4b6579 bbf316e8d940af0ad3（公开 RC4 测试向量 → 明文 Plaintext）启动；无联网、无外部命令、不读敏感文件、不写/删文件；结束即销毁临时件。",
+    "sourceSha256": {
+      "WjCryptLib_Rc4.c": "sha256:9c77e9b3f45dfe6162b1694b57bda665a3b24490841fa5ef95952dd1a73a72c6",
+      "WjCryptLib_Rc4.h": "sha256:f33d3a78e2f0642ad0c99d226f29eaaac844c82a0eaaae42a377b4222984f7c0",
+      "rc4_decrypt_cli.c": "sha256:9ab3ebbb8926bf580162ba2307401f8b1bb923e5ba944ef85a0a508ef5789083"
+    },
+    "translatedTargetSha256": "sha256:7629c790df359fa83dd8a5d70694e8603150d4d26a9eedec6c84a1c200613278",
+    "targetEqualsGenerated": "run 根 target.go 与 02-conversion/target.gen.go 同一 sha256（7629c790…）；无自修轮。",
+    "step05Status": "BLOCKED",
+    "step05Note": "skills/directions/c-to-go 须锚定真实目标 build 证据在 step-05 反哺创建。本 run 未取得目标 build 证据（same-runner INFRA_ERROR），故 step-05 暂不创建——不搭空架子（AGENTS.md：新目录/机制须有当前消费者、真实证据）。待 same-runner 路径修复或改采不触发该路径的合规配置并取得真实证据后再建。"
+  }
+}

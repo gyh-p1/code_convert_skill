@@ -7,11 +7,11 @@ metadata:
 
 # Code Convert Skill
 
-本项目提供给智能体使用的转换知识，不是独立转换程序。在本工作区，用户要求调度 Agent 使用根目录 `.env` 配置的外部模型生成目标代码；Agent 负责画像、Skill 选择、请求调度、静态审阅和移交，不以自身生成替代配置模型。开始时区分：**片段转换**只要求目标语法正确；**单文件转换**还要求按可观察行为约束保持功能；长单文件需加载[长单文件转换工作流](skills/workflows/long-file-conversion/SKILL.md)，该流程目前是未经转换效果验证的初稿；700 个 LF 归一化物理源代码行仍是计划上限，不宣称已支持或达标。
+本项目提供给智能体使用的转换知识，不是独立转换程序。在本工作区，用户要求调度 Agent 使用根目录 `.env` 配置的外部模型生成目标代码；Agent 负责画像、Skill 选择、请求调度、静态审阅和移交，不以自身生成替代配置模型。开始时区分：**片段转换**只要求目标语法正确；**单文件转换**还要求按可观察行为约束保持功能；长单文件需加载[长单文件转换工作流](skills/workflows/long-file-conversion/SKILL.md)，该流程目前未经长文件范围内的转换效果验证；700 个 LF 归一化物理源代码行仍是计划上限，不宣称已支持或达标。
 
 ## 选择适用知识
 
-先完成源码画像，再选 Skill；不要先看 ATT&CK 标签再反推代码行为。当前有 [C → C++ 语言方向](skills/directions/c-to-cpp/SKILL.md)、[网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[并发场景](skills/scenes/concurrency/SKILL.md)、[POSIX ↔ Winsock 套接字](skills/systems/posix-winsock/SKILL.md)、[POSIX ↔ Windows 文件路径](skills/systems/posix-windows-filesystem/SKILL.md) 与 [POSIX ↔ Windows 线程](skills/systems/posix-windows-threads/SKILL.md) 知识；这些系统方向和长文件流程均为初稿，未经本项目转换验证。进程创建等未列出的方向仍无对应 Skill。
+先完成源码画像，再选 Skill；不要先看 ATT&CK 标签再反推代码行为。当前有 [C → C++ 语言方向](skills/directions/c-to-cpp/SKILL.md)、[网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[并发场景](skills/scenes/concurrency/SKILL.md)、[POSIX ↔ Winsock 套接字](skills/systems/posix-winsock/SKILL.md)、[POSIX ↔ Windows 文件路径](skills/systems/posix-windows-filesystem/SKILL.md) 与 [POSIX ↔ Windows 线程](skills/systems/posix-windows-threads/SKILL.md) 知识。文件系统 POSIX→Windows 已有 stest、realpath、pwd 的逐例编译证据，du 目标未构建；这些证据不证明功能。其他系统方向和长文件流程仍是未验证初稿。进程创建等未列出的方向仍无对应 Skill。
 
 按以下顺序执行：
 

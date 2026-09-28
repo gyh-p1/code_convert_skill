@@ -54,7 +54,7 @@ capsule.zip
 - 源无可运行入口（库翻译单元无 `main`）时，默认按冻结记录补写最小入口/驱动（fe 用形态 B：`-DFE_STANDALONE` 编入 REPL `main`），并在 `frozen-inputs.md` 标注补写内容。
 - 组装临时目录里**不要**留 `__pycache__`/`*.pyc`；打包前清理，避免污染 zip 与 git。
 
-fe run-01 的实样落于 `docs/test/cases/fe-lisp-c-to-cpp/output/no-rag/run-01/04-evaluation/job-01-dual-build/`，回传证据落于其 `returned-evidence/`，可作组装与回填模板。
+fe run-01 的实样落于 `docs/test/dataset/c-to-cpp/fe-lisp-c-to-cpp/output/no-rag/run-01/04-evaluation/job-01-dual-build/`，回传证据落于其 `returned-evidence/`，可作组装与回填模板。
 
 ## 提交—轮询—取证流程（本会话实测）
 
@@ -92,6 +92,14 @@ curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/logs"            # co
   - `executionApproved`：仅在**实际提交并回传证据后**置 `true`。
   - `behaviorVerdict`：Controller `comparison` 的结果仅作**信息记录**；本编译质量阶段不计入功能率、不设行为 oracle、不外推等价。
 - 模型自审 `NO-REPAIR-IDENTIFIED` 只是提交门槛，**绝非语法结论**（C01 先例：自审通过仍被 MinGW 定位到 `min` 未声明）。
+
+## 已知限制：same-runner（same-OS 双侧）baseline 交接缺陷
+
+- **现象**：当 `comparison_manifest` 两侧 `os`/`arch` 相同（如均 `windows`/`x64`），`resolve_runner_assignments` 把 source 与 target 都指到**同一台** runner（矩阵内仅一台 Windows runner `windows-vm-agent-x64`），`executionStrategy=same-runner`。Controller 先在该 runner 跑源侧 baseline，再向**同一 runner** 交接目标运行时，agent `/run` 以 `INVALID_PACKAGE: baselineReference artifactHash does not match uploaded artifact` 拒绝。
+- **终态**：`jobStatus=INFRA_ERROR`；`failure.type=AGENT_UNAVAILABLE`、`failure.category=environment`、`retryable=false`；目标侧 `execution.performed=false`、`preflight/cleanup=SKIPPED`（**从未构建**），源侧虽 `performed=true` 但 `evidenceBundleRef=null` 且 `evidence/source`=404——**两侧均无 build 证据**。`environmentStatus=clean`、`runnerStateAfter=READY`。
+- **归因**：提交方 `comparison_manifest` 无 `artifactHash`/`baselineReference` 字段，该校验是 Controller/agent 在 same-runner 路径的内部机制，提交方无从设置；判为**基础设施缺陷**，非 capsule 内容/目标代码/转换缺陷。跨 OS/different-runner 路径（fe run-01 C→C++、du 等）不走此交接，均 `COMPLETED`。
+- **首次坐实**：rc4 C→Go run-01（2026-09-28），jobId `eval-20260928-092052-390487e9` 与相同输入重试 `eval-20260928-092721-a2e2311f`，**两次确定性复现**同一错误。证据见 `docs/test/dataset/c-to-go/rc4-c-to-go/output/no-rag/run-01/04-evaluation/job-01-dual-build/returned-evidence/`。
+- **处置**：按恒就绪政策记环境失败、相同输入重试一次即止（`retryable=false`，确定性复现，多试无益）；**不改用本机编译、不放松命令、不伪造 build 结论**。same-OS 数据点在该缺陷修复前无法经此路径取得目标 build 证据；是否改采不触发 same-runner 的合规配置属上层设计决策（当前仅一台 Windows runner，任何 same-OS Windows 双侧都会解析为 same-runner；跨 OS 取证会重新引入被刻意规避的 OS 变量）。
 
 ## 安全边界
 

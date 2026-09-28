@@ -1,12 +1,12 @@
 # step-02：选定并冻结第二份独立 C 源
 
-> 状态：方案待确认
+> 状态：已完成（fe 源快照已冻结并用于 step-03；原四例样本配额随后取消）
 > 类型：样例选定与冻结（本步只做只读检索与冻结记录，不编译不执行）
 > 归属阶段：[最终交付编译质量与 Skill 拓展](index.md)
 
 ## 目标
 
-找 / 确认一份 ~600–900 物理行、许可清晰、可独立构建的独立 C 单文件，冻结源快照 + 目标工具链/标准 + 隔离条件，为后续 comparison capsule 双侧 build 做准备。同时补上 [four-case-matrix](../../test/four-case-matrix.md) 记录的“第二份独立长源”缺口（uhttpd 只算一份且超限）。
+找 / 确认一份 ~600–900 物理行、许可清晰、可独立构建的独立 C 单文件，冻结源快照 + 目标工具链/标准 + 隔离条件，为后续 comparison capsule 双侧 build 做准备。实际选定 [rxi/fe](../../test/sources/fe/source.md)，作为独立编译质量样源；当时还参考了后来[取消的四例样本计划](../four-case-cancellation.md)，但 fe 不承担当前四例配额。
 
 ## 纳入范围
 
@@ -27,8 +27,7 @@
 
 ## 预计改动文件
 
-- `docs/test/four-case-matrix.md` 或新 case 目录：记录候选表与冻结条件（dev 记录，留在 `docs/`）。
-- 冻结后：`sources/<名称>/` 源快照 + `source.md`。
+- 实际落点：[fe 源快照](../../test/sources/fe/source.md)与[fe case](../../test/dataset/c-to-cpp/fe-lisp-c-to-cpp/case.md)；旧四例矩阵已在取消时移除。
 
 ## 验收依据（人工检查）
 

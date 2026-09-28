@@ -22,7 +22,7 @@
 
 ## 当前进展
 
-已建立 [长单文件转换工作流 Skill](../../skills/workflows/long-file-conversion/SKILL.md)，覆盖全文件地图、语义分段、逐单元转换、合并核对与交付边界。C01 run-02 已按相关流程完成一次探索性转换和获批评估，但该例超出 700 物理行、行为 oracle 有限，不能证明工作流整体效果或计划上限已验收。后续优先按[当前阶段方案](final-output-compile/阶段方案.md)补 C → C++ 类型、声明/定义、宏、回调、平台 API 与依赖知识；四例准备暂不作为内容拓展前置条件。
+已建立[长单文件转换工作流 Skill](../../skills/workflows/long-file-conversion/SKILL.md)，覆盖全文件地图、语义分段、逐单元转换、合并核对与交付边界。C01 run-02 已按相关流程完成一次探索性转换和获批评估，但该例超出 700 物理行、行为 oracle 有限，不能证明工作流整体效果或计划上限已验收。后续优先按[当前阶段方案](final-output-compile/阶段方案.md)补 C → C++ 类型、声明/定义、宏、回调、平台 API 与依赖知识；原固定四例准备已[取消](four-case-cancellation.md)。
 ## C → C++ 内容顺序
 
 1. 类型、整数转换、布局与 C ABI：已有初稿；

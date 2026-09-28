@@ -1,0 +1,34 @@
+{
+  "target_complete": true,
+  "coverage": {
+    "declarations": "单文件完整、无省略/占位/围栏；BSD 许可与 `#if 0` 版权块保留。main 之前的前向声明区已包含 getcwd_logical、getcwd_physical、pwd_getopt、set_progname、usage、err_exit，并且新增了 `static int pwd_optind = 1;` 与 `static int pwd_optpos = 1;` 的定义；全文件对这两个符号各仅一处定义（文件后部 pwd_getopt 定义区未再出现同名定义）。",
+    "entry": "`int main(int argc, char *argv[])` 存在：set_progname(argv[0]) → `while ((ch = pwd_getopt(argc, argv, \"LP\")) != -1)` → `argc -= pwd_optind; argv += pwd_optind;` → `argc != 0` → usage() → 逻辑/物理选择 → `printf(\"%s\\n\", p)` 或 `err_exit(1, \".\")` → `exit(0)`，结构与源一致。",
+    "branches": "physical 默认 1；-L→0、-P→1、'?'/default→usage()；短路求值 `(!physical && (p = getcwd_logical()) != NULL) || (p = getcwd_physical()) != NULL` 与源顺序一致；getcwd_logical 的 stat 失败→NULL 且置 ENOENT；getcwd_physical 的 NULL 缓冲失败→malloc/ERANGE 增长回退→最终 errno=ERANGE；usage 打印到 stderr 后 exit(1)。",
+    "public_functions": "main、usage、err_exit、getcwd_logical、getcwd_physical、pwd_getopt、set_progname 均有完整定义与匹配签名；__dead2 由 [[noreturn]] 承接（仅写在首声明，定义处省略，符合 C++ 属性由首声明决定）；err(3)→err_exit、getcwd→_getcwd(<direct.h>)、getopt/optind→pwd_getopt/pwd_optind、__progname→set_progname 的替换链完整。"
+  },
+  "prior_issues_resolution": [
+    {
+      "prior_location": "main 内 `argc -= pwd_optind; argv += pwd_optind;` 引用 `pwd_optind`，而 `static int pwd_optind = 1;` / `static int pwd_optpos = 1;` 原定义在 main 之后（declaration-order，REPAIR-RECOMMENDED 阻断项）",
+      "status": "resolved",
+      "evidence": "修复后 `static int pwd_optind = 1;` 与 `static int pwd_optpos = 1;` 位于 main 之前的前向声明区（紧跟 `pwd_getopt`/`set_progname`/`usage`/`err_exit` 声明之后，注释块 'State used by pwd_getopt(); ... must be visible to main(). Defined once here, before main().'）。通读全文件：pwd_optind/pwd_optpos 各仅出现一处定义，pwd_getopt 与 main 中均为纯引用，未残留旧位置的第二处定义，也无同名 extern/局部遮蔽。main 引用点因此有可见声明，原 C++ 无隐式声明导致的编译阻断点已消除。",
+      "suggested_fix": "无需改动"
+    },
+    {
+      "prior_location": "getcwd_logical() 中 `if (lg.st_ino != 0 && lg.st_dev == phy.st_dev && lg.st_ino == phy.st_ino)` 一行（platform-condition 语义偏差）",
+      "status": "accepted-known-difference",
+      "evidence": "守卫在修复后逐字保留：`if (lg.st_ino != 0 && lg.st_dev == phy.st_dev && lg.st_ino == phy.st_ino) return (pwd);`，并在两处显式登记：文件顶部注释块 'KNOWN PLATFORM DIFFERENCE (recorded, not worked around): on Windows stat() reports st_ino == 0 ... so -L falls back to the physical getcwd() result ... This is a deliberate deviation from the source's observable behaviour on this platform'，以及 getcwd_logical 内联注释同义说明。与上一轮给出的选项 (b)（保留守卫并在交付说明中显式登记 -L 在 Windows 恒等价 -P）一致，属已记录的已知平台差异而非未处理缺陷。",
+      "suggested_fix": "无需改动（若后续要求与源逐字同语义，则删除 `lg.st_ino != 0 &&`；本审阅按已登记差异认定）"
+    }
+  ],
+  "issues": [],
+  "risks": [
+    "toolchain-unknown：MinGW-w64/UCRT64 在 `g++ -std=c++17`（定义 __STRICT_ANSI__）下，`<sys/stat.h>` 是否无条件暴露 `stat()`、`struct stat` 及其 `st_dev`/`st_ino` 成员未在本机核实；若被 POSIX/严格 ANSI 门控，getcwd_logical() 的 stat 调用点需改写为 `_stat64`/`struct _stat64`。不能据此断言失败，仅列为需编译确认项。",
+    "toolchain-unknown：`_getcwd(NULL, 0)` 在 UCRT 上是否按自动分配（malloc）语义工作未经本机验证；代码已有 malloc+ERANGE 增长回退，最坏情形是首次调用失败后走回退分支，但若某实现以非 ERANGE 的 errno 拒绝 NULL 缓冲，err_exit 报出的原因可能不同于源 getcwd 的 ENOMEM/EINVAL。",
+    "toolchain-unknown：`err_exit` 以非字面量 fmt 调 `vfprintf`（未加 `__attribute__((format(printf,2,3)))`），部分 GCC 配置会给出 -Wformat-nonliteral 警告（非错误）；本程序唯一调用点 `err_exit(1, \".\")` 无格式说明符，运行行为等价于 BSD err()。",
+    "源/目标诊断文本差异（非契约项、目标注释已登记）：glibc getopt 对未知短选项会额外打印 `pwd: invalid option -- 'x'`；pwd_getopt 只返回 '?' 由 usage() 打印 usage 行。若比对完整 stderr 文本需注意。",
+    "源/目标参数排列差异（非契约项、目标注释已登记）：glibc getopt 做 argv 重排，`pwd -L foo` 与 `pwd foo -L` 在源侧路径不同；本实现不重排，两者均以 usage() 结束，退出码一致但中间诊断顺序可能不同。",
+    "`getcwd_physical()` 成功返回的缓冲区（_getcwd 分配或 malloc）在 main 打印后不释放；与源 `getcwd(NULL, 0)` 同样属源已有行为，不构成新缺陷，但若将来复用到长生命周期程序中需补释放约定。"
+  ],
+  "verdict": "NO-REPAIR-IDENTIFIED",
+  "notes": "本次为修复后的静态复审，不含编译结果。逐条核对：(1) 声明顺序阻断点已消除——pwd_optind/pwd_optpos 已上移至 main 之前且全文件各仅一处定义，未见重复定义或旧位置残留，故非『已部分修复』而是 resolved；(2) st_ino != 0 守卫保留且在文件顶部注释中作为 KNOWN PLATFORM DIFFERENCE 显式登记，符合上一轮给出的取舍 (b)，判为 accepted-known-difference。修复动作本身未观察到新引入的可定位缺陷：前向声明与定义签名一致（含 pwd_getopt 的 `char *const argv[]` 与 main 的 `char **` 之间的限定转换，C++ 允许）、[[noreturn]] 仅写在首声明符合属性归属规则、<direct.h>/_getcwd、<sys/stat.h>/struct stat/st_ino 的使用在文本层面自洽（实际可用性列为 risks）。剩余不确定项均属无法在本机定位的工具链/文本差异，已放入 risks 而非 issues，未臆造缺陷。结论：不存在未解决的 transform-introduced 缺陷；待第三方在 Windows x64 MinGW-w64/UCRT64 `g++ -std=c++17` 上编译确认（AWAITING-THIRD-PARTY-COMPILE / UNVERIFIED）。"
+}

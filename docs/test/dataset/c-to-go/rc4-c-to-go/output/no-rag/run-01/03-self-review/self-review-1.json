@@ -1,0 +1,19 @@
+{
+  "target_complete": true,
+  "coverage": {
+    "declarations": "完整单文件，首行 package main。包含 rc4Context 结构（i/j uint32，s [256]byte）、rc4Initialise、rc4Output、rc4Xor、rc4XorWithKey、hexDecode、keyCapacity/cipherCapacity 常量、errZeroKeySize 变量、main。",
+    "entry": "main 存在，按 len(os.Args)!=3 做用法检查并使用 os.Args[1]/os.Args[2]。",
+    "branches": "用法错误与 key/cipher hex 错误（key 空、非法、超 256；cipher 非法、超 4096）均 os.Exit(2)；RC4 初始化失败 os.Exit(1)；成功路径隐式返回 0。空密文允许。",
+    "public_functions": "上游 Rc4Initialise/Rc4Output/Rc4Xor/Rc4XorWithKey 均以等价小写函数保留；其中 rc4Output 未被 main 调用但保留模块面，Go 允许未使用函数。"
+  },
+  "issues": [],
+  "risks": [
+    "Windows 上 C 源 stdout 默认文本模式，fwrite 可能把明文中的换行符转换为 CRLF；Go 的 os.Stdout.Write 为二进制模式，不转换。若逐字节比较明文输出，含换行符时两侧可能不同。该差异源于 C 运行时文本模式而非转换引入的编译/语义缺陷，需第三方运行时比对确认。",
+    "Windows 上 C 源 stderr 默认文本模式，Go 的 os.Stderr 为二进制模式；错误消息中的换行符处理可能不同。通常不影响退出码与 stdout，仅影响 stderr 字节细节。",
+    "Go 的 os.Args 在 Windows 上由 UTF-16 转 UTF-8，C 的 argv 使用当前代码页；非 ASCII 参数可能导致 hex 解析前的字节序列差异，但 hex 输入预期为 ASCII。",
+    "rc4Output 在目标中未导出且未被 main 调用，Go 编译器不报未使用函数；若评估要求所有上游函数均处于执行路径，需注意这是模块面保留而非实际调用。",
+    "C 的 hex_decode 先检查奇数长度与超容量，Go 的 hexDecode 同样先检查 len%2 与 nbytes>outCap，再依赖 encoding/hex.Decode 做字符校验；若未来 Go 标准库改变 Decode 的部分写入/错误分类行为，理论上可能影响错误归类，当前稳定版行为与源一致。"
+  ],
+  "verdict": "NO-REPAIR-IDENTIFIED",
+  "notes": "静态自审未定位到 transform-introduced 缺陷；目标完整、无省略/围栏，RC4 KSA/PRGA/DropN、hex 解析、退出码分支与源逐项对应。未断言 go build 必然通过，仅未发现可定位的编译错误或语义偏离。"
+}

@@ -1,0 +1,31 @@
+{
+  "stage": "SELF_REVIEWED",
+  "round": 1,
+  "model": "deepseek-flash",
+  "requested_model": "deepseek-flash",
+  "temperature": 0.2,
+  "max_tokens": 120000,
+  "finish_reason": "stop",
+  "usage": {
+    "prompt_tokens": 15842,
+    "completion_tokens": 29739,
+    "total_tokens": 45581,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 27031
+    },
+    "prompt_cache_hit_tokens": 0,
+    "prompt_cache_miss_tokens": 15842
+  },
+  "response_id": "070a5380-0da8-46cc-bd0a-164c555d72b2",
+  "http_status": 200,
+  "reasoning_present": true,
+  "request_sha256": "a1ffea62d367d9d220440f401065cbe05e4e73da83516c42d1d5ffc7ea0640fc",
+  "content_sha256": "4afbbf52cadd02318f9308b615c9ec2e56008a549a5c30fec77d115c440497b2",
+  "content_chars": 6443,
+  "parsed_ok": true,
+  "parse_error": null,
+  "captured_at": "2026-09-28T15:04:00.183559+08:00"
+}

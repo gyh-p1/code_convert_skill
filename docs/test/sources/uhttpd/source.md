@@ -9,4 +9,4 @@
 - Size: 1,317 LF-normalized physical lines; GitHub displays approximately 1,092 LOC. It exceeds the project's 700-physical-line planning limit and is therefore an **over-limit exploratory candidate**, not a sample proving the planned 700-line boundary.
 - Build context from pinned upstream README: Linux/macOS uses a C compiler and pthread; Windows instructions use Pelles C and the upstream Makefile. The pinned README is retained as `UPSTREAM-README.md`. No build was run here.
 
-Do not modify this source snapshot. Case-specific instructions, limits, and behavior oracle are in `../../cases/c01-linux-win-network/case.md` and `../../cases/c02-win-linux-network/case.md`. This one upstream file can be used for both OS-direction runs, but it is only **one distinct long source example**.
+Do not modify this source snapshot. The existing consumer is the [historical C01 exploration](../../dataset/c-to-cpp/c01-linux-win-network/case.md). The proposed reverse C02 task was cancelled before a conversion run; no active test is assigned to this source. It remains one distinct, over-limit long source example.

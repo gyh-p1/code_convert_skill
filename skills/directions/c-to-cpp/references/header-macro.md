@@ -30,7 +30,16 @@
   - `NOMINMAX` 是**项目级取舍**：定义后，凡依赖 Windows `min` / `max` 宏的其它代码都会受影响。跨 OS 目标要统一策略并在交付中记录；纯 POSIX 目标不涉及本条。
 - **前提**：目标或分支为 Windows 且（直接或间接）包含 `<windows.h>`。
 
-## 4. 交付时的最小说明
+## 4. 整头缺失：平台专有系统头在目标构建不存在（真实坐实）
+
+前几节讲“名字隐式可见”，本节讲更硬的一类——**整个系统头在目标平台根本不存在**，`#include` 处直接 fatal error，命令行特性测试宏无法补齐：
+
+- **触发条件**：源依赖某平台专有系统头（典型 FreeBSD-base：`<libutil.h>`、`<fts.h>`、`<sys/queue.h>`、`<sysexits.h>` 等），目标 glibc/MinGW 缺该头或其符号。
+- **真实证据**：step-04 du 例源侧在 plain-glibc Linux `cc -std=c11 …` 即失败于 `du.c:55:10: fatal error: libutil.h: No such file or directory`（首个硬阻断）。这是**源对目标平台的可移植性事实**，非“隐式可见”类，`-D_POSIX_C_SOURCE`/`-D_DEFAULT_SOURCE`/`-D__unused=` 均无法补齐。
+- **处理**：命中即**先记源侧基线可能 FAILED_COMPILE**，并规划目标侧在 C++ 内自备等价（`humanize_number`→自写单位换算、`fts`→`std::filesystem`、`sys/queue`→STL）。跨 OS 系统层重写细节见系统方向 [`posix-windows-filesystem` §2](../../../systems/posix-windows-filesystem/SKILL.md)。
+- **定序后果**：跨 OS 双侧评估中，源基线失败则目标侧被跳过、无目标 build 证据，syntaxVerdict 记 INCONCLUSIVE（非 PASS、非转换引入 FAIL），不改源、不伪造目标通过。
+
+## 5. 交付时的最小说明
 
 涉及本主题时，指出：为哪些名字补了显式 `#include` 或限定、来源头是否已核实、是否存在参数副作用导致“宏 → 函数模板”替换改变求值次数、是否设置 `NOMINMAX` 及其影响范围。没有第三方编译证据前，只能说**据语言标准与已核来源作了静态修正，尚未验证**；不得据此写 `syntaxPassed`。
 

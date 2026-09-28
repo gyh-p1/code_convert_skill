@@ -23,4 +23,4 @@ ATT&CK Enterprise 的全部当前战术用于分类、检索与风险提示；�
 
 语言/平台语义以标准、官方 API 文档、协议规范为主；ATT&CK 用于行为分类，不代替 API 依据。GitHub 是带来源、版本与许可的边界案例发现渠道，不将示例或自动生成规则直接升级为权威。旧库候选见 [审阅记录](legacy-knowledge-review.md)。
 
-未来检索条目至少保留源/目标语言、源/目标 OS、架构或 API 条件、场景、ATT&CK ID、出处及适用版本。RAG 命中只能表示找到了资料，不能代替转换结果的编译和行为证据；RAG 配对试验见 [阶段 04](stage-04-rag-comparison.md)，前置无 RAG 基线见 [阶段 03](stage-03-no-rag-baseline.md)。
+未来若另立检索试验，条目至少保留源/目标语言、源/目标 OS、架构或 API 条件、场景、ATT&CK ID、出处及适用版本。RAG 命中只能表示找到了资料，不能代替转换结果的编译和行为证据；原固定四例配对方案已[取消](four-case-cancellation.md)，当前没有 RAG 测试任务。
