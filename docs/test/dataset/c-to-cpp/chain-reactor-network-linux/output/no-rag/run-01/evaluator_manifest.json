@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "kind": "third-party-evaluator-manifest",
+  "generatedBy": "code_convert configured-model run; Agent hand-authored handoff",
+  "languagePair": {"sourceLang": "c", "targetLang": "cpp"},
+  "taskMetadata": {
+    "sourceLanguage": "c",
+    "targetLanguage": "cpp",
+    "attackTactic": "none",
+    "sceneTags": ["network-io", "adversary-simulation", "linux-same-os"],
+    "sourceOs": "linux",
+    "targetOs": "linux",
+    "sourceArch": "x64",
+    "targetArch": "x64",
+    "riskLevel": "medium",
+    "evidenceMode": "static-and-runtime",
+    "supportLevel": "experimental"
+  },
+  "targetDir": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01",
+  "files": [
+    {
+      "relativePath": "networking_quarks.c",
+      "sourcePath": "docs/test/sources/chain-reactor-network/networking_quarks.c",
+      "translatedCodePath": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/target.cpp",
+      "evaluationNotesPath": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/result.md",
+      "replayArtifactPath": null,
+      "success": true,
+      "artifacts": {
+        "hasSource": true,
+        "hasTranslatedCode": true,
+        "hasEvaluationNotes": true,
+        "hasReplayArtifact": false
+      }
+    }
+  ],
+  "x_adapter": {
+    "status": "EVALUATED-CLOSED",
+    "executionApproved": true,
+    "explorationOnly": true,
+    "inputContractPath": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/01-frozen/frozen-inputs.md",
+    "sourceAnalysisPath": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/source-analysis.md",
+    "modelMetadataPath": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/02-conversion/target.gen.model.json",
+    "modelSelfReviewPath": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/03-self-review/self-review-1.json",
+    "modelSelfReviewStatus": "NO-REPAIR-IDENTIFIED (model preflight only)",
+    "selfRepairRounds": 0,
+    "thirdPartyCompileStatus": "THIRD-PARTY-COMPILE-PASSED",
+    "syntaxVerdict": "PASS (final target.cpp, Linux x64 GNU C++17, target build exitCode=0)",
+    "behaviorVerdict": "matched within two case-private loopback output observations; informational, not current functional score",
+    "producedBy": {
+      "conversion": "configured external model via root .env (deepseek-flash), orchestrated by Agent",
+      "compileAndRun": "authorized isolated Controller job eval-20260928-123304-add87d9d; both sides build/execute completed; no local compile or execution",
+      "thisRepo": "source freeze, case-private loopback driver, static review and handoff"
+    },
+    "selectedSkills": ["c-to-cpp", "network-io", "long-file-conversion", "header-macro", "type-abi"],
+    "sourceSha256": "sha256:8b8c2f355b0382f19dda088ff2d32fadc9b7b22713df0e87dca2b2330851edf0",
+    "targetSha256": "sha256:d8b539ab65057befecc5620ee5b79fda7bbadf81356712adaa804034d99159fd",
+    "driverSha256": "sha256:ff710e0e6689d84fa4e1c8789270aac1339d121baad097b240669bcfeb6b1da6",
+    "companionFiles": ["atoms.h", "util.h", "util.c"],
+    "jobId": "eval-20260928-123304-add87d9d",
+    "evaluationCapsuleDir": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/04-evaluation/job-01-dual-build",
+    "returnedEvidenceDir": "docs/test/dataset/c-to-cpp/chain-reactor-network-linux/output/no-rag/run-01/04-evaluation/job-01-dual-build/returned-evidence",
+    "buildEvidence": {
+      "source": {"status": "completed", "exitCode": 0, "toolchain": "GNU C11 on linux-vm-agent-x64"},
+      "target": {"status": "completed", "exitCode": 0, "toolchain": "GNU C++17 plus original C util.c/driver.c on linux-vm-agent-x64", "warning": "GCC C-only diagnostic pragma ignored in C++"}
+    },
+    "runtimeEvidence": {
+      "source": {"status": "completed", "exitCode": 0, "normalReceivedLength": 512, "refusedSendResult": -1},
+      "target": {"status": "completed", "exitCode": 0, "normalReceivedLength": 512, "refusedSendResult": -1},
+      "comparison": "output matched 1/1; all other dimensions not-applicable; functionality not scored"
+    },
+    "runBoundary": "only case-private 127.0.0.1 TCP receiver, synthetic random buffer; no upstream public-address profiles",
+    "attackClassification": {
+      "status": "reviewed-no-supported-tactic-mapping",
+      "tactics": [],
+      "techniques": [],
+      "rationale": "This selected function simulates a controlled network connection; API presence alone does not establish an ATT&CK tactic."
+    }
+  }
+}

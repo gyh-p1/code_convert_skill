@@ -32,7 +32,7 @@
 | `realpath-fs-posix-to-win` | `docs/test/dataset/c-to-cpp/realpath-fs-posix-to-win/` | 跨 OS 编译 PASS |
 | `pwd-fs-posix-to-win` | `docs/test/dataset/c-to-cpp/pwd-fs-posix-to-win/` | 跨 OS 编译 PASS |
 | `du-fs-posix-to-win` | `docs/test/dataset/c-to-cpp/du-fs-posix-to-win/` | 源基线失败，目标未构建 |
-| `rc4-c-to-go` | `docs/test/dataset/c-to-go/rc4-c-to-go/` | same-runner 基础设施错误，目标未构建 |
+| `rc4-c-to-go` | `docs/test/dataset/c-to-go/rc4-c-to-go/` | 当时报告为 same-runner 基础设施错误；后续定位为 Windows 文件路径大小写排序不一致，目标未构建 |
 
 本步骤新增 `docs/test/dataset/README.md` 作为数据集入口、每个方向一个索引和旧用例候选索引；更新 `docs/test/README.md`、当时仍存在的四例矩阵、项目业务文档、阶段 index 与受影响的 Markdown 引用及 `evaluator_manifest.json` 路径。四例矩阵在后续取消步骤中移除。冻结输入 Markdown 仅调整导航链接；原始模型请求/响应、Controller JSON、capsule 内的历史路径保持原样，并由迁移映射解释。
 
@@ -45,7 +45,7 @@
 
 ## 旧 Controller 静态审阅与后续判据设计
 
-旧仓库 `E:/桌面文档/Code_Convert` 的 `input-profile` 契约列出 output、filesystem、processes、registry、network；当前 Agent 实现仅采集前三类，registry/network 返回超出当前版本范围。下一阶段先为**实际选入的场景**冻结输入、正常/错误路径、可观察副作用、比较规则、不可观测处理和跨 OS 差异，再决定 Controller/Collector 的最小变更。same-runner `artifactHash` 交接错误作为独立基础设施缺陷记录；不在本步骤修改或部署 Controller。
+旧仓库 `E:/桌面文档/Code_Convert` 的 `input-profile` 契约列出 output、filesystem、processes、registry、network；当前 Agent 实现仅采集前三类，registry/network 返回超出当前版本范围。下一阶段先为**实际选入的场景**冻结输入、正常/错误路径、可观察副作用、比较规则、不可观测处理和跨 OS 差异，再决定 Controller/Collector 的最小变更。本步骤当时把 RC4 `artifactHash` 错误暂记 same-runner 交接；后续修正见[适配记录](../../../references/adapter/controller/remote-controller-adapter.md)，本步骤未修改或部署 Controller。
 
 ## 验收依据与人工检查
 

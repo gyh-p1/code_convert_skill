@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "codeconvert-comparison-manifest",
+  "caseId": "chain-reactor-network-linux-run-01",
+  "inputProfileRef": "input_profile.json",
+  "source": {
+    "artifactLanguage": "c",
+    "os": "linux",
+    "arch": "x64",
+    "buildCommand": "python build_case.py source",
+    "runCommand": "python run_case.py"
+  },
+  "target": {
+    "artifactLanguage": "cpp",
+    "os": "linux",
+    "arch": "x64",
+    "buildCommand": "python build_case.py target",
+    "runCommand": "python run_case.py"
+  }
+}

@@ -7,7 +7,7 @@
 
 | 旧目录文件 | 本地身份与可核上游 | 实际行为及边界 | 结论 |
 |---|---|---|---|
-| `测试用例c/c测试用例/防御规避/ApiSetMap.c` | 442 LF 物理行，SHA-256 `13346b48f8b5c7211fd43ce2d954f1398ad9574065316564634d1cc9fa9747d8`。文件头有 2017 年 Cylance/Jeff Tang 的许可文本；中文注释说明原 `.h` 结构/宏已被并入。未定位能绑定此副本的上游仓库与提交 | 读取 Windows PEB API Set 映射，按 v2/v4/v6 查重定向名称；`main` 打印结果后调用 `system("pause")`。它是攻击工具可复用的 API 解析组件，**不是完整攻防链**；依赖 Windows 内部结构/编译器内建函数 | **需补条件**：先确认上游身份与改写 diff；单独界定 `system("pause")` 的进程副作用。Windows 同 OS 双侧 build 受 same-runner 故障阻断；当前只可静态研究 |
+| `测试用例c/c测试用例/防御规避/ApiSetMap.c` | 442 LF 物理行，SHA-256 `13346b48f8b5c7211fd43ce2d954f1398ad9574065316564634d1cc9fa9747d8`。文件头有 2017 年 Cylance/Jeff Tang 的许可文本；中文注释说明原 `.h` 结构/宏已被并入。未定位能绑定此副本的上游仓库与提交 | 读取 Windows PEB API Set 映射，按 v2/v4/v6 查重定向名称；`main` 打印结果后调用 `system("pause")`。它是攻击工具可复用的 API 解析组件，**不是完整攻防链**；依赖 Windows 内部结构/编译器内建函数 | **需补条件**：先确认上游身份与改写 diff；单独界定 `system("pause")` 的进程副作用。RC4 的 Windows 哈希排序故障尚未远端修复；本例是否受影响需以自身文件树和无害取证核对 |
 | `测试用例c/c测试用例/防御规避/ReflectiveLoader.c` | 750 LF 物理行，SHA-256 `ee67e501a9cb0e89d5926d816b9bb20f612349bbf29fbf90cd838a23248809c2`。可定位[Stephen Fewer 上游固定提交的 `ReflectiveLoader.c`](https://github.com/stephenfewer/ReflectiveDLLInjection/blob/178ba2a6a9feee0a9d9757dcaa65168ced588c12/dll/src/ReflectiveLoader.c)与[三条款 BSD 许可证](https://github.com/stephenfewer/ReflectiveDLLInjection/blob/178ba2a6a9feee0a9d9757dcaa65168ced588c12/LICENSE.txt)，但旧副本明显改写：上游文件约 496 行、引用专用头，旧副本增加内联结构/宏及平台 pragma，不能冒称上游原件 | 真正的反射 DLL 加载组件，涉及可执行内存、导入解析、重定位与入口调用；不是独立 CLI。旧副本超 700 行计划上限，功能保持需要受控 PE/DLL 与内存/进程观察，现有 output/filesystem/processes 证据不足 | **仅保留静态候选**：来源方向清楚，但要先还原改写清单、依赖和构建单位；本轮不以它作首个功能样例或执行对象 |
 | `测试用例c/c测试用例/数据外传/http_upload.c` | 93 LF 物理行，SHA-256 `a15e667aed95d7c04429266a00aaa52bb3452dae306a2dd72bdedad9beebfb`。没有逐文件许可或固定上游提交；聚合来源说明不能绑定此文件 | 用 WinINet 读取文件并 HTTP POST。`main` 写死局域网接收端和主机文件路径；成功/失败打印不同文字，但两种路径最终都返回退出码 0。现有 Agent 的 network 观察维度未实现 | **不能原样执行或纳入数据集**。需可追溯来源、明确改写、假文件与隔离 loopback 接收端、请求体/错误路径观察；单凭 stdout 或退出码不足以判定外传行为 |
 
@@ -24,4 +24,4 @@
 
 ## 下一步判据
 
-优先寻找**上游提交与许可可固定、源侧可在现有隔离环境构建、关键行为可由受控输入/观察证明**的真实 C 场景。当前三个旧副本没有同时满足这些条件，故本步骤不创建新 `sources/` 或转换 run。后续要先决定功能观察契约与 same-runner 修复顺序，再将 Windows 专有候选升级；若选择跨 OS 样例，必须另审源/目标平台语义，不为绕过基础设施故障而把 OS 差异混进语言转换结论。
+优先寻找**上游提交与许可可固定、源侧可在现有隔离环境构建、关键行为可由受控输入/观察证明**的真实 C 场景。当前三个旧副本没有同时满足这些条件，故本步骤不创建新 `sources/` 或转换 run。后续先决定功能观察契约并验证 Windows Agent 哈希修复远端状态，再将 Windows 专有候选升级；若选择跨 OS 样例，必须另审源/目标平台语义，不为绕过基础设施故障而把 OS 差异混进语言转换结论。

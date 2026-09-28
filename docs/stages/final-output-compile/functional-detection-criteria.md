@@ -1,7 +1,7 @@
 # 功能检测判据草案：Controller 变更前的设计输入
 
-> 状态：设计草案，未批准为功能正确率口径，未修改 Controller/Agent。当前阶段仍只统计最终交付目标代码的编译结果。
-> 依据：只读审阅旧仓库 `E:/桌面文档/Code_Convert` 的 `input-profile.schema.json`、`evaluation_core/evidence_comparator.py`、`vm_agent/app/observations.py` 与 Controller same-runner 路径；旧实现和旧报告不直接继承为本项目的验收结果。
+> 状态：功能判据设计草案，未批准为功能正确率口径。旧仓库 Agent 身份哈希排序已在独立分支本地修正，**未部署**；本草案不改变功能 Collector。当前阶段仍只统计最终交付目标代码的编译结果。
+> 依据：只读审阅旧仓库 `E:/桌面文档/Code_Convert` 的 `input-profile.schema.json`、`evaluation_core/evidence_comparator.py`、`vm_agent/app/observations.py` 与身份哈希路径；旧实现和旧报告不直接继承为本项目的验收结果。RC4 的后续排序根因见[Controller 适配记录](../../../references/adapter/controller/remote-controller-adapter.md)。
 
 ## 1. 先定义可观察义务，再选样例和 Collector
 
@@ -9,7 +9,7 @@
 
 | 检测面 | 最小可观察事实 | 错误或拒绝路径 | 当前旧实现证据边界 |
 |---|---|---|---|
-| 构建/启动 | 源、目标各自 build 状态；启动/超时独立记录 | 源基线失败、目标编译失败、环境失败分别归因 | Controller 已分层，same-runner 交接仍有确定性故障 |
+| 构建/启动 | 源、目标各自 build 状态；启动/超时独立记录 | 源基线失败、目标编译失败、环境失败分别归因 | Controller 已分层；Windows 混合大小写文件包的身份哈希排序差异使 RC4 两次阻断，远端尚未升级验证 |
 | 输出与协议字节 | 退出码、stdout/stderr 的选定字段；请求/响应的关键字节或状态 | 无效输入、短读、超时、拒绝响应 | output 可观测；仅比较输出长度或一次 liveness 不足以证明功能 |
 | 文件与数据 | 限定目录内文件名、内容摘要/结构、写入/删除和错误结果 | 不存在、不可读、边界路径 | 旧 Agent 可采 workspace 文件变化；不自动覆盖 VM 全局文件系统 |
 | 子进程与资源 | 进程启动、参数、退出/清理，必要时资源释放 | 启动失败、异常退出、残留 | 旧 Agent 可采部分进程事件；需逐例确认命令与子进程观测完整性 |
@@ -29,11 +29,11 @@
 
 1. 从[旧候选索引](../../test/dataset/legacy-candidates.md)挑一份上游可追溯、可隔离的真实行为样例，静态冻结其义务与安全边界；先判断现有 output/filesystem/processes 能否观测关键结果。需要 network/registry 时，把 Collector 缺口明确列为需求。
 2. 对该场景写最小正常、错误和不可观测三类输入/证据预期，确定 source/target 比较字段和允许差异；用无害数据验证检测标准是否能识别一个人为注入的单一差异。成功信号是同一义务的匹配、偏差、缺证据三种结论互不混淆。
-3. 汇总选入场景共用的最小证据契约与 Collector 需求，再在旧仓库单独修 same-runner `baselineReference.artifactHash` 交接缺陷。修复前后使用**相同的无害 capsule**和 RC4 原样输入分别验证基础设施与转换结论，避免把契约扩展和基础设施修复混成同一变量。
+3. 汇总选入场景共用的最小证据契约与 Collector 需求；旧仓库先用混合大小写的无害包回归 Windows Agent 哈希排序修复。部署后以同一无害 capsule 验证两侧证据，再原样重提 RC4；契约扩展与身份修复分开。
 4. 只有新证据维度有实际消费者、隔离约束和可复核报告时，才升级 Controller/Agent/Evaluation Core；部署与回滚另走旧仓库的远程栈流程。本项目只消费回传事实，不引入本地测试运行时。
 
 ## 4. 当前无法确定的事
 
 - 旧目录中多数样例缺逐文件上游 commit/许可和改写差异；在补齐前不能判定其是否可纳入。
 - 当前旧 Controller 的 network/registry 仅有契约占位，尚无可用观察结果；真实 C2、外传、持久化的功能率因此不可判定。
-- same-runner 故障在两次 RC4 提交中复现，但静态阅读尚不能唯一定位根因；需在旧仓库以无害 fixture 检查 staging hash、上传文件树与 Agent workspace digest 的差异，不运行攻防样本作调试。
+- RC4 两次回传的错误已由静态哈希重算和无害 Agent 回归收窄为 Windows 大小写排序差异；远端修正及 RC4 新证据仍缺。Linux 同机路径未实测，不把 Windows 个例外推为通用 same-runner 故障。

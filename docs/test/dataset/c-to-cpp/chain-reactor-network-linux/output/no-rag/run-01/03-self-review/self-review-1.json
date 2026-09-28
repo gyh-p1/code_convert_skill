@@ -1,0 +1,19 @@
+{
+  "target_complete": true,
+  "coverage": {
+    "functions": "源文件 20 个函数全部保留定义：x86_int0x80、socketcall、socketcall_socket、socketcall_send、socketcall_sendto、socketcall_bind、socketcall_connect、socketcall_listen、socketcall_accept4、socketcall_recv、socket_type、create_socket、connect_socket、send_data、bind_socket、listen_socket、accept_socket、quark_connect、quark_listen；宏 ALLOC_SOCKETCALL_ARGS、SYS_*、SEND_RECV_CB 均保留。",
+    "branches": "method/socket_type 条件分支、TCP/UDP 分支、syscall/socketcall 分支、fork 父子分支、accept/recv 错误清理分支均保留；未发现遗漏的公开分支。",
+    "abi": "quark_connect 与 quark_listen 已使用 extern \"C\"，与 driver.c 的 C 声明匹配；util.h 在 extern \"C\" 块内包含，urand 可链接到原样 C 编译的 util.o。非合同内的 socketcall_* 全局函数未加 extern \"C\"，符号变为 C++ mangled，当前指定链接不引用它们故未报错，但存在潜在 ABI 偏差。"
+  },
+  "issues": [],
+  "risks": [
+    "socketcall_socket/socketcall_send/socketcall_sendto/socketcall_bind/socketcall_connect/socketcall_listen/socketcall_accept4/socketcall_recv 在源 C 中是非 static 外部函数，目标中未加 extern \"C\"，在对象文件里变为 C++ mangled 符号；若其他 C 翻译单元引用这些符号会链接失败。当前冻结链接仅含 driver.c 与 util.c，二者均未引用它们，所以不是已确认缺陷。",
+    "atoms.h 未包裹在 extern \"C\" 中，其中声明的 split_atom 在目标 TU 获得 C++ 链接；本 TU 未调用 split_atom，因此不影响当前链接，但若未来 C++ 侧调用并链接 C 编译的定义，符号会不匹配。",
+    "atoms.h 使用柔性数组成员（char argv[]、char address[] 等）；GNU C++17 下依赖 GCC 扩展，标准 C++17 或 -pedantic-errors 可能拒绝。冻结契约指定 GNU 扩展，故记为工具链相关风险，而非确定转换缺陷。",
+    "util.h 中 const char* red_canary(); 在 C++ 下等价于无参声明；若 C 实现实际带参数或未来被调用，类型/调用约定可能不匹配。当前未调用。",
+    "将原先的指针到 int 直接截断改为 (int)(intptr_t) 截断，在 Linux x64 + GCC 下与源语义一致；若目标平台 int 与指针宽度关系不同，则不能保证等价。",
+    "未执行本机编译/链接，语法与行为状态为 UNVERIFIED/AWAITING-THIRD-PARTY-COMPILE；以上静态检查不构成编译或功能通过结论。"
+  ],
+  "verdict": "NO-REPAIR-IDENTIFIED",
+  "notes": "目标完整保留源 TU 的全部函数、宏与控制流；为通过 C++ 编译所做的改动（intptr_t 中间转换、quark_connect/quark_listen 的 extern \"C\"、util.h 的 extern \"C\" 包裹、显式包含 stdint.h/limits.h、default 分支加花括号）均属必要且语义保持的转换。未发现可定位的转换引入编译或链接缺陷；socketcall_* 链接变化与 atoms.h 未 extern \"C\" 属未触发风险。本自审不声称编译或行为已通过。"
+}

@@ -1,6 +1,6 @@
 # Code Convert Skill
 
-一个面向网络攻防相关代码、以转换知识为中心的轻量 Skill 项目。智能体按**语言方向 × 实际语义场景 × 源/目标系统方向**选读知识，并使用 ATT&CK Enterprise 分类作索引。当前有 **C → C++**、网络/文件/并发场景、POSIX ↔ Winsock、POSIX ↔ Windows 文件路径/线程初稿与长文件工作流；进程场景和系统方向仍缺。fe、stest、realpath、pwd 已取得逐例目标编译证据，但功能保持、真实攻防场景效果及 700 行上限均未验收；C → Go 仅有受基础设施故障阻断的探索稿。
+一个面向网络攻防相关代码、以转换知识为中心的轻量 Skill 项目。智能体按**语言方向 × 实际语义场景 × 源/目标系统方向**选读知识，并使用 ATT&CK Enterprise 分类作索引。当前有 **C → C++**、网络/文件/并发场景、POSIX ↔ Winsock、POSIX ↔ Windows 文件路径/线程初稿与长文件工作流；进程场景和系统方向仍缺。fe、stest、realpath、pwd、Chain Reactor 网络模块已取得逐例目标编译证据；Chain Reactor 仅在受控 loopback 两输入的 case receiver 输出范围内匹配，完整功能、真实攻击链效果及 700 行上限均未验收。C → Go 仍只有受 Windows Agent 身份哈希故障阻断的探索稿。
 
 ## 使用方式
 

@@ -93,13 +93,12 @@ curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/logs"            # co
   - `behaviorVerdict`：Controller `comparison` 的结果仅作**信息记录**；本编译质量阶段不计入功能率、不设行为 oracle、不外推等价。
 - 模型自审 `NO-REPAIR-IDENTIFIED` 只是提交门槛，**绝非语法结论**（C01 先例：自审通过仍被 MinGW 定位到 `min` 未声明）。
 
-## 已知限制：same-runner（same-OS 双侧）baseline 交接缺陷
+## 已知限制：Windows 混合大小写文件名的身份哈希排序差异
 
-- **现象**：当 `comparison_manifest` 两侧 `os`/`arch` 相同（如均 `windows`/`x64`），`resolve_runner_assignments` 把 source 与 target 都指到**同一台** runner（矩阵内仅一台 Windows runner `windows-vm-agent-x64`），`executionStrategy=same-runner`。Controller 先在该 runner 跑源侧 baseline，再向**同一 runner** 交接目标运行时，agent `/run` 以 `INVALID_PACKAGE: baselineReference artifactHash does not match uploaded artifact` 拒绝。
-- **终态**：`jobStatus=INFRA_ERROR`；`failure.type=AGENT_UNAVAILABLE`、`failure.category=environment`、`retryable=false`；目标侧 `execution.performed=false`、`preflight/cleanup=SKIPPED`（**从未构建**），源侧虽 `performed=true` 但 `evidenceBundleRef=null` 且 `evidence/source`=404——**两侧均无 build 证据**。`environmentStatus=clean`、`runnerStateAfter=READY`。
-- **归因**：提交方 `comparison_manifest` 无 `artifactHash`/`baselineReference` 字段，该校验是 Controller/agent 在 same-runner 路径的内部机制，提交方无从设置；判为**基础设施缺陷**，非 capsule 内容/目标代码/转换缺陷。跨 OS/different-runner 路径（fe run-01 C→C++、du 等）不走此交接，均 `COMPLETED`。
-- **首次坐实**：rc4 C→Go run-01（2026-09-28），jobId `eval-20260928-092052-390487e9` 与相同输入重试 `eval-20260928-092721-a2e2311f`，**两次确定性复现**同一错误。证据见 `docs/test/dataset/c-to-go/rc4-c-to-go/output/no-rag/run-01/04-evaluation/job-01-dual-build/returned-evidence/`。
-- **处置**：按恒就绪政策记环境失败、相同输入重试一次即止（`retryable=false`，确定性复现，多试无益）；**不改用本机编译、不放松命令、不伪造 build 结论**。same-OS 数据点在该缺陷修复前无法经此路径取得目标 build 证据；是否改采不触发 same-runner 的合规配置属上层设计决策（当前仅一台 Windows runner，任何 same-OS Windows 双侧都会解析为 same-runner；跨 OS 取证会重新引入被刻意规避的 OS 变量）。
+- **真实回传**：rc4 C→Go run-01 两次终态 `INFRA_ERROR`（jobId `eval-20260928-092052-390487e9`、`eval-20260928-092721-a2e2311f`），Agent 报 `INVALID_PACKAGE: baselineReference artifactHash does not match uploaded artifact`。源侧未落 evidence bundle，目标侧从未构建；两侧均无 build 证据。原报告的 `executionStrategy=same-runner` 是事实，但**不足以证明故障发生在源→目标交接**。
+- **后续定位**：旧仓库 Controller `artifact_tree_hash` 按相对 POSIX 路径字符串排序，Windows Agent `_workspace_digest` 原按 `Path` 对象排序（忽略大小写）。RC4 源包同时有 `WjCryptLib_Rc4.c/.h` 和小写文件；静态重算两种哈希不同。旧仓库独立分支新增无害混合大小写 `/run` 回归，修前同报 400，统一 Agent 排序后通过，错误哈希仍拒绝；相关工程测试 67/67 通过。这将故障收窄为**Windows 文件树哈希顺序不一致**，不是 same-runner 的一般语义结论，也不是目标 Go 编译失败。
+- **状态**：本地旧仓库 `codex/controller-path-hash` 分支提交 `7d77158` 已修 Agent 排序，相关工程测试 67/67 通过；这**不等于** Windows VM Agent 已部署或 RC4 已重新取证。当前 RC4 保持 `INCONCLUSIVE`；须按旧仓库部署/回滚流程升级并用无害 capsule 验证两侧证据后，才可原样重提 RC4。Linux 同机是否存在别的阻断仍需无害检查，不从 Windows 个例推断。
+- **边界**：提交方 manifest 没有 `baselineReference` 字段，不能靠修改目标代码、改换 OS 或放松哈希校验绕过。原始 Controller JSON/log 保持不变；此段是后续诊断，不倒改历史回传。
 
 ## 安全边界
 

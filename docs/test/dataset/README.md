@@ -4,8 +4,8 @@
 
 | 方向 | 当前 case | 已取得的目标编译证据 | 入口 |
 |---|---:|---|---|
-| C → C++ | 6 | fe、stest、realpath、pwd 在各自声明的工具链下 PASS；C01 仅探索工具链 PASS；du 目标未构建 | [C → C++](c-to-cpp/README.md) |
-| C → Go | 1 | RC4 因 Controller same-runner 环境故障未构建 | [C → Go](c-to-go/README.md) |
+| C → C++ | 7 | fe、stest、realpath、pwd、Chain Reactor 在各自声明工具链下取得最终目标 build PASS；C01 仅探索工具链 PASS；du 目标未构建 | [C → C++](c-to-cpp/README.md) |
+| C → Go | 1 | RC4 因 Windows Agent 混合大小写文件哈希排序故障未构建；本地修正未部署 | [C → Go](c-to-go/README.md) |
 
 **状态分层**：`编译 PASS` 只认对应最终交付文件的第三方目标 build；`探索工具链 PASS` 不等于正式目标工具链验收；`INCONCLUSIVE`、源基线阻断和环境故障不计作目标通过或失败。功能结果另列，未观测写 `UNVERIFIED`。不能把这几个不同任务、模型/Skill 版本和工具链条件混算成总体准确率。
 

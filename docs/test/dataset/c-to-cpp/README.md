@@ -11,5 +11,6 @@
 | realpath run-01 | 路径规范化 | 上游 FreeBSD C 源 | 第三方目标 build PASS | 未计分；跨 OS 路径文本不同 | [case](realpath-fs-posix-to-win/case.md) · [result](realpath-fs-posix-to-win/output/no-rag/run-01/result.md) |
 | pwd run-01 | 当前目录/路径身份 | 上游 FreeBSD C 源 | 第三方目标 build PASS | 未计分；跨 OS 路径文本不同 | [case](pwd-fs-posix-to-win/case.md) · [result](pwd-fs-posix-to-win/output/no-rag/run-01/result.md) |
 | du run-01 | 递归磁盘用量 | 上游 FreeBSD C 源 | **INCONCLUSIVE**：Linux 源基线缺 `libutil.h`，目标未构建 | 未计分；两侧未完成比较 | [case](du-fs-posix-to-win/case.md) · [result](du-fs-posix-to-win/output/no-rag/run-01/result.md) |
+| Chain Reactor 网络 run-01 | 受控网络连接（真实 Linux API 的对抗模拟组件） | 发布方固定提交 + MIT；主源 559 行，伴随 C 依赖另计 | 第三方 Linux GNU C++17 目标 build **PASS**；源基线亦 PASS | 两侧正常/拒绝 loopback 输出在 case receiver 可见范围匹配；仅信息记录，不计功能率 | [case](chain-reactor-network-linux/case.md) · [result](chain-reactor-network-linux/output/no-rag/run-01/result.md) |
 
 **覆盖缺口**：这一方向尚无已冻结且通过功能 oracle 的真实攻击链样例；fe 和文件系统四例主要考编译与平台 API。C01 虽有真实网络服务与有限动态证据，源自带目标平台分支，不能证明从 POSIX 逻辑独立移植。下一轮选样需补真实攻防行为与可观测义务。

@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0",
+  "kind": "codeconvert-input-profile",
+  "profileId": "chain-reactor-network-linux-run-01",
+  "argv": [],
+  "stdin": null,
+  "environment": {},
+  "workingDirectory": "workspace",
+  "timeoutSeconds": 90,
+  "fixtures": [],
+  "observationPolicy": {
+    "dimensions": [
+      "output"
+    ]
+  },
+  "comparisonPolicy": {
+    "output": {
+      "stdoutMode": "json-structural",
+      "stderrMode": "normalized-text",
+      "ignoredJsonPaths": []
+    }
+  }
+}

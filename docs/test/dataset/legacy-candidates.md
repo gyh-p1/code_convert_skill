@@ -12,7 +12,7 @@
 
 | 候选文件 | 静态可见行为/价值 | 当前可用判断 | 先决核验 |
 |---|---|---|---|
-| `防御规避/ApiSetMap.c` | Windows API 解析，442 物理行；文件头有作者与许可文本 | **已静态初审、需补条件**：旧副本并入原头文件，未定位固定上游版本，入口调用 `system("pause")` | [首轮审阅](../candidates/real-scenario-source-review.md)：上游身份、改写 diff、依赖/入口及 same-runner 取证阻断 |
+| `防御规避/ApiSetMap.c` | Windows API 解析，442 物理行；文件头有作者与许可文本 | **已静态初审、需补条件**：旧副本并入原头文件，未定位固定上游版本，入口调用 `system("pause")` | [首轮审阅](../candidates/real-scenario-source-review.md)：上游身份、改写 diff、依赖/入口及当前 Windows Agent 身份哈希取证边界 |
 | `数据外传/http_upload.c` | WinINet 读文件并 HTTP POST；是真实传输路径 | **已静态初审、不能原样执行**：main 写死局域网目标和主机路径，逐文件来源/许可不明 | [首轮审阅](../candidates/real-scenario-source-review.md)：假文件、隔离 loopback 服务、请求字节/错误路径 oracle；当前网络采集缺口 |
 | `数据外传/dns_exfil.c` | 构造并发送 DNS 数据 | **条件候选，不能原样执行**：main 写死外部公共 DNS 地址 | 逐文件来源/许可；隔离 DNS stub、无外联、协议字段 oracle；当前网络采集缺口 |
 | `持久化/registry_run.c` | 写 HKCU Run 项，带示例占位路径 | **暂缓功能评估** | 逐文件来源/许可；测试注册表范围和恢复；当前 registry 采集缺口 |

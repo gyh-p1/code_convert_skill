@@ -25,5 +25,5 @@
 ## 判读（据真实回传，不倒填）
 
 - **无目标 build 证据 → 语法结论 `INCONCLUSIVE`（阻断）**，`thirdPartyCompileStatus=BLOCKED-INFRA-ERROR`。
-- 归因：项目首个 same-OS/same-runner 提交，failure 落在**同机 baseline 交接**（Controller/agent 内部 `baselineReference.artifactHash` 校验），**非** capsule 内容/`target.go`/C→Go 转换缺陷（fe/du 跨 OS/different-runner 均 COMPLETED）。
+- 后续诊断更正：`same-runner` 是当时调度事实，不能证明故障在源→目标交接。源侧无 evidence bundle、目标未执行；静态哈希重算与旧仓库无害 `/run` 回归定位到 Controller 与 Windows Agent 对混合大小写文件的排序不一致。修正仅在本地分支通过工程测试，**未部署或重评 RC4**；原始回传仍保持 `INFRA_ERROR`/`INCONCLUSIVE`。详见 run 根 [`result.md`](../../result.md)。
 - 处置：恒就绪政策下已用相同输入重试一次，确定性复现；**不改用本机编译、不放松命令、不伪造 build 结论**。详见 run 根 [`result.md`](../../result.md) 与 [`evaluator_manifest.json`](../../evaluator_manifest.json)。
