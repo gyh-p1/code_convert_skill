@@ -1,12 +1,12 @@
 # du · run-01 · 配置模型转换输入记录（冻结）
 
 > 状态：FROZEN；`.env` 配置模型生成目标；step-04 多系统 POSIX→Windows filesystem 批次第 4 例（最后一例）。本 run 属当前编译质量阶段，只把 **build 证据**计入指标，不评功能、不设行为 oracle。**本例冻结时即预记为预期硬/失败类数据点**（见 §2.1）。
-> 归属：[case.md](../../../../case.md) · 阶段 [index step-04](../../../../../../../../stages/final-output-compile/index.md) · 批次 [step-04](../../../../../../../../stages/final-output-compile/step-04-multisystem-filesystem-batch.md)
+> 归属：[case.md](../../../../case.md) · 阶段 [index step-04](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件) · 批次 [step-04](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件)
 > 前序：批次前三例 [stest run-01](../../../../../stest-fs-posix-to-win/output/no-rag/run-01/result.md)、[realpath run-01](../../../../../realpath-fs-posix-to-win/output/no-rag/run-01/result.md)、[pwd run-01](../../../../../pwd-fs-posix-to-win/output/no-rag/run-01/result.md) 均已 CLOSED（跨 OS 双侧 build 真实 PASS）。
 
 ## 1. 输入与目标
 
-- 源文件：`docs/test/sources/freebsd-du/du.c`（561 行）。**自包含，无伴随本地头**（仅系统头）。
+- 源文件：`当前 run 的 source/ 冻结副本`（561 行）。**自包含，无伴随本地头**（仅系统头）。
 - 源快照：FreeBSD `usr.bin/du/du.c`，tag `release/14.2.0` = commit `89042d64c83ca92d90bd3d161eebc353d5edb3c6`；完整性以 sha256 固定：`du.c`=`d7ba9521006f876879a8e181c13547cf385184aa620fe7600518fd566197ae41`。
 - 源语言/系统：C（**C11**）；POSIX/BSD，无平台 `#ifdef` 分支；含大量 FreeBSD base 惯用法（`__unused`/`SIGINFO`/`UF_NODUMP`/`<libutil.h>`/`<sys/queue.h>`/`fts(3)`）。
 - 目标语言/系统：C++（**C++17**）；**跨 OS 迁移 POSIX/Linux → Windows**。

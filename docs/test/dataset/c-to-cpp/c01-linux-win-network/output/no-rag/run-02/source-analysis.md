@@ -6,7 +6,7 @@
 
 | 维度 | 本次选择 | 依据/状态 |
 |---|---|---|
-| 输入 | `docs/test/sources/uhttpd/uhttpd.c`，PJO2/uhttpd commit `59d17b86ec9f2a70ce1f4369b4c148824be55155` | 源快照只读；GPL-2.0-or-later 许可证随附 |
+| 输入 | `当前 run 的 source/ 冻结副本`，PJO2/uhttpd commit `59d17b86ec9f2a70ce1f4369b4c148824be55155` | 源快照只读；GPL-2.0-or-later 许可证随附 |
 | 任务模式 | 单文件、长文件文本级探索 | 输入为 1,317 LF 物理行，超过项目 700 行规划边界；不计入该边界验证 |
 | 源语言 → 目标语言 | C → C++ | C 方向知识可用；本次仅做保持行为的最小 C++ 兼容改写 |
 | 源系统 → 目标系统 | Linux x64 → Windows x64 | 输入源侧按 `UNIX` 分支理解；目标稿按 `_MSC_VER` Windows 实现分支选择 |

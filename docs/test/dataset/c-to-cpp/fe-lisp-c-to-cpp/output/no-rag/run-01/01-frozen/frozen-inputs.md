@@ -1,11 +1,11 @@
 # fe · run-01 · 配置模型转换输入记录（冻结）
 
 > 状态：FROZEN；`.env` 配置模型生成目标；用户 2026-09-28 确认目标方向并选 **B（FE_STANDALONE 可运行）**，为后续统一走 comparison capsule 双侧执行做准备。本 run 属当前编译质量阶段，只把 **build 证据**计入指标，不评功能、不设行为 oracle。
-> 归属：[case.md](../../../../case.md) · 阶段 [index step-03](../../../../../../../../stages/final-output-compile/index.md)
+> 归属：[case.md](../../../../case.md) · 阶段 [index step-03](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件)
 
 ## 1. 输入与目标
 
-- 源文件：`docs/test/sources/fe/fe.c`（879 行）+ 同目录 `fe.h`（61 行，编译必需）。
+- 源文件：`当前 run 的 source/ 冻结副本`（879 行）+ 同目录 `fe.h`（61 行，编译必需）。
 - 源快照：rxi/fe，commit `3efa075`（2020-04-05）；完整性以 sha256 固定：`fe.c`=`3fc7466e9ae2c114e6fdf36410fc8804a20c83d5c21babcaf664567af6276807`、`fe.h`=`4b30a0f26a8a3c186047a5f6ff60779811de5dfa596c2ea9942398cc0034a69e`。
 - 源语言/系统：C（**C11**）；**无平台 `#ifdef` 分支**。
 - 目标语言/系统：C++（**C++17**）；**同一目标 OS，不做跨 OS 迁移**。

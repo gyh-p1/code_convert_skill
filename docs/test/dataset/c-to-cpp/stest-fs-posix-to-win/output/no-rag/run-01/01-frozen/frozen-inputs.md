@@ -1,11 +1,11 @@
 # stest · run-01 · 配置模型转换输入记录（冻结）
 
 > 状态：FROZEN；`.env` 配置模型生成目标；step-04 多系统 POSIX→Windows filesystem 批次首例。本 run 属当前编译质量阶段，只把 **build 证据**计入指标，不评功能、不设行为 oracle。
-> 归属：[case.md](../../../../case.md) · 阶段 [index step-04](../../../../../../../../stages/final-output-compile/index.md) · 批次 [step-04](../../../../../../../../stages/final-output-compile/step-04-multisystem-filesystem-batch.md)
+> 归属：[case.md](../../../../case.md) · 阶段 [index step-04](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件) · 批次 [step-04](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件)
 
 ## 1. 输入与目标
 
-- 源文件：`docs/test/sources/dmenu-stest/stest.c`（109 行）+ 同目录 `arg.h`（49 行，编译必需的本地头）。
+- 源文件：`当前 run 的 source/ 冻结副本`（109 行）+ 同目录 `arg.h`（49 行，编译必需的本地头）。
 - 源快照：suckless dmenu，commit `61e0072c3e6adfc67bafbc84e376cf26bc3680c0`；完整性以 sha256 固定：`stest.c`=`bb943c3e2c228398c592e873bb31abf18efba5c0f06c3bc39220443a7c7696bd`、`arg.h`=`99ca0b684fa83f2d21899345ccc33ec357cbbe48d09c56794e3292c2e28f21b0`。
 - 源语言/系统：C（**C11**）；纯 **POSIX**，无平台 `#ifdef` 分支。
 - 目标语言/系统：C++（**C++17**）；**跨 OS 迁移 POSIX/Linux → Windows**。

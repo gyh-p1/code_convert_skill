@@ -4,7 +4,7 @@
 
 ## 文件、方向与知识选择
 
-- 拟转换单元：上游 `networking_quarks.c` 559 LF 物理行，固定提交 `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`、MIT；完整哈希见[源快照](../../../../../../sources/chain-reactor-network/source.md)。伴随 `atoms.h`、`util.h`、原样 C `util.c` 与本 case `driver.c` 不并入目标单文件。
+- 拟转换单元：上游 `networking_quarks.c` 559 LF 物理行，固定提交 `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`、MIT；完整哈希见源快照（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）。伴随 `atoms.h`、`util.h`、原样 C `util.c` 与本 case `driver.c` 不并入目标单文件。
 - 方向与场景：Linux x64 C → Linux x64 GNU C++17，网络 I/O；同 OS，无跨 OS 映射。ATT&CK 不能仅由 socket/API 推断，记录 `none`。按需读取 C→C++ 方向、网络 I/O 场景、长单文件工作流、头文件/宏与类型/C ABI 专题；监听分支使用 `fork`，但本 case 不调用，进程系统方向仍无项目 Skill。
 
 ## 结构与行为地图

@@ -19,7 +19,7 @@
 
 Controller 在各侧目录内执行 `buildCommand` 再 `runCommand`。realpath **无伴随本地头**，故各侧只含其 artifact + 驱动：
 
-- `source/`：`realpath.c`（源自 `docs/test/sources/freebsd-realpath/`）+ 本目录 `source/run_case.py`
+- `source/`：`realpath.c`（源自 `当前 run 的 source/ 冻结副本`）+ 本目录 `source/run_case.py`
 - `target/`：`target.cpp`（run 根最终交付稿 = 自修稿）+ 本目录 `target/run_case.py`
 - 顶层：`comparison_manifest.json`、`input_profile.json`、`metadata.json`
 

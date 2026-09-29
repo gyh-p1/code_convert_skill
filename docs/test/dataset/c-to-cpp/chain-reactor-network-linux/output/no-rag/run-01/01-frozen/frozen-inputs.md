@@ -1,12 +1,12 @@
 # Chain Reactor 网络模块 run-01：冻结输入
 
 > 状态：FROZEN（仅文本转换输入；未编译/运行）
-> 归属：[case.md](../../../../case.md) · [阶段 step-07](../../../../../../../../stages/final-output-compile/step-07-chain-reactor-network-case.md)
+> 归属：[case.md](../../../../case.md) · [阶段 step-07](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件)
 
 ## 身份与目标
 
-- 主源：[`networking_quarks.c`](../../../../../../../sources/chain-reactor-network/networking_quarks.c)，上游 Red Canary Chain Reactor commit `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`，SHA-256 `8b8c2f355b0382f19dda088ff2d32fadc9b7b22713df0e87dca2b2330851edf0`，559 LF 物理行。
-- 伴随原件：[`atoms.h`](../../../../../../../sources/chain-reactor-network/atoms.h)、[`util.h`](../../../../../../../sources/chain-reactor-network/util.h)、[`util.c`](../../../../../../../sources/chain-reactor-network/util.c)；完整哈希、MIT 许可见[源说明](../../../../../../../sources/chain-reactor-network/source.md)。
+- 主源：`networking_quarks.c`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录），上游 Red Canary Chain Reactor commit `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`，SHA-256 `8b8c2f355b0382f19dda088ff2d32fadc9b7b22713df0e87dca2b2330851edf0`，559 LF 物理行。
+- 伴随原件：`atoms.h`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）、`util.h`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）、`util.c`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）；完整哈希、MIT 许可见源说明（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）。
 - case 私有非上游入口：[`driver.c`](../../../../driver.c)，SHA-256 `ff710e0e6689d84fa4e1c8789270aac1339d121baad097b240669bcfeb6b1da6`；唯一网络目标固定 loopback，端口由未来受控 receiver 给定。任何修改另起版本。
 - 目标：`target.cpp`，Linux x64 C++17（GNU 扩展）。源与目标同 OS。只翻译主源完整翻译单元，不改写伴随 C 实现或新增网络/进程/权限能力；保持 `quark_connect` 与 C 入口的调用 ABI、整数/结构语义和原有错误/清理路径。
 - 任务工作流：根 Skill + C→C++ 方向 + 网络 I/O 场景 + 长文件工作流 + header-macro/type-abi 专题；ATT&CK 无源代码证据时 `none`；RAG 关闭。

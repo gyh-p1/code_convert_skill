@@ -1,9 +1,9 @@
 # pwd：FreeBSD `pwd(1)` POSIX C → Windows C++（多系统 filesystem 子域，step-04 批次 3/4）
 
 > 状态：FROZEN（step-04 批次第 3 例；跨 OS 双侧 build 形态沿用 stest/realpath——见 §3）
-> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../stages/final-output-compile/阶段方案.md) · 执行真源 [index](../../../../stages/final-output-compile/index.md) step-04 · 批次文档 [step-04](../../../../stages/final-output-compile/step-04-multisystem-filesystem-batch.md)
-> 共享源样例：[`../../sources/freebsd-pwd/pwd.c`](../../../sources/freebsd-pwd/pwd.c)（自包含，仅系统头，无本地 `""` 头）
-> 上游来源与许可：[source.md](../../../sources/freebsd-pwd/source.md) 与随附 BSD-3-Clause `COPYRIGHT.freebsd`
+> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../项目开发规范.md#当前开发阶段与退出条件) · 执行真源 [index](../../../../项目开发规范.md#当前开发阶段与退出条件) step-04 · 批次文档 [step-04](../../../../项目开发规范.md#当前开发阶段与退出条件)
+> 共享源样例：`当前 run 的 source/ 冻结副本`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）（自包含，仅系统头，无本地 `""` 头）
+> 上游来源与许可：上游来源说明已清理；冻结副本见当前 run 的 `source/` 目录 与随附 BSD-3-Clause `COPYRIGHT.freebsd`
 > 前序：批次首二例 [stest](../stest-fs-posix-to-win/case.md)、[realpath](../realpath-fs-posix-to-win/case.md) 均已 CLOSED（跨 OS 双侧 build 真实 PASS）；本例复用同一形态与调度政策。
 
 ## 1. 转换方向与标签（已确认）

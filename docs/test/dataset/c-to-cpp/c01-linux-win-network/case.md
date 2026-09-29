@@ -1,8 +1,8 @@
 # C01：uhttpd Linux → Windows（历史探索）
 
-> 状态：HISTORICAL-EXPLORATION（run-01 文本稿、run-02 获批隔离探索已结束；原固定四例任务已[取消](../../../../stages/four-case-cancellation.md)）
-> 共享源样例：[`../../sources/uhttpd/uhttpd.c`](../../../sources/uhttpd/uhttpd.c)  
-> 上游来源与许可：[source.md](../../../sources/uhttpd/source.md) 与随附 GPL-2.0-or-later `LICENSE`
+> 状态：HISTORICAL-EXPLORATION（run-01 文本稿、run-02 获批隔离探索已结束；原固定四例任务已[取消](../../../../项目开发规范.md#当前开发阶段与退出条件)）
+> 共享源样例：`当前 run 的 source/ 冻结副本`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）
+> 上游来源与许可：上游来源说明已清理；冻结副本见当前 run 的 `source/` 目录 与随附 GPL-2.0-or-later `LICENSE`
 
 ## 转换方向与标签
 

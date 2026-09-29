@@ -1,9 +1,9 @@
 # rc4：WjCryptLib RC4（公有领域 C）→ Go（同 OS）——语言方向维度首例（攻防 crypto 切片）
 
 > 状态：FROZEN。本项目在完成 step-04「多系统 POSIX→Windows/filesystem」批次（stest/realpath/pwd CLOSED、du 失败类数据点 CLOSED）后，**新开「语言方向」维度**：约束在攻防语言域内取最常见转换。工具链约束下（Windows Agent 支持 `c/cpp/python/powershell/go/dotnet`，**无 rust**）选 **C → Go**，**同 OS**（隔离语言变量，避免 du 式跨 OS/源基线失败导致取不到目标证据）。本 run 属编译质量阶段，只把 **build 证据**计入指标，不评功能、不设行为 oracle。
-> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../stages/final-output-compile/index.md)（语言方向为该阶段新拓展维度）
-> 共享源样例：[`../../sources/wjcryptlib-rc4/`](../../../sources/wjcryptlib-rc4/source.md)——上游 RC4 模块（逐字）+ 薄 CLI 驱动（自写 harness）
-> 上游来源与许可：见 [source.md](../../../sources/wjcryptlib-rc4/source.md)（公有领域，文件头奉献声明；sha256 为完整性锚）
+> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../项目开发规范.md#当前开发阶段与退出条件)（语言方向为该阶段新拓展维度）
+> 共享源样例：`当前 run 的 source/ 冻结副本`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）——上游 RC4 模块（逐字）+ 薄 CLI 驱动（自写 harness）
+> 上游来源与许可：见 上游来源说明已清理；冻结副本见当前 run 的 `source/` 目录（公有领域，文件头奉献声明；sha256 为完整性锚）
 
 ## 1. 转换方向与标签（已确认）
 

@@ -1,9 +1,9 @@
 # fe：rxi/fe Lisp 解释器 C → C++（当前编译质量阶段）
 
 > 状态：CLOSED（step-03 已取得源、目标双侧 build PASS；功能未计分）
-> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../stages/final-output-compile/阶段方案.md) · 执行真源 [index](../../../../stages/final-output-compile/index.md) step-03
-> 共享源样例：[`../../sources/fe/fe.c`](../../../sources/fe/fe.c)（配 [`fe.h`](../../../sources/fe/fe.h)）
-> 上游来源与许可：[source.md](../../../sources/fe/source.md) 与随附 MIT `LICENSE`
+> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../项目开发规范.md#当前开发阶段与退出条件) · 执行真源 [index](../../../../项目开发规范.md#当前开发阶段与退出条件) step-03
+> 共享源样例：`当前 run 的 source/ 冻结副本`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）（配 `fe.h`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录））
+> 上游来源与许可：上游来源说明已清理；冻结副本见当前 run 的 `source/` 目录 与随附 MIT `LICENSE`
 
 ## 1. 转换方向与标签（已确认）
 
@@ -40,5 +40,5 @@
 
 - 不在本机编译、运行、调用构建脚本或触发代码生成。
 - 不评功能正确率、不设/不比对行为 oracle；build 通过不说成功能或安全正确。
-- fe 是独立编译质量 run；不把它倒填为 C01 或正式功能基线。原固定四例专项已[取消](../../../../stages/four-case-cancellation.md)。
+- fe 是独立编译质量 run；不把它倒填为 C01 或正式功能基线。原固定四例专项已[取消](../../../../项目开发规范.md#当前开发阶段与退出条件)。
 - 不为凑“通过”把修订稿成功回写成原始生成稿成功。

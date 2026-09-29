@@ -1,8 +1,8 @@
 # Chain Reactor 网络模块：Linux C → Linux C++
 
 > 状态：CLOSED / EVALUATED（最终目标 Linux GNU C++17 build PASS；有限 loopback 输出匹配仅作信息记录）
-> 阶段真源：[step-07 单例闭环](../../../../stages/final-output-compile/step-07-chain-reactor-network-case.md)
-> 源快照：[source.md](../../../sources/chain-reactor-network/source.md)；上游提交 `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`，MIT。
+> 阶段真源：[step-07 单例闭环](../../../../项目开发规范.md#当前开发阶段与退出条件)
+> 源快照：上游来源说明已清理；冻结副本见当前 run 的 `source/` 目录；上游提交 `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`，MIT。
 
 ## 任务范围
 
@@ -14,7 +14,7 @@
 
 ## 来源选择与可观察义务
 
-旧目录 `ApiSetMap.c`、改写的反射加载器与 HTTP 上传样例的准入问题见[旧候选审阅](../../../candidates/real-scenario-source-review.md)。此处选 Chain Reactor，是因为[发布方](https://github.com/redcanaryco/chain-reactor/blob/51c25c4c9dfdc73085c35882d6bbb58e56c006a7/README.md)、固定提交与 MIT 许可可核，模块使用真实 Linux 网络 API；但它仍是对抗行为**模拟组件**，不是完整在野攻击链。对照的 [Atomic Red Team T1040 抓包 C 源](https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1040/src/linux_pcapdemo.c)需要提权/原始套接字，本轮不选。上游示例 JSON 含公网目标，**未复制入本 case**。
+旧目录 `ApiSetMap.c`、改写的反射加载器与 HTTP 上传样例的准入问题见旧候选审阅（已清理，不再作为当前数据）。此处选 Chain Reactor，是因为[发布方](https://github.com/redcanaryco/chain-reactor/blob/51c25c4c9dfdc73085c35882d6bbb58e56c006a7/README.md)、固定提交与 MIT 许可可核，模块使用真实 Linux 网络 API；但它仍是对抗行为**模拟组件**，不是完整在野攻击链。对照的 [Atomic Red Team T1040 抓包 C 源](https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1040/src/linux_pcapdemo.c)需要提权/原始套接字，本轮不选。上游示例 JSON 含公网目标，**未复制入本 case**。
 
 | 义务 | 受控输入与源行为 | 必需观察与结论限制 |
 |---|---|---|

@@ -1,12 +1,12 @@
 # C01 · uhttpd · 文本级转换探索稿交付说明
 
-> 历史状态：原固定四例方案已[取消](../../../../../../../stages/four-case-cancellation.md)；本稿及其 `UNVERIFIED` 结论保留作证据，不再进入原计划基线。
+> 历史状态：原固定四例方案已[取消](../../../../../../../项目开发规范.md#当前开发阶段与退出条件)；本稿及其 `UNVERIFIED` 结论保留作证据，不再进入原计划基线。
 
 > 状态：EXPLORATORY DRAFT — 非正式 No-RAG 基线；语法与行为均 **UNVERIFIED**。
 
 ## 1. 任务画像
 
-- 源：[`../../../../../sources/uhttpd/uhttpd.c`](../../../../../../sources/uhttpd/uhttpd.c)，PJO2/uhttpd commit `59d17b86ec9f2a70ce1f4369b4c148824be55155`，GPL-2.0-or-later。
+- 源：`当前 run 的 source/ 冻结副本`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录），PJO2/uhttpd commit `59d17b86ec9f2a70ce1f4369b4c148824be55155`，GPL-2.0-or-later。
 - 源配置：C / Linux x64，按 POSIX `UNIX` 分支理解；原文件本身还包含 Windows 分支。
 - 目标：C++ / Windows x64；MSVC-compatible C++17 是本次探索假设，不是已冻结工具链。
 - 场景标签：`network-io`、`file-io`、`concurrency`。
@@ -42,7 +42,7 @@
 
 | 检查 | 状态 | 说明 |
 |---|---|---|
-| 源快照未修改 | 静态检查完成 | 转换只读 `docs/test/sources/uhttpd/uhttpd.c` |
+| 源快照未修改 | 静态检查完成 | 转换只读 `当前 run 的 source/ 冻结副本` |
 | 目标文件存在/覆盖 | 静态检查完成 | 已生成完整单文件；按源结构与函数地图人工对照，未做 AST/编译器核验 |
 | 目标 C++ 语法/编译 | **UNVERIFIED** | 未调用编译器、构建系统或代码生成器 |
 | HTTP 行为 oracle | **UNVERIFIED** | oracle 仍为草案，未运行源或目标服务 |

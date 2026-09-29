@@ -15,7 +15,7 @@
 
 Controller 在各侧目录内执行 `buildCommand` 再 `runCommand`，故 `fe.h` 必须与被编译文件同目录：
 
-- `source/`：`fe.c` + `fe.h`（源自 `docs/test/sources/fe/`）+ 本目录 `source/run_case.py`
+- `source/`：`fe.c` + `fe.h`（源自 `当前 run 的 source/ 冻结副本`）+ 本目录 `source/run_case.py`
 - `target/`：`target.cpp`（run 根最终交付稿）+ `fe.h` + 本目录 `target/run_case.py`
 - 顶层：`comparison_manifest.json`、`input_profile.json`、`metadata.json`
 

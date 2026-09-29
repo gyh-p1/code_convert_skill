@@ -1,13 +1,13 @@
 # rc4 · run-01 · 配置模型转换输入记录（冻结）
 
 > 状态：FROZEN；`.env` 配置模型生成目标；**语言方向维度**首例，方向 **C → Go**，**同 OS**（Windows Agent，隔离语言变量）。本 run 属当前编译质量阶段，只把 **build 证据**计入指标，不评功能、不设行为 oracle。
-> 归属：[case.md](../../../../case.md) · 阶段 [index](../../../../../../../../stages/final-output-compile/index.md)
-> 共享源：[source.md](../../../../../../../sources/wjcryptlib-rc4/source.md)（上游 RC4 模块逐字 + 自写薄 CLI 驱动；公有领域；sha256 为完整性锚）
+> 归属：[case.md](../../../../case.md) · 阶段 [index](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件)
+> 共享源：上游来源说明已清理；冻结副本见当前 run 的 `source/` 目录（上游 RC4 模块逐字 + 自写薄 CLI 驱动；公有领域；sha256 为完整性锚）
 > 与 du 的关键差异：du 是**跨 OS**、预记为失败类；本例是**同 OS 语言方向**、预期双侧可干净 build（但不预判，见 §2.1）。
 
 ## 1. 输入与目标
 
-- 源文件（3 份，均在 `docs/test/sources/wjcryptlib-rc4/`）：
+- 源文件（3 份，均在 `当前 run 的 source/ 冻结副本`）：
   - `WjCryptLib_Rc4.c`（167 行，sha256 `9c77e9b3f45dfe6162b1694b57bda665a3b24490841fa5ef95952dd1a73a72c6`）——**上游逐字，被评译主体**。
   - `WjCryptLib_Rc4.h`（94 行，sha256 `f33d3a78e2f0642ad0c99d226f29eaaac844c82a0eaaae42a377b4222984f7c0`）——**上游逐字，被评译主体**。
   - `rc4_decrypt_cli.c`（94 行，sha256 `9ab3ebbb8926bf580162ba2307401f8b1bb923e5ba944ef85a0a508ef5789083`）——**本项目自写薄驱动**（非上游，按"可执行时默认补入口"政策补入，无自有密码学逻辑）。

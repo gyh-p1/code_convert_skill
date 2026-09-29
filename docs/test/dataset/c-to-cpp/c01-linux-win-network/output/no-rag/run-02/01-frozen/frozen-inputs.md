@@ -4,7 +4,7 @@
 
 ## 1. 输入与目标
 
-- 源文件：`docs/test/sources/uhttpd/uhttpd.c`
+- 源文件：`当前 run 的 source/ 冻结副本`
 - 源快照：PJO2/uhttpd，commit `59d17b86ec9f2a70ce1f4369b4c148824be55155`
 - 源语言/系统：C / Linux x64，按 POSIX `UNIX` 分支理解
 - 目标语言/系统：C++ / Windows x64

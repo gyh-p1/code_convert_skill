@@ -5,7 +5,7 @@
   "note": "dmenu stest.c POSIX C11 -> Windows C++17 (step-04 multi-system POSIX->Windows filesystem batch, 1/4). Cross-OS dual-side build: source C baseline on Linux VM, target C++ on Windows VM. Compile-quality stage: only build evidence is counted; behavior is not scored and no behavior oracle is set.",
   "safetyClassification": "authorized-isolated-vm-loopback-only",
   "schemaVersion": "1.0",
-  "sourceArtifact": "docs/test/sources/dmenu-stest/stest.c",
+  "sourceArtifact": "当前 run 的 source/dmenu-stest/stest.c",
   "targetArtifact": "docs/test/cases/stest-fs-posix-to-win/output/no-rag/run-01/target.cpp",
   "sourceHash": "sha256:bb943c3e2c228398c592e873bb31abf18efba5c0f06c3bc39220443a7c7696bd",
   "sharedHeaderHash": "sha256:99ca0b684fa83f2d21899345ccc33ec357cbbe48d09c56794e3292c2e28f21b0",

@@ -12,7 +12,7 @@
 
 ## 任务与最终交付
 
-- [上游源快照](../../../../../../sources/chain-reactor-network/source.md)：Red Canary Chain Reactor commit `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`、MIT。主文件 559 物理行；原样 C 伴随实现和[case 私有 loopback 入口](../../../driver.c)另计，不把它称作 559 行完整程序。
+- 上游源快照（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）：Red Canary Chain Reactor commit `51c25c4c9dfdc73085c35882d6bbb58e56c006a7`、MIT。主文件 559 物理行；原样 C 伴随实现和[case 私有 loopback 入口](../../../driver.c)另计，不把它称作 559 行完整程序。
 - Linux x64 C → Linux x64 GNU C++17，RAG 关闭。目标是完整转换主翻译单元，保留源网络/进程分支和外部 C 调用边界，不新增源无能力。任务范围、选中知识与安全边界见[冻结输入](01-frozen/frozen-inputs.md)和[源码画像](source-analysis.md)。
 - run 根[最终目标稿](target.cpp)是配置模型首次稿的原样副本；其它请求、响应与模型元数据在[`02-conversion/`](02-conversion/)，结构化自审与请求在[`03-self-review/`](03-self-review/)。没有自修轮或评估后 repair；第三方编译结果只归属该最终稿。
 

@@ -6,7 +6,7 @@
 
 ## 1. 源
 
-- 文件：[`../../../../../sources/uhttpd/uhttpd.c`](../../../../../../sources/uhttpd/uhttpd.c)
+- 文件：`当前 run 的 source/ 冻结副本`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）
 - 上游：`PJO2/uhttpd`，`uhttpd.c`
 - Pinned commit：`59d17b86ec9f2a70ce1f4369b4c148824be55155`
 - 许可：GPL-2.0-or-later（随附 `LICENSE`、`UPSTREAM-README.md`）

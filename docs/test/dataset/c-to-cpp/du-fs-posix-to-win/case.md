@@ -1,9 +1,9 @@
 # du：FreeBSD `du(1)` POSIX C → Windows C++（多系统 filesystem 子域，step-04 批次 4/4，预期硬数据点）
 
 > 状态：CLOSED（step-04 批次第 4 例 = 最后一例）。**§2.1/§6 预记的"失败类别数据点"已由真实证据坐实**：job-01 `eval-20260928-073929-e89be213`（COMPLETED）——源侧 C11 基线在 plain-glibc Linux VM `FAILED_COMPILE`（首个硬阻断 `du.c:55:10 libutil.h: No such file or directory`），据双 runner 定序目标侧被跳过（`execution.performed=false`）、无目标 build 证据；runVerdict=blocked、syntaxVerdict=INCONCLUSIVE。目标 C++ 稿经 2 轮自修（预算用尽，1 项 fnmatch 残留已登记）。证据见 [run-01/result.md](output/no-rag/run-01/result.md) 与 [job-01-dual-build](output/no-rag/run-01/04-evaluation/job-01-dual-build/README.md)。冻结预记原文保留于 §2.1（不倒填）；全程不改源、不放松命令、不伪造目标通过。
-> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../stages/final-output-compile/阶段方案.md) · 执行真源 [index](../../../../stages/final-output-compile/index.md) step-04 · 批次文档 [step-04](../../../../stages/final-output-compile/step-04-multisystem-filesystem-batch.md)
-> 共享源样例：[`../../sources/freebsd-du/du.c`](../../../sources/freebsd-du/du.c)（自包含，仅系统头，无本地 `""` 头）
-> 上游来源与许可：[source.md](../../../sources/freebsd-du/source.md) 与随附 BSD-3-Clause `COPYRIGHT.freebsd`
+> 归属阶段：[最终交付编译质量与 Skill 拓展](../../../../项目开发规范.md#当前开发阶段与退出条件) · 执行真源 [index](../../../../项目开发规范.md#当前开发阶段与退出条件) step-04 · 批次文档 [step-04](../../../../项目开发规范.md#当前开发阶段与退出条件)
+> 共享源样例：`当前 run 的 source/ 冻结副本`（共享源快照已清理；冻结副本见当前 run 的 `source/` 目录）（自包含，仅系统头，无本地 `""` 头）
+> 上游来源与许可：上游来源说明已清理；冻结副本见当前 run 的 `source/` 目录 与随附 BSD-3-Clause `COPYRIGHT.freebsd`
 > 前序：批次前三例 [stest](../stest-fs-posix-to-win/case.md)、[realpath](../realpath-fs-posix-to-win/case.md)、[pwd](../pwd-fs-posix-to-win/case.md) 均已 CLOSED（跨 OS 双侧 build 真实 PASS）；本例复用同一形态与调度政策，但**源画像远重**。
 
 ## 1. 转换方向与标签（已确认）

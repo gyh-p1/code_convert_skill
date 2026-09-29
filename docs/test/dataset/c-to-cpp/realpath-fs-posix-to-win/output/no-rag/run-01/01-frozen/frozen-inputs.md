@@ -1,12 +1,12 @@
 # realpath · run-01 · 配置模型转换输入记录（冻结）
 
 > 状态：FROZEN；`.env` 配置模型生成目标；step-04 多系统 POSIX→Windows filesystem 批次第 2 例。本 run 属当前编译质量阶段，只把 **build 证据**计入指标，不评功能、不设行为 oracle。
-> 归属：[case.md](../../../../case.md) · 阶段 [index step-04](../../../../../../../../stages/final-output-compile/index.md) · 批次 [step-04](../../../../../../../../stages/final-output-compile/step-04-multisystem-filesystem-batch.md)
+> 归属：[case.md](../../../../case.md) · 阶段 [index step-04](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件) · 批次 [step-04](../../../../../../../../项目开发规范.md#当前开发阶段与退出条件)
 > 前序：批次首例 [stest run-01](../../../../../stest-fs-posix-to-win/output/no-rag/run-01/result.md) 已 CLOSED（跨 OS 双侧 build 真实 PASS，job-02 `eval-20260928-053745-2a386af5`）。
 
 ## 1. 输入与目标
 
-- 源文件：`docs/test/sources/freebsd-realpath/realpath.c`（82 行）。**自包含，无伴随本地头**（仅系统头）。
+- 源文件：`当前 run 的 source/ 冻结副本`（82 行）。**自包含，无伴随本地头**（仅系统头）。
 - 源快照：FreeBSD `bin/realpath/realpath.c`，tag `release/14.2.0` = commit `89042d64c83ca92d90bd3d161eebc353d5edb3c6`；完整性以 sha256 固定：`realpath.c`=`179ec5ea1f7e6197c9acf9785c4933a379fed0839fb788be376ea8caff4de889`。
 - 源语言/系统：C（**C11**）；POSIX/BSD，无平台 `#ifdef` 分支；含 FreeBSD base 惯用法 `__dead2`。
 - 目标语言/系统：C++（**C++17**）；**跨 OS 迁移 POSIX/Linux → Windows**。
