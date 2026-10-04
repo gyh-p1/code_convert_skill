@@ -10,3 +10,12 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# 2026-10-02 外部攻防样本原始交付：本地待审，不进入公开仓库
+/docs/test/dataset/incoming-2026-10-02/
+
+# 2026-10-02 handoff cases: source snapshots are local-only; case metadata stays tracked
+/docs/test/dataset/*/handoff-2026-10-02-d*/source/
+
+# Temporary previous-layout local copies; removal is pending host filesystem policy
+/docs/test/dataset/language-handoff-2026-10-02/

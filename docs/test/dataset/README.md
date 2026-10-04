@@ -7,6 +7,8 @@
 | C → C++ | 7 | fe、stest、realpath、pwd、Chain Reactor 在各自声明工具链下取得最终目标 build PASS；C01 仅探索工具链 PASS；du 目标未构建 | [C → C++](c-to-cpp/README.md) |
 | C → Go | 1 | RC4 因 Windows Agent 混合大小写文件哈希排序故障未构建；本地修正未部署 | [C → Go](c-to-go/README.md) |
 
+**2026-10-02 外部候选（与上表历史结果分开）**：依照[交接盘点与计数](handoff-2026-10-02.md)，在 42 个有向语言目录下新增 **233 个候选 case 记录**，其中 **209 个本地源文件哈希匹配、24 个源文件缺失**；对应 `source/` 被 Git 忽略。它们尚未冻结完整任务合同、没有目标转换代码或 Controller 回传，**不计入历史编译/行为证据**。[原包 SHA-256 清单](handoff-2026-10-02-manifest.tsv)用于未来移交原包核对；只交付 Git 仓库并不等于交付原始样本。
+
 **状态分层**：`编译 PASS` 只认对应最终交付文件的第三方目标 build；`探索工具链 PASS` 不等于正式目标工具链验收；`INCONCLUSIVE`、源基线阻断和环境故障不计作目标通过或失败。功能结果另列，未观测写 `UNVERIFIED`。不能把不同任务、模型/Skill 版本和工具链条件混算成总体准确率。
 
 ## 目录

@@ -9,6 +9,8 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 
 > 战术名称与 ID 以 [MITRE 官方 Enterprise 战术列表](https://attack.mitre.org/tactics/enterprise/) 为准。下表按 2026-09-25 核对的 MITRE 官方 Enterprise 列表记录 15 个战术（TA0005 为 Stealth，并包含 TA0112 Defense Impairment）;使用前仍须核对官方列表;引用本索引不代表该战术已有专属转换能力。
 
+> **2026-10-02 外部样本标签**：按方向归档的候选见[数据集交接盘点](../../docs/test/dataset/handoff-2026-10-02.md)。外部清单的 EXEC/PER/DE 等 11 类缩写是旧资料的**未核实标签**，不是本索引的战术覆盖证据；特别是旧资料以“防御规避”称 TA0005，而本索引按 2026-09-25 核对的现行名称为 Stealth。逐例分类前需按当前官方 ID/名称与源码实际行为重新核对。七语言转换知识仍位于根[通用入口](../../SKILL.md)、`skills/directions/` 和 `skills/references/`，不把语言规则复制进战术索引。
+
 ## 如何使用
 
 1. 从战术只用于**定位关注点**:知道代码大致用途后,仍必须从源码**实际行为**判断语义场景,不按战术标签假定隐藏行为(判断口径见根 [通用 Skill 入口](../../SKILL.md) §选择适用知识)。

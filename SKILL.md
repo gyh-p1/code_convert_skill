@@ -11,7 +11,35 @@ metadata:
 
 ## 选择适用知识
 
-先完成源码画像，再选 Skill；不要先看 ATT&CK 标签再反推代码行为。当前有 [C → C++ 语言方向](skills/directions/c-to-cpp/SKILL.md)、[网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[并发场景](skills/scenes/concurrency/SKILL.md)、[POSIX ↔ Winsock 套接字](skills/systems/posix-winsock/SKILL.md)、[POSIX ↔ Windows 文件路径](skills/systems/posix-windows-filesystem/SKILL.md) 与 [POSIX ↔ Windows 线程](skills/systems/posix-windows-threads/SKILL.md) 知识。文件系统 POSIX→Windows 已有 stest、realpath、pwd 的逐例编译证据，du 目标未构建；这些证据不证明功能。其他系统方向和长文件流程仍是未验证初稿。进程创建等未列出的方向仍无对应 Skill。
+先完成源码画像，再选 Skill；不要先看 ATT&CK 标签再反推代码行为。
+
+七语言底层语义与共性机制由 [七语言共性语义参考库](skills/references/seven-language-common-semantics.md) 统一定义（基于 2026-10-01 冻结基线：C11、C++17、C# 12/.NET 8、CPython 3.12、Go 1.27、PowerShell 7.6、Ruby 3.4）。
+
+**当前已编写规则的独立语言方向 Skill**：
+- [C → C++ 语言方向](skills/directions/c-to-cpp/SKILL.md)（仅 fe、stest、realpath、pwd、chain-reactor 5 个用例取得 MinGW g++ C++17 目标 build PASS，功能未验收；MSVC/Clang 待验证）；
+- [C++ → C 语言方向](skills/directions/cpp-to-c/SKILL.md)（未验证/阻断：无目标编译 PASS 证据）；
+- [C → Python 语言方向](skills/directions/c-to-python/SKILL.md)（未验证/阻断：无目标构建 PASS 证据）；
+- [C → Go 语言方向](skills/directions/c-to-go/SKILL.md)（未验证/阻断：受 Windows Agent 路径哈希故障阻断，两端未构建）；
+- [Python → Go 语言方向](skills/directions/python-to-go/SKILL.md)（未验证/阻断：无目标构建 PASS 证据）；
+- [Go → C 语言方向](skills/directions/go-to-c/SKILL.md)（未验证/阻断：无目标编译 PASS 证据）。
+
+**其余 36 个语言转换方向专向规则覆盖参考**：
+详见 [剩余 36 个语言转换方向专向规则覆盖参考库](skills/references/remaining-direction-overlays.md)，可直接定位到对应源→目标锚点：
+
+| 源语言 | 覆盖目标语言专向规则锚点 |
+|---|---|
+| **C** | [C → C#](skills/references/remaining-direction-overlays.md#c-to-csharp) ｜ [C → PowerShell](skills/references/remaining-direction-overlays.md#c-to-powershell) ｜ [C → Ruby](skills/references/remaining-direction-overlays.md#c-to-ruby) |
+| **C++** | [C++ → C#](skills/references/remaining-direction-overlays.md#cpp-to-csharp) ｜ [C++ → Python](skills/references/remaining-direction-overlays.md#cpp-to-python) ｜ [C++ → Go](skills/references/remaining-direction-overlays.md#cpp-to-go) ｜ [C++ → PowerShell](skills/references/remaining-direction-overlays.md#cpp-to-powershell) ｜ [C++ → Ruby](skills/references/remaining-direction-overlays.md#cpp-to-ruby) |
+| **C#** | [C# → C](skills/references/remaining-direction-overlays.md#csharp-to-c) ｜ [C# → C++](skills/references/remaining-direction-overlays.md#csharp-to-cpp) ｜ [C# → Python](skills/references/remaining-direction-overlays.md#csharp-to-python) ｜ [C# → Go](skills/references/remaining-direction-overlays.md#csharp-to-go) ｜ [C# → PowerShell](skills/references/remaining-direction-overlays.md#csharp-to-powershell) ｜ [C# → Ruby](skills/references/remaining-direction-overlays.md#csharp-to-ruby) |
+| **Python** | [Python → C](skills/references/remaining-direction-overlays.md#python-to-c) ｜ [Python → C++](skills/references/remaining-direction-overlays.md#python-to-cpp) ｜ [Python → C#](skills/references/remaining-direction-overlays.md#python-to-csharp) ｜ [Python → PowerShell](skills/references/remaining-direction-overlays.md#python-to-powershell) ｜ [Python → Ruby](skills/references/remaining-direction-overlays.md#python-to-ruby) |
+| **Go** | [Go → C++](skills/references/remaining-direction-overlays.md#go-to-cpp) ｜ [Go → C#](skills/references/remaining-direction-overlays.md#go-to-csharp) ｜ [Go → Python](skills/references/remaining-direction-overlays.md#go-to-python) ｜ [Go → PowerShell](skills/references/remaining-direction-overlays.md#go-to-powershell) ｜ [Go → Ruby](skills/references/remaining-direction-overlays.md#go-to-ruby) |
+| **PowerShell** | [PowerShell → C](skills/references/remaining-direction-overlays.md#powershell-to-c) ｜ [PowerShell → C++](skills/references/remaining-direction-overlays.md#powershell-to-cpp) ｜ [PowerShell → C#](skills/references/remaining-direction-overlays.md#powershell-to-csharp) ｜ [PowerShell → Python](skills/references/remaining-direction-overlays.md#powershell-to-python) ｜ [PowerShell → Go](skills/references/remaining-direction-overlays.md#powershell-to-go) ｜ [PowerShell → Ruby](skills/references/remaining-direction-overlays.md#powershell-to-ruby) |
+| **Ruby** | [Ruby → C](skills/references/remaining-direction-overlays.md#ruby-to-c) ｜ [Ruby → C++](skills/references/remaining-direction-overlays.md#ruby-to-cpp) ｜ [Ruby → C#](skills/references/remaining-direction-overlays.md#ruby-to-csharp) ｜ [Ruby → Python](skills/references/remaining-direction-overlays.md#ruby-to-python) ｜ [Ruby → Go](skills/references/remaining-direction-overlays.md#ruby-to-go) ｜ [Ruby → PowerShell](skills/references/remaining-direction-overlays.md#ruby-to-powershell) |
+
+> [!IMPORTANT]
+> **能力与证据边界声明**：上述全部 42 个方向（6 个独立 Skill + 36 个覆盖参考）均已建立静态语言决策规则，但**规则依据绝对不等于转换验证**。当前全矩阵中仅 C → C++ 具备 5 个案例的 MinGW g++ C++17 目标编译 PASS 记录（功能仍未验收），其余 41 个方向在真实证据模型中均处于 `未验证/阻断` 状态，**绝对不代表转换验证，不代表目标工具链已安装或目标代码功能等价**。
+
+**场景与系统方向知识**：当前有 [网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[并发场景](skills/scenes/concurrency/SKILL.md)、[POSIX ↔ Winsock 套接字](skills/systems/posix-winsock/SKILL.md)、[POSIX ↔ Windows 文件路径](skills/systems/posix-windows-filesystem/SKILL.md) 与 [POSIX ↔ Windows 线程](skills/systems/posix-windows-threads/SKILL.md) 知识。文件系统 POSIX→Windows 已有 stest、realpath、pwd 的逐例编译证据，du 目标未构建；这些证据不证明功能。其他系统方向和长文件流程仍是未验证初稿。进程创建等未列出的方向仍无对应 Skill。
 
 按以下顺序执行：
 
