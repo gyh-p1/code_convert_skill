@@ -7,6 +7,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 > **适用基线**：源语言 Python 3.12 / CPython 3.12 ([PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html), [PY-REF-YIELD](https://docs.python.org/3.12/reference/expressions.html)) → 目标语言 Go 1.27 ([GO-SPEC](https://go.dev/ref/spec), [GO-PKG-CONTEXT](https://pkg.go.dev/context))
 > **共性语义依据**：[七语言共性语义参考库](../../references/seven-language-common-semantics.md)
+> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/python-to-go/README.md)；候选、冻结任务与第三方回传须分层记录。
 > **真实构建证据口径**：当前仓库中 Python→Go 方向处于**`未验证/阻断`**状态（尚无项目级目标编译 PASS 证据）；本 Skill 仅提供静态决策依据。
 > **规范硬约束**：严格遵循 Python 3.12 规范与 Go 1.27 语言规范；纠正负索引认知（Go 常量负下标为编译期报错，非常数表达式负索引在运行期触发 panic）；消除任何不具官方依据的实现数字。
 

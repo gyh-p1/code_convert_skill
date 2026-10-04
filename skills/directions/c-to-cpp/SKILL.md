@@ -7,6 +7,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 > **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 ISO C++17 ([WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf))
 > **共性语义依据**：[七语言共性语义参考库](../../references/seven-language-common-semantics.md)
+> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/c-to-cpp/README.md)；候选、冻结任务与第三方回传须分层记录。
 > **真实构建证据口径**：当前仓库仅 `fe`、`stest`、`realpath`、`pwd`、`chain-reactor` 五个冻结样例在 MinGW-w64 g++ / C++17 目标环境下取得构建 PASS 记录；**功能均未验收**。MSVC 与 Clang 仅为候选工具链，无目标构建证据。
 > **规范硬约束**：严格排除 C++20 Concepts、协程及 C++23 `std::expected` 等超出 C++17 基线的特性。
 

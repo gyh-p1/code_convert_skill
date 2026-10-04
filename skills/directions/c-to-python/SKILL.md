@@ -7,6 +7,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 > **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 Python 3.12 / CPython 3.12 ([PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html), [CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/))
 > **共性语义依据**：[七语言共性语义参考库](../../references/seven-language-common-semantics.md)
+> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/c-to-python/README.md)；候选、冻结任务与第三方回传须分层记录。
 > **真实构建证据口径**：当前仓库中以 C 为源、Python 为目标的方向处于**`未验证/阻断`**状态（Controller 虽声明支持 `python`，但本任务未取得版本、安装清单、BOM 或目标构建证据）；本 Skill 仅提供静态决策依据。
 > **规范硬约束**：严格遵循 Python 3.12 标准，排除 Python 3.13+ 特性；严格区分 Python 语言规范与 CPython 解释器专有实现（如 GIL、引用计数）。
 

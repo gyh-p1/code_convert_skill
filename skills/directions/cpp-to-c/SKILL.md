@@ -7,6 +7,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 
 > **适用基线**：源语言 ISO C++17 ([WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)) → 目标语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf))
 > **共性语义依据**：[七语言共性语义参考库](../../references/seven-language-common-semantics.md)
+> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/cpp-to-c/README.md)；候选、冻结任务与第三方回传须分层记录。
 > **真实构建证据口径**：当前仓库中 C++ 作为源语言、C 作为目标语言的方向处于**`未验证/阻断`**状态（尚无项目级目标编译 PASS 证据）；本 Skill 仅提供静态决策依据，不代表转换产物已通过编译或功能验证。
 > **规范硬约束**：源基线以 ISO C++17 为限（不含 C++20 Concepts、协程等）；目标基线以 ISO C11 为限（不含 C23 特性）。
 
