@@ -13,9 +13,9 @@ metadata:
 
 先完成源码画像，再选 Skill；不要先看 ATT&CK 标签再反推代码行为。
 
-七语言底层语义与共性机制由 [七语言共性语义参考库](skills/references/seven-language-common-semantics.md) 统一定义（基于 2026-10-01 冻结基线：C11、C++17、C# 12/.NET 8、CPython 3.12、Go 1.27、PowerShell 7.6、Ruby 3.4）。
+七语言共享事实由 [共性语义索引](skills/references/seven-language-common-semantics.md) 路由到各语言参考页；每次只按需加载源语言与目标语言两页（知识基线：C11、C++17、C# 12/.NET 8、CPython 3.12、Go 1.27、PowerShell 7.6、Ruby 3.4）。
 
-**语言方向 Skill（42 个源→目标方向，各有独立入口与实质规则）**：先按实际源/目标语言选定一个方向 Skill，再按源码行为加载适用的场景、系统和工作流知识。跨方向共性语义由上方参考库维护，不在 42 份文件中重复。
+**语言方向 Skill（42 个源→目标方向，各有独立入口与实质规则）**：先按实际源/目标语言选定一个方向 Skill，再按源码行为加载适用的场景、系统和工作流知识。跨方向共性语义由各语言参考页维护，不在 42 份文件中重复。
 
 | 源语言 | 目标语言方向 Skill |
 |---|---|
