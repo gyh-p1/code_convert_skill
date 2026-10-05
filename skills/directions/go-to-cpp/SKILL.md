@@ -150,6 +150,21 @@ description: Use when converting Go source to C++; apply this direction's langua
 6. **信息不足或实现相关时的处理**：若 `interface{}` 承载的具体类型集合无法从源码穷举（依赖反射、注册表或调用方注入），必须标注“类型集合封闭性待确认”，在 `std::variant` 与 `std::any` 之间取舍前先向调用方确认。
 7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Interface_types, #Type_assertions](https://go.dev/ref/spec)；[WG21-N4659 Clause 20.7.3, Clause 20.8](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
 
+### 规则 GO-CPP-07：Go 监听器关闭向 C++ 裸 fd 的唤醒与唯一所有权映射
+1. **源码触发条件**：Go 在 `net.Listener.Close()` 或 `http.Server.Close()` 后等待服务协程退出；目标 C++ 用监听 fd、`accept()` 线程和 `join()` 表达该生命周期。
+2. **冻结版本/运行时/API 前提**：Go 1.27 → Linux x64 / C++17 POSIX socket；其他 OS 的 `accept`/关闭唤醒行为不得照搬。本例还在离开作用域时二次触发监听器清理。
+3. **原可观察行为**：Go `Listener.Close` 使阻塞的 `Accept` 返回错误，后续等待能够结束。裸 fd 在一个线程阻塞 I/O 时由另一线程直接 `close`，不能据此保证唤醒；关闭后 fd 数值可被重用，重复 `close` 可能误关新资源。
+4. **目标可选写法和不适用条件**：在关闭前建立明确的停止/唤醒路径，例如停止标志配合有界 `poll`，按冻结平台核对 `shutdown` 对监听 socket 的效果，然后关闭 fd、立即置为 `-1` 并等待线程退出；`Close()` 需只在 fd 有效时执行并避免与显式关闭二次作用。若目标使用 RAII socket 包装或其他事件循环，改用其可证明的取消机制，不机械复制本例的 POSIX 调用。
+5. **错误机械替换反例**：
+   ```cpp
+   ::close(listener_fd); worker.join();  // 错误：阻塞的 accept 不保证因此返回
+   ::close(listener_fd);                 // 错误：fd 可能已经被重用
+   // 目标方案须先通知/唤醒 worker，再一次性关闭并使持有者失效。
+   ```
+6. **信息不足或实现相关时的处理**：若无法确认线程对 fd 的并发访问、`shutdown`/`poll` 的目标平台语义、关闭后是否仍有回调或析构，保留为未解决的生命周期问题；只看到 build PASS 不能证明没有挂起或误关。
+7. **直接官方 HTTPS 依据链接**：[Go `net.Listener`](https://pkg.go.dev/net#Listener)；[Linux `close(2)` 的多线程说明](https://man7.org/linux/man-pages/man2/close.2.html)；[Linux `poll(2)`](https://man7.org/linux/man-pages/man2/poll.2.html)。
+8. **来源与证据边界**：batch-01 B20（`handoff-2026-10-02-d26-chunk-upload-rehash-go`）`self-review-2` 定位阻塞 `accept` 与重复关闭，`target.self-repair-2.cpp` 加入停止标志/`poll`、`shutdown` 和 fd 失效处理；最终目标侧 build PASS（job `eval-20261005-075714-01c8bdb5`）。源码运行/功能 oracle 未冻结，comparison 的 output matched 仅供信息，行为仍 `UNVERIFIED`。
+
 ## 转换与验证边界
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。

@@ -132,6 +132,25 @@ description: Use when converting PowerShell source to C#; apply this direction's
 6. **信息不足或实现相关时的处理**：调用点用到的 .NET API 在目标框架版本中是否存在同签名重载、`[ref]` 参数是 `ref` 还是 `out`、以及源里的清理是否已经在某条路径上做过，都必须先确认；确认不了就停下标注，不要改写成 P/Invoke 或换用另一个 API 来“凑等价”。
 7. **直接官方 HTTPS 依据链接**：[MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)；[MS-CS-USING](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using)。
 
+### 规则 PS-CS-07：非终止读取错误与结果槽位数量的保持
+1. **源码触发条件**：PowerShell 在默认或显式 `-ErrorAction Continue` 下逐项读取注册表/属性，错误写入错误流但继续拼接报告；随后按已枚举的属性名逐个输出值，包括读取失败时的 `$null` 槽位。
+2. **冻结版本/运行时/API 前提**：PowerShell 7.6 → C# 12 / .NET 8、同一 Windows 注册表视图；先区分 cmdlet 的非终止错误、语句终止异常及外部命令退出码，不能统称为“可继续”。
+3. **原可观察行为**：本例读取失败可以产出一条错误诊断，同时后续段落继续；一次属性包读取失败后，已枚举名称仍各占一个空值位置。元素数与分隔符位置是报告的可观察结构。
+4. **目标可选写法和不适用条件**：在 C# 对应的枚举/读取点局部捕获适用异常，写 stderr 诊断并继续；遍历已知名称时读取失败要向结果列表补一个 `null`/空槽再处理下一名，不能 `return` 截断整段。若源设置 `-ErrorAction Stop`、通过 `throw` 终止，或错误发生在不能恢复的入口，则按其终止路径转换，不套用此继续策略。
+5. **错误机械替换反例**：
+   ```csharp
+   foreach (var name in valueNames) {
+       if (!TryReadValue(key, name, out var value)) return; // 错误：后续槽位消失
+       elements.Add(value?.ToString());
+   }
+   // 正确：记录该槽位，再继续处理后续名称
+   foreach (var name in valueNames)
+       elements.Add(TryReadValue(key, name, out var value) ? value?.ToString() : null);
+   ```
+6. **信息不足或实现相关时的处理**：需确认 PowerShell 原错误是否真为非终止、`$null` 是否会参与管道/数组展开、以及 `Get-ItemProperty` 与 `RegistryKey.GetValue` 的注册表视图和错误类型；不确定时只报告结构风险。`Console.Error.WriteLine` 也不自动等价于完整 PowerShell ErrorRecord 文本。
+7. **直接官方 HTTPS 依据链接**：[PowerShell 错误处理与非终止错误](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_error_handling?view=powershell-7.6)；[.NET `RegistryKey.GetValue`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.win32.registrykey.getvalue?view=net-8.0)。
+8. **来源与证据边界**：batch-01 B27（`handoff-2026-10-02-d39-get-information-text`）`self-review-1/2` 指出未捕获读取异常及失败时提前 `return`，`target.self-repair-2.cs` 保留诊断与空槽；最终目标侧 build PASS（job `eval-20261005-093103-2955456e`）。未冻结行为 oracle，Controller output mismatch 仅作信息记录；功能仍 `UNVERIFIED`。
+
 ## 转换与验证边界
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。

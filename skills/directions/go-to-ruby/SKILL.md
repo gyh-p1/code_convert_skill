@@ -159,6 +159,29 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 6. **信息不足或实现相关时的处理**：若无法确认原数据的编码，或原 Go 代码依赖按字节的长度与切片下标语义，必须标注“编码与字节长度语义待确认”，不得用 `scrub`/`encode(invalid: :replace)` 之类的宽松策略掩盖差异。
 7. **直接官方 HTTPS 依据链接**：[GO-SPEC #String_types](https://go.dev/ref/spec)；[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)、[RB-DOC-ENCODING](https://docs.ruby-lang.org/en/3.4/Encoding.html)。
 
+### 规则 GO-RB-07：被丢弃的文件打开错误不能变成 Ruby 的异常终止
+1. **源码触发条件**：Go 以 `f, _ := os.Open(path)` 丢弃打开错误，将可能为 nil 的 `*os.File` 交给 `bufio.Scanner`，不检查 `Scanner.Err()`，后续仍生成结果。
+2. **冻结版本/运行时/API 前提**：Go 1.27 → Ruby 3.4；需确认源码确实忽略打开、扫描和 `Close` 的错误，且目标路径与输出义务已冻结。
+3. **原可观察行为**：本触发形态下，打开失败得到 nil `*os.File`；其 `Read`/`Close` 返回 `os.ErrInvalid` 而非自动 panic，`Scanner.Scan()` 因读取错误返回 false。若调用方不查 `Scanner.Err()`，可继续以空结果写报告并以 0 退出（前提是后续写入成功）。Ruby `File.open` 则会抛如 `Errno::ENOENT` 的异常，未经处理时提前终止。
+4. **目标可选写法和不适用条件**：只在源确实丢弃该错误时，把 `File.open` 的相应系统错误转换成 nil，并以 `if f` 跳过扫描、在清理处用 `f&.close`，保留后续空结果路径；不要用包围整个函数的宽泛 `rescue` 吞掉解析或报告写入错误。若 Go 检查 `err` 或 `Scanner.Err()`、主动返回非零状态，Ruby 必须保留那个失败分支，不能套用“忽略并继续”。
+5. **错误机械替换反例**：
+   ```ruby
+   f = File.open(path, 'rb')                 # 错误：缺文件时提前抛异常
+   f = begin
+     File.open(path, 'rb')
+   rescue SystemCallError
+     nil
+   end
+   begin
+     f.each_line { |line| consume(line) } if f # 仅在源忽略打开/扫描错误时继续
+   ensure
+     f&.close
+   end
+   ```
+6. **信息不足或实现相关时的处理**：若不清楚 Go 是否检查 `Scanner.Err()`、`defer f.Close()` 的返回值、或后续报告写入是否成功，不能断言退出码和产物；把打开失败路径单列为待验证 oracle。
+7. **直接官方 HTTPS 依据链接**：[Go `os.File` nil 接收者的 `ErrInvalid`](https://pkg.go.dev/os#ErrInvalid)；[Go `bufio.Scanner.Scan`](https://pkg.go.dev/bufio#Scanner.Scan)；[Ruby 3.4 `Errno`](https://docs.ruby-lang.org/en/3.4/Errno.html)。
+8. **来源与证据边界**：batch-01 B24（`handoff-2026-10-02-d29-inbox-batch-validate-go`）`self-review-1` 定位裸 `File.open` 的差异，`target.self-repair-1.rb` 加入 `rescue nil` 与扫描守卫，最终目标侧 build PASS（job `eval-20261005-074431-03b18ad5`）。`self-review-2` 又基于“nil *os.File 会 panic”的相反前提建议撤销修订；官方 Go API 不支持该前提，第二轮自修也未形成最终稿。这里只沉淀可核对的条件式规则，不宣称该错误路径或整例行为已通过，功能仍 `UNVERIFIED`。
+
 ## 转换与验证边界
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。

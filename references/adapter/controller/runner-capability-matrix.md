@@ -10,7 +10,7 @@
 
 | runnerId | os / arch | 支持语言（`supportedLanguages`） | 快照回滚 | 基线快照 | 实测状态 |
 |---|---|---|---|---|---|
-| `linux-vm-agent-x64` | linux / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Linux-8Lang-R11` | READY、`contaminated=false` |
+| `linux-vm-agent-x64` | linux / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Linux-8Lang-R12` | READY、`contaminated=false` |
 | `windows-vm-agent-x64` | windows / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Windows-8Lang-R11` | READY、`contaminated=false` |
 | `macos-vm-agent-x64` | macos / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Mac-7Lang-R2` | READY、`contaminated=false` |
 
@@ -19,9 +19,15 @@
 ## 1.1 Ruby 适配证据（2026-10-05）
 
 - **适配前探测**：Controller 与 Windows/Linux Agent 的语言列表均缺 `ruby`，但隔离探针 job `eval-20261005-053322-b85dce16` 在 Linux 与 Windows 分别找到 Ruby 3.3.8、Ruby 4.0.3；两侧 `ruby -c` 均返回 `Syntax OK`、退出码 0。版本是运行环境事实，不作测试用例来源校验。
-- **配置与基线**：Windows、Linux Agent 的 `capabilities.languages` 均已添加 `ruby`，Controller 两个 runner 的 `supported_languages` 同步更新；新建 `CC-Eval-Windows-8Lang-R11` 与 `CC-Eval-Linux-8Lang-R11` 快照并设为当前基线。原 R10 快照仍可用于回退。macOS 继续使用 `CC-Eval-Mac-7Lang-R2`。
+- **配置与基线（Ruby 适配当时）**：Windows、Linux Agent 的 `capabilities.languages` 均已添加 `ruby`，Controller 两个 runner 的 `supported_languages` 同步更新；当时新建 `CC-Eval-Windows-8Lang-R11` 与 `CC-Eval-Linux-8Lang-R11` 快照。Linux 当前已按 §1.2 升为 R12；R11 保留可回退。macOS 继续使用 `CC-Eval-Mac-7Lang-R2`。
 - **快照恢复后的整链路验证**：无副作用 job `eval-20261005-055954-f055ab5b` 将 Linux Ruby 作为 source、Windows Ruby 作为 target。两侧 `ruby -c run_case.rb` 均 build `completed`、退出码 0、输出 `Syntax OK`；两侧运行退出码 0、输出相同的固定 JSON；Controller 报 `COMPLETED`、代码结论 `passed`、两侧清理 `PASSED`。该证据只证明本例的 Ruby 工具链、runner 分配、快照恢复与回传可用，不代表任一攻防转换案例通过。
 - **当前部署**：Controller `GET /api/runners` 与两台 Agent `/health` 均登记 `ruby`；复核时三台 runner 为 READY、`contaminated=false`。任何新 job 仍须读取实时状态，并核对其特定依赖与入口。
+
+## 1.2 batch-01 发现的 Linux Go 缓存路径缺陷
+
+- B20 首提 job `eval-20261005-075546-2bffe862` 的源侧 `go build` 在源码编译前失败：`failed to initialize build cache at /home/d9lab/.cache/go-build: mkdir /home/d9lab: permission denied`。Controller 报 `CODE_RESULT`，但按 stderr 归因是 runner 的 HOME/默认构建缓存不可写，不能计作源代码或转换失败；目标侧未得到 build 证据。
+- 同一案例补 `GOCACHE=/tmp/gocache` 后，重提 job `eval-20261005-075714-01c8bdb5` 的源、目标 build 均 `completed` 且退出码 0。绕行只证明这个 job 在该缓存位置可用，**不证明 runner 默认 HOME/缓存权限已修好**。
+- **2026-10-05 单机热修已取证**：旧仓库 `codex/linux-go-cache-home` 提交 `8d4da68` 将 Linux Agent 的 `HOME`、`XDG_CACHE_HOME`、`GOCACHE` 指向 `/var/lib/codeconvert-agent` 下的可写目录。当前 VM 的 unit SHA-256 为 `8d87a7d016bf979a8d829ef62dd0c6e9cbb8f72a4de8c4dc75deca4c0f5ade84`；新快照 `CC-Eval-Linux-8Lang-R12` 已设置为 Controller 的 Linux 基线，R11 保留。无害 Go 作业 `eval-20261005-115047-f2cdbaec` 使用直接的 `go build -o program hello.go`（没有 `GOCACHE` 前缀），源/目标 build 与运行均 `completed/0`，comparison `matched`、环境 `clean`、两侧清理 `PASSED`。作业结束后核对 Linux unit 仍为新哈希，三台 runner 均 `READY/clean`；Controller 契约哈希保持 `sha256:e088a356b48fd1c3f50e480ac24c2fd03319dc60a49b41de4d076219819c4c45`。该证据只证明无害 fixture 与当前环境，不回填 B20 原始作业或其它转换样本。
 
 ## 2. 对冻结契约与提交的影响
 

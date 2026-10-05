@@ -141,6 +141,26 @@ description: Use when converting Go source to C#; apply this direction's languag
 6. **信息不足或实现相关时的处理**：若源码依赖 channel 的阻塞/缓冲容量与关闭时机来实现背压或终止条件，必须标注“channel 背压与关闭语义在 C# 中无直接对等物，需重新设计”，交由并发场景 Skill 与架构审阅决定，不得声称行为等价。
 7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[MS-CS-THREADING](https://learn.microsoft.com/en-us/dotnet/standard/threading/)、[MS-CS-CONCCOLL](https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/)。
 
+### 规则 GO-CS-07：Go `os.WriteFile` 创建权限向 .NET 文件流选项映射
+1. **源码触发条件**：Go 在 Unix 目标上用 `os.WriteFile(path, data, 0o644)` 等显式模式创建或截断文件，转换需保留新文件的权限意图。
+2. **冻结版本/运行时/API 前提**：Go 1.27 → C# 12 / .NET 8、目标 OS 为 Linux/Unix；`FileStreamOptions.UnixCreateMode` 的设置在 Windows 不受支持，权限还受进程 umask 影响。
+3. **原可观察行为**：`os.WriteFile` 创建新文件时使用给定模式并受 umask 约束；已有文件被截断重写时，该模式不重新设置其现有权限。返回的写入错误是否被调用方忽略须按源码保留。
+4. **目标可选写法和不适用条件**：用 `FileStreamOptions` 指定 `FileMode.Create`、`FileAccess.Write` 和 `UnixCreateMode`，以 `FileStream` 写入字节；源若写成 `_ = os.WriteFile(...)`，在对应调用范围处理 .NET 的可预期写入异常后继续。若目标为 Windows、权限由外部部署控制，或源码没有显式模式义务，不机械加入 Unix 模式选项。
+5. **错误机械替换反例**：
+   ```csharp
+   File.WriteAllBytes(path, bytes, UnixFileMode.UserRead); // 错误：.NET 8 无此重载
+   var options = new FileStreamOptions {
+       Mode = FileMode.Create, Access = FileAccess.Write,
+       UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite |
+                        UnixFileMode.GroupRead | UnixFileMode.OtherRead
+   };
+   using var stream = new FileStream(path, options);
+   stream.Write(bytes);
+   ```
+6. **信息不足或实现相关时的处理**：先查明文件可能已存在、umask、目标 OS 和源是否丢弃错误；未知时不声称最终权限字节或失败路径等价。`File.SetUnixFileMode` 会改变已有文件权限，不能直接充当本例“只在创建时给 mode”的替代。
+7. **直接官方 HTTPS 依据链接**：[Go `os.WriteFile`](https://pkg.go.dev/os#WriteFile)；[.NET 8 `File` 方法与重载](https://learn.microsoft.com/en-us/dotnet/api/system.io.file?view=net-8.0)；[.NET `FileStreamOptions.UnixCreateMode`](https://learn.microsoft.com/en-us/dotnet/api/system.io.filestreamoptions.unixcreatemode?view=net-8.0)。
+8. **来源与证据边界**：batch-01 B21（`handoff-2026-10-02-d27-autorun-manifest-write-go`）`self-review-1` 指出不存在的 `File.WriteAllBytes(..., UnixFileMode)` 重载，`target.self-repair-1.cs` 改用 `FileStreamOptions`；最终目标侧 build PASS（job `eval-20261005-080811-e6b394d1`）。该证据只证明此目标版本可构建，权限与失败路径行为仍 `UNVERIFIED`。
+
 ## 转换与验证边界
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。

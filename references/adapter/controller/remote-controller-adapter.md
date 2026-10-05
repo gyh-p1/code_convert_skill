@@ -19,7 +19,7 @@
 
 | runnerId | os/x64 | supportedLanguages | 基线快照 | 快照回滚 | 状态 |
 |---|---|---|---|---|---|
-| `linux-vm-agent-x64` | linux | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Linux-8Lang-R11` | true | READY/clean |
+| `linux-vm-agent-x64` | linux | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Linux-8Lang-R12` | true | READY/clean |
 | `windows-vm-agent-x64` | windows | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Windows-8Lang-R11` | true | READY/clean |
 | `macos-vm-agent-x64` | macos | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Mac-7Lang-R2` | true | READY/clean |
 
@@ -60,6 +60,7 @@ capsule.zip
 ```
 
 - **`comparison_manifest.json`** 关键字段（Controller `validate_comparison_identity` 逐项校验）：`caseId`（与 POST 表单 `caseId` 一致）、`source`/`target` 各自的 `os`、`arch`、`artifactLanguage`、`runCommand`、`buildCommand`。双侧 os/arch/language 必须能被 `resolve_runner_assignments` 匹配到 READY 的 runner。
+- **Windows Winsock 构建命令预检（batch-01 B07）**：源侧和目标侧分别检查是否直接调用 Winsock API；使用 MinGW-w64/UCRT64 的 `gcc`/`g++` 时，若依赖 `WSAStartup`、`socket`、`sendto` 等符号，须在对应构建命令的目标文件之后显式链接 `-lws2_32`。源码中的 MSVC `#pragma comment(lib, "ws2_32.lib")` 不能替代该链接参数。B07 首提两侧命令均缺该链接参数，源侧首先失败；补参数后双侧 build PASS。这是命令修正，不是目标代码修复。其他编译器按其工具链语法冻结对应库名，不机械照抄 MinGW 参数。
 - **`input_profile.json`** 通过 `validate_evaluation_contract` 校验：`argv`、`stdin`、`observationPolicy.dimensions`（如 `["output"]`）、`comparisonPolicy`（如 `output.stdoutMode="json-structural"`）、`timeoutSeconds`、`workingDirectory`。
 - **`run_case.py`**（两侧各一份）：无害 liveness 驱动——定位构建出的 `program.exe`/`program`，`subprocess.run(stdin=DEVNULL, timeout=…)`，打印 JSON（`exitCode`/`stdoutLen`/`stderrLen`）。不联网、不调外部命令、不读敏感文件。
 - 源无可运行入口（库翻译单元无 `main`）时，默认按冻结记录补写最小入口/驱动（fe 用形态 B：`-DFE_STANDALONE` 编入 REPL `main`），并在 `frozen-inputs.md` 标注补写内容。

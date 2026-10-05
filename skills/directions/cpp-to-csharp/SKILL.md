@@ -143,6 +143,20 @@ description: Use when converting C++ source to C#; apply this direction's langua
 6. **信息不足或实现相关时的处理**：源 C++ 是否设置了流的 `exceptions()` 掩码、以及 `catch` 实际捕获的异常类型，必须从源码逐个确认；第三方库抛出的未文档化异常要保留未分类通道并标注异常语义不确定。
 7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 18](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)；[MS-CS-WHEN](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/when)。
 
+### 规则 CPP-CS-07：Windows 文本模式标准输出的行尾与刷新语义
+1. **源码触发条件**：C++ 用 `std::cout << text << std::endl` 输出需要按字节比对的行，目标为 Windows C# 控制台程序。
+2. **冻结版本/运行时/API 前提**：ISO C++17、Windows CRT 文本模式 stdout → C# 12 / .NET 8；先核对源是否改为二进制模式，以及输出是控制台、重定向文件还是管道。
+3. **原可观察行为**：`std::endl` 插入换行并刷新流；在本例 Windows 文本模式下，输出的 LF 经 CRT 转成 CRLF。行尾字节与输出时机都可能被观察。
+4. **目标可选写法和不适用条件**：源确为文本模式且目标按同一 Windows 行尾输出时，用 `Console.Out.WriteLine(text)`（必要时再 `Flush()`）或显式采用已核对的 `TextWriter.NewLine`；不要把裸 `"\n"` 当作字节等价。源设为二进制模式、输出格式只按归一化文本比较、或目标 OS 不同时，须按实际要求重新选行尾与刷新策略。
+5. **错误机械替换反例**：
+   ```csharp
+   Console.Out.Write(json + "\n");      // 错误：裸 LF 不保留本例的 CRLF
+   Console.Out.WriteLine(json);          // Windows 文本行尾；若刷新可见，再 Flush()
+   ```
+6. **信息不足或实现相关时的处理**：无法确认 CRT 模式、目标 `TextWriter.NewLine`、编码或刷新是否属于 oracle 时，分别标记这些字节/时序差异为未验证，不凭注释或 build PASS 断言 stdout 等价。
+7. **直接官方 HTTPS 依据链接**：[Microsoft CRT `_setmode`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/setmode?view=msvc-170)；[.NET `TextWriter.NewLine`](https://learn.microsoft.com/en-us/dotnet/api/system.io.textwriter.newline?view=net-8.0)。
+8. **来源与证据边界**：batch-01 B08（`handoff-2026-10-02-d08-dir-sample-discovery-cpp`）自审 `self-review-1/2` 指出行尾问题，`target.self-repair-2.cs` 经第 3 次自审后取得目标侧 build PASS（job `eval-20261005-073823-80e93daa`）。本条是静态规则提炼；该 job 的 comparison 有环境目录差异，功能仍 `UNVERIFIED`。
+
 ## 转换与验证边界
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。

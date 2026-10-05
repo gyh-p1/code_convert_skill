@@ -138,6 +138,25 @@ description: Use when converting Go source to PowerShell; apply this direction's
 6. **信息不足或实现相关时的处理**：若无法确认某个 Go 错误在原程序中是“必须中断”还是“可忽略继续”，必须标注“错误严重级别待确认”，不得默认按终止错误处理；若原 Go 代码用 `panic`+`recover` 表达非局部失败，标注“panic/recover 与 PowerShell 错误流的对应关系待确认”。
 7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Errors, #Defer_statements](https://go.dev/ref/spec)；[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)、[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)。
 
+### 规则 GO-PS-07：多段路径与空字符串参数的绑定边界
+1. **源码触发条件**：Go 用 `filepath.Join(base, part1, part2, ...)` 拼接多段路径，或 `strings.SplitN(line, "=", 2)` 后允许空键、空值并传给 PowerShell 函数。
+2. **冻结版本/运行时/API 前提**：Go 1.27 → PowerShell 7.6；先核对目标 PS 版本，因为 `Join-Path -AdditionalChildPath` 自 PowerShell 6.0 起可用，7.6 的 `-ChildPath` 也可接受数组。
+3. **原可观察行为**：每个路径段都参与拼接；Go 字符串参数可为 `""`，例如 `=x` 和 `mode=` 分别形成空键与空值，后续 JSON 输出不能因参数绑定失败而中断。
+4. **目标可选写法和不适用条件**：每个嵌套 `Join-Path` 都须同时有 `-Path` 与 `-ChildPath`，三段可嵌套两层；在 7.6 也可用 `-AdditionalChildPath` 或数组式 `-ChildPath`。若函数参数必须存在但允许空字符串，加 `[AllowEmptyString()]`；若省略参数也有效，可将其设为非 Mandatory 并显式处理默认值。`[AllowNull()]` 对 `[string]` 参数不能单独保证接收 `$null`，需按实际类型另行设计。
+5. **错误机械替换反例**：
+   ```powershell
+   $root = Join-Path (Join-Path (Join-Path $tmp 'a') 'b') # 错误：最外层缺 ChildPath
+   $root = Join-Path (Join-Path $tmp 'a') 'b'             # 两层均有两个参数
+   # PowerShell 7.6 也可写：Join-Path -Path $tmp -ChildPath 'a' -AdditionalChildPath 'b'
+   function Encode {
+     param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Value)
+       return $Value
+   }
+   ```
+6. **信息不足或实现相关时的处理**：若源数据是否会有空键/空值、`$null` 或目标 PS 版本不明，先记待确认；不要把 B22 的错误概括成“`Join-Path` 只能接收两段”，也不靠 build PASS 推断所有输入已匹配。
+7. **直接官方 HTTPS 依据链接**：[PowerShell 7.6 `Join-Path`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/join-path?view=powershell-7.6)；[高级函数参数的 `AllowEmptyString`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters?view=powershell-7.6)。
+8. **来源与证据边界**：batch-01 B22（`handoff-2026-10-02-d30-inbox-kv-parse-go`）`self-review-1` 定位多余外层 `Join-Path` 与空字符串绑定，`target.self-repair-1.ps1` 修订后第 2 次自审无定位缺陷；目标侧解析/build PASS（job `eval-20261005-073327-f2280eff`）。仅作静态规则提炼；功能 oracle 未设，行为仍 `UNVERIFIED`。
+
 ## 转换与验证边界
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
