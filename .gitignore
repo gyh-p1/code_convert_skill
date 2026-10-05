@@ -11,11 +11,8 @@ Thumbs.db
 .idea/
 .vscode/
 
-# 2026-10-02 外部攻防样本原始交付：本地待审，不进入公开仓库
-/docs/test/dataset/incoming-2026-10-02/
+# 转换测试数据、源码快照与批次产物仅保留在本地工作区
+/docs/test/dataset/
 
-# 2026-10-02 handoff cases: source snapshots are local-only; case metadata stays tracked
-/docs/test/dataset/*/handoff-2026-10-02-d*/source/
-
-# Temporary previous-layout local copies; removal is pending host filesystem policy
-/docs/test/dataset/language-handoff-2026-10-02/
+# 本地一次性静态盘点辅助脚本，不随 Skill 分发
+/audit_clean.ps1

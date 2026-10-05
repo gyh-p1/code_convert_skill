@@ -7,7 +7,7 @@ description: Use when converting Python source to C; apply this direction's lang
 
 > **适用基线**：CPython 3.12 → ISO C11。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Python](../../references/languages/python.md)与[目标语言 C](../../references/languages/c.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/python-to-c/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/python-to-c/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -78,6 +78,77 @@ description: Use when converting Python source to C; apply this direction's lang
    ```
 6. **信息不足或实现相关时的处理**：若无法确认数值是否超过 64 位，向用户标记潜在溢出截断风险。
 7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.5.7](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+
+---
+
+### 规则 PY-C-04：Python 列表推导式与生成器表达式向 C 显式循环映射
+
+1. **源码触发条件**：Python 源码中使用列表推导式（`[x*2 for x in items if x > 0]`）或生成器表达式（`(x*2 for x in items)`）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）；目标语言 ISO C11。
+3. **原可观察行为**：列表推导式立即求值并返回完整列表；生成器表达式惰性求值，每次迭代按需计算下一个元素。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：列表推导式展开为 C 显式循环，预分配数组或使用动态扩容结构体；生成器表达式需实现状态机结构体记录迭代位置，或降级为一次性预计算并缓存结果数组；
+   - *不适用条件*：严禁在 C 中使用全局静态变量存储生成器状态（非线程安全且无法支持多个并发迭代器）；生成器的惰性求值特性在 C 中无内建等价物。
+5. **错误机械替换反例**：
+   ```c
+   // 错误：将列表推导式转为固定大小数组，未计算过滤后实际元素数量导致数组越界或浪费
+   // Python: result = [x*2 for x in items if x > 0]
+   int result[100]; // 错误：硬编码大小，若 items 长度或过滤结果数量不匹配则失败
+   int count = 0;
+   for (size_t i = 0; i < items_len; i++) {
+       if (items[i] > 0) {
+           result[count++] = items[i] * 2; // 未检查 count < 100，潜在越界！
+       }
+   }
+   ```
+6. **信息不足或实现相关时的处理**：若生成器表达式涉及复杂的嵌套作用域捕获或依赖外部可变状态，必须设计显式上下文结构体并说明状态生命周期。
+7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA §6.2.4 List displays](https://docs.python.org/3.12/reference/expressions.html#list-displays)；[WG14-N1570 §6.5.2.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 PY-C-05：Python `with` 上下文管理器向 C 显式资源获取释放模式映射
+
+1. **源码触发条件**：Python 源码中使用 `with open(...) as f:` 或自定义 `__enter__` / `__exit__` 的上下文管理器。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-CTX](https://docs.python.org/3.12/reference/datamodel.html#context-managers)）；目标语言 ISO C11。
+3. **原可观察行为**：进入 `with` 块时调用 `__enter__`，退出块（无论正常返回还是异常）时确定性调用 `__exit__` 清理资源。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：展开为 C 显式的资源获取、使用、释放模式；使用 `goto cleanup` 标签确保所有退出路径均执行清理；若涉及文件，映射为 `fopen` / `fclose`；若涉及锁，映射为 `lock` / `unlock`；
+   - *不适用条件*：严禁遗漏任何提前返回分支的清理代码；严禁在 C 中依赖析构函数或自动清理（C 无此机制）。
+5. **错误机械替换反例**：
+   ```c
+   // 错误：提前返回分支遗漏资源释放，导致文件句柄泄漏
+   // Python: with open(path, 'r') as f: data = f.read(); if not valid(data): return -1
+   int process_file(const char* path) {
+       FILE* f = fopen(path, "r");
+       if (!f) return -1;
+       char data[1024];
+       fread(data, 1, sizeof(data), f);
+       if (!valid(data)) {
+           return -1; // 错误：未调用 fclose(f)，句柄泄漏！
+       }
+       fclose(f);
+       return 0;
+   }
+   // 正确：使用 goto cleanup 统一清理
+   int process_file(const char* path) {
+       FILE* f = fopen(path, "r");
+       if (!f) return -1;
+       int ret = 0;
+       char data[1024];
+       fread(data, 1, sizeof(data), f);
+       if (!valid(data)) {
+           ret = -1;
+           goto cleanup;
+       }
+   cleanup:
+       fclose(f);
+       return ret;
+   }
+   ```
+6. **信息不足或实现相关时的处理**：若 Python `__exit__` 方法包含异常抑制逻辑（返回 `True` 抑制异常），在 C 中必须使用特定错误码表示该语义，并在文档中说明。
+7. **直接官方 HTTPS 依据链接**：[PY-REF-CTX](https://docs.python.org/3.12/reference/datamodel.html#context-managers)；[WG14-N1570 §7.21.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
 
 ## 转换与验证边界
 

@@ -7,7 +7,7 @@ description: Use when converting C++ source to C#; apply this direction's langua
 
 > **适用基线**：ISO C++17 → C# 12 / .NET 8。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C++](../../references/languages/cpp.md)与[目标语言 C#](../../references/languages/csharp.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/cpp-to-csharp/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/cpp-to-csharp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -82,6 +82,66 @@ description: Use when converting C++ source to C#; apply this direction's langua
    ```
 6. **信息不足或实现相关时的处理**：若涉及底层线程优先级设置，加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)。
 7. **直接官方 HTTPS 依据链接**：[MS-CS-ASYNC](https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/)。
+
+### 规则 CPP-CS-04：C++ std::string/char 的文本与字节双重角色向 C# byte[]/string + 显式 Encoding 映射
+1. **源码触发条件**：C++ 源码把 `std::string` 当字节缓冲使用（`std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());` 后 `send(s, data.c_str(), static_cast<int>(data.size()), 0);`），从字节指针+长度构造 `std::string(buf, n)`，或对 `char` 逐字节异或（`for (char& c : out) c ^= key;`、`encoded.push_back(c ^ 0x2A)`）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（[WG21-N4659 Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-STRING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/strings/), [MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)）。
+3. **原可观察行为**：`std::string` 记录独立长度、允许内部 `\0`，元素是 1 字节的 `char`，标准库不做任何编码转换；`c_str()` 只保证追加尾随 `\0`，长度仍须用 `size()`。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：字节语义一律用 `byte[]`/`ReadOnlySpan<byte>`（`File.ReadAllBytes`、`Stream.Read`），文本语义才用 `string`，并在每个跨越边界处显式选择编码（`Encoding.UTF8`/`Encoding.Latin1`/`Encoding.Unicode`）；逐字节异或改为 `out[i] = (byte)(out[i] ^ key);`；长度用 `.Length` 并说明其单位是字节。
+   - *不适用条件*：严禁默认用 `Encoding.UTF8.GetString(bytes)` 做"字节→string→字节"往返（任意字节序列不可逆，会被替换为 U+FFFD 且长度改变）；严禁把 `std::string` 直译为 C# `string` 后用 `.Length` 当字节数（那是 UTF-16 代码单元数，含代理对时与字节数无关）；严禁用 `char[]`/`string` 承载协议头或文件字节。
+5. **错误机械替换反例**：
+   ```csharp
+   // 错误：把 std::string 的字节缓冲直译为 string，并做 UTF-8 往返
+   string data = File.ReadAllText(path);        // 二进制内容被按文本解码
+   byte[] raw = Encoding.UTF8.GetBytes(data);   // 错误：往返不可逆，字节数与内容已改变
+   Send(raw, raw.Length);                       // 与 C++ data.size() 不再对应
+   // 正确：字节用 byte[]，文本才用 string
+   byte[] raw2 = File.ReadAllBytes(path);
+   Send(raw2, raw2.Length);
+   ```
+6. **信息不足或实现相关时的处理**：若同一 `std::string` 在不同使用点分别承载文本与字节、或源编码未在源码中体现，必须逐使用点停下确认，不得统一按 UTF-8 处理；涉及 socket/文件字节数时加载 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md) 或 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)。
+7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[MS-CS-STRING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/strings/)；[MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)。
+
+### 规则 CPP-CS-05：C++ std::map/operator[] 的有序遍历与默认插入向 C# SortedDictionary 与 TryGetValue 映射
+1. **源码触发条件**：C++ 源码用 `std::map`/`std::set` 统计并按键序输出（`std::map<std::string, int> typeCount; typeCount[parts[2]]++; for (const auto& kv : typeCount) report << kv.first << "=" << kv.second << "\n";`），或用容器 `operator[]` 读取可能不存在的键（`typeCount[key]`、`probes[i]`、`names[i]`）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（[WG21-N4659 Clause 26](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-MEMBERACCESS](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/member-access-operators), [MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)）。
+3. **原可观察行为**：`std::map` 按比较器严格有序，遍历顺序确定且与插入顺序无关；`std::map::operator[]` 在键不存在时先插入默认构造值再返回引用（是写操作）；`std::vector::operator[]` 不做边界检查。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：需要稳定顺序时用 `SortedDictionary<TKey,TValue>`/`SortedSet<T>`（或在输出前显式 `OrderBy`）；只做查找时用 `Dictionary<TKey,TValue>`，读取可能缺失的键用 `TryGetValue`，计数写成 `dict[k] = dict.TryGetValue(k, out var c) ? c + 1 : 1;`；序列索引用 `List<T>`/数组索引器，必要时显式判界。
+   - *不适用条件*：严禁把 `std::map` 直译为 `Dictionary` 后沿用原有遍历顺序（`Dictionary` 的遍历顺序不受保证，报告行序会变化）；严禁用 C# 索引器读取可能缺失的键来顶替 `std::map::operator[]` 的"默认插入"语义（前者抛 `KeyNotFoundException`）；也不得反过来用 `TryAdd` 忽略已存在的键（会丢计数，与 `typeCount[key]++` 语义不同）。
+5. **错误机械替换反例**：
+   ```csharp
+   // 错误：有序 map 直译为 Dictionary；缺失键用索引器自增
+   var typeCount = new Dictionary<string, int>();
+   typeCount[parts[2]]++;                                  // 新键 → KeyNotFoundException
+   foreach (var kv in typeCount) report.AppendLine($"{kv.Key}={kv.Value}"); // 顺序不受保证
+   // 正确：顺序敏感用 SortedDictionary，计数用 TryGetValue
+   var sorted = new SortedDictionary<string, int>();
+   sorted[parts[2]] = sorted.TryGetValue(parts[2], out var c) ? c + 1 : 1;
+   foreach (var kv in sorted) report.AppendLine($"{kv.Key}={kv.Value}");
+   ```
+6. **信息不足或实现相关时的处理**：输出是否要求按键有序、键缺失时应插入还是视为错误，属于需求事实；无法从源码确认时必须停下询问，不得用 `Dictionary` 的当前遍历顺序充当"看起来一致"的证据。
+7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 26](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[MS-CS-MEMBERACCESS](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/member-access-operators)；[MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)。
+
+### 规则 CPP-CS-06：C++ iostream 失败位与异常层次向 C# 抛异常 API 与 catch 过滤映射
+1. **源码触发条件**：C++ 源码用失败位而非异常判断 I/O 结果（`std::ifstream in(p); if (!in) { ... }`、`while (std::getline(in, line))`、`std::getline(ss, item, d)`），同时调用默认抛异常的设施（`fs::create_directories`、`fs::exists`、`std::stoi`、`.at()`），并出现 `catch (const std::exception&)`/`catch (...)` 与 `what()`。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（[WG21-N4659 Clause 18](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/), [MS-CS-WHEN](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/when)）。
+3. **原可观察行为**：iostream 默认不抛异常（失败置位并继续让调用方检查状态）；`<filesystem>` 与数值转换函数默认抛异常；`std::exception::what()` 返回错误消息；未捕获异常导致 `std::terminate()`。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：把"失败位 + 检查"改写为 C# 的 `try`/`catch` 包裹会抛异常的 API（`File.OpenRead`、`Directory.CreateDirectory`、`int.Parse`），并按目标实际抛出的异常类型分流：文件/目录失败用 `IOException`/`UnauthorizedAccessException`/`DirectoryNotFoundException`，解析失败用 `FormatException`/`OverflowException`；`what()` 映射为 `ex.Message`；`catch (...)` 保留为 `catch (Exception)` 并记录为未分类失败；需要按条件分流时用 `catch (Exception ex) when (...)`。
+   - *不适用条件*：严禁删除 `if (!in)` 形式的失败检查后直接调用 C# 会抛异常的 API 而不加 `try`（转换后的程序在可预期失败处会直接终止，终止点与 C++ 不同）；严禁把 `catch (...)` 直译为空的 `catch { }`（静默吞掉未知异常）；严禁用 `throw ex;` 重置堆栈（应使用 `throw;`）。
+5. **错误机械替换反例**：
+   ```csharp
+   // 错误：C++ 的失败位检查被省略，会抛异常的 API 未被包裹
+   var lines = File.ReadAllLines(path);   // 文件缺失 → 抛异常，而原逻辑是"返回空并继续"
+   int count = int.Parse(lines[0]);       // 空行 → FormatException 直接终止
+   // 正确：区分"可预期的缺失"与"必须上抛的失败"
+   if (!File.Exists(path)) { Console.WriteLine("{\"rows\":0}"); return; }
+   try { ... } catch (FormatException ex) { Console.Error.WriteLine(ex.Message); }
+   ```
+6. **信息不足或实现相关时的处理**：源 C++ 是否设置了流的 `exceptions()` 掩码、以及 `catch` 实际捕获的异常类型，必须从源码逐个确认；第三方库抛出的未文档化异常要保留未分类通道并标注异常语义不确定。
+7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 18](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)；[MS-CS-WHEN](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/when)。
 
 ## 转换与验证边界
 

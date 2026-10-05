@@ -7,7 +7,7 @@ description: Use when converting PowerShell source to Ruby; apply this direction
 
 > **适用基线**：PowerShell 7.6 → CRuby 3.4。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 PowerShell](../../references/languages/powershell.md)与[目标语言 Ruby](../../references/languages/ruby.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/powershell-to-ruby/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/powershell-to-ruby/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -70,6 +70,77 @@ description: Use when converting PowerShell source to Ruby; apply this direction
    ```
 6. **信息不足或实现相关时的处理**：扫描源码所有反引号转义并做正规化替换。
 7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+
+### 规则 PS-RB-04：PowerShell `[ordered]@{}` 与属性包枚举向 Ruby `Hash` 与键值块映射
+1. **源码触发条件**：源码用有序哈希表或属性包装配数据并按条目遍历，例如 `$standard_commands = [ordered]@{ 'Basic System Information' = 'Start-Process "systeminfo" ...' ; ... }`、`$AccessPermissions = @{ KEY_QUERY_VALUE = 1; ... }`、`$Props = @{ Key = $Key; Time = [DateTime]::Now; Window = $Title.ToString() }`、`ForEach ($command in $commands.GetEnumerator()) { ... $command.Name ... $command.Value }`、`$properties = [pscustomobject]$UserProps`、以及 `$_.properties['ServicePrincipalName']` 这类属性取值。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-HASH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_hash_tables)）；目标语言 CRuby 3.4（[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html), [RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）。
+3. **原可观察行为**：默认 `@{}` 的遍历顺序不作保证，只有 `[ordered]@{}` 才保证插入顺序；键名比较大小写不敏感；`GetEnumerator()` 产出的是带 `Name`/`Value` 两个属性的字典条目对象，而直接对 `@{}` 做管道遍历得到的是条目对象而非 `[key, value]` 数组；属性缺失返回 `$null`，内插进字符串得到空串。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：Ruby `Hash` 自 1.9 起按插入顺序遍历，可直接承载 `[ordered]@{}` 的顺序义务；遍历用 `hash.each { |key, value| ... }` 或 `hash.each_pair`；需要“条目对象”的语义时用 `hash.each_entry` 或显式取 `[key, value]`；属性集合固定时优先定义类/`Struct`/`Data` 而不用 Hash 承载字段。
+   - *不适用条件*：严禁把 `@{}` 当作“无序即可乱序”的依据而改用 `Set` 之类丢失值语义的容器；严禁用 `hash.keys.zip(hash.values)` 重建条目（多一次分配且不必要）；注意 Ruby 的 `Hash#each` 与 PS 的 `GetEnumerator()` 都给出有序键值，但源若用的是无序 `@{}`，Ruby 的稳定顺序会比源更确定——不得把“顺序更确定”当成等价性证据，需在报告中标注该差异。
+5. **错误机械替换反例**：
+   ```ruby
+   # 错误：把 @{} 的条目对象语义原样搬成数组下标，且丢掉了键名大小写不敏感
+   commands.each do |item|
+     puts item.Name          # NoMethodError: Array/Hash 没有 Name
+   end
+   # 正确：按 Ruby 的键值块语义遍历
+   commands.each do |name, command|
+     puts name
+     run_command(command)
+   end
+   ```
+6. **信息不足或实现相关时的处理**：源使用的是 `@{}` 还是 `[ordered]@{}`、键名大小写是否被依赖、以及条目对象上是否还用到 `Name`/`Value` 之外的成员，都必须先确认；确认不了就停下标注，不要默认 Hash 或默认有序。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)；[MS-PS-HASH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_hash_tables)。
+
+### 规则 PS-RB-05：PowerShell `$null` 判定与数组展开向 Ruby `nil` 判定与 `compact` 映射
+1. **源码触发条件**：源码把 `$null` 与集合混用，例如 `$grepStream = $null; $xmlStream = $null; $readableStream = $null` 之后按需赋值、`if ($Socket -eq $null){break}`、`if (($i -ne $null) -and (($r -ne "") -or ($e -ne "")))`、`$null = $hostList.Add($iHostPart1)` 这种“吞掉返回值”的写法、`$null` 被内插进字符串（`$_.Replace("    All User Profile     : ",$null)`）、以及 `$CurrentIPString = $null` 之后被加入数组。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators), [MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)）；目标语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/), [RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)）。
+3. **原可观察行为**：`$null` 与空数组在布尔化时都为假，但把 `$null` 加入数组会得到含 `nil` 元素的数组，而“没有输出”（例如 `Where-Object` 无命中）不会产生元素；`$null -eq $null` 为真、`$null -eq 0` 为假；`$null` 参与字符串内插时变成空串；被赋 `$null` 的变量在后续属性访问上会静默得到 `$null`。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：`$null` 判定映射为 `x.nil?`；容器里的“缺失元素”用 `nil` 表示并显式判定，需要过滤时用 `array.compact`；可选值用 `nil` 加显式分支，不要用 `false`/`0` 顶替；字符串内插中源的 `$null -> ""` 语义用 `x.to_s` 或显式 `x || ""` 表达。
+   - *不适用条件*：严禁把 `if ($x -eq $null)` 机械写成 `unless x`——Ruby 中 `false` 与 `nil` 是仅有的假值，但 `unless`/`if !x` 会把 `false` 一并当作“为 nil”，与源 `-eq $null` 可区分；严禁把 `$null` 机械映射为 `0`/`""`（源里三者可区分）；严禁依赖“给数组加 `$null`”与 Ruby `push(nil)` 之外的等价性而不检查元素计数。
+5. **错误机械替换反例**：
+   ```ruby
+   # 错误：-eq $null 被写成 unless，false 被一起吞掉；nil 元素未过滤
+   unless socket
+     break                       # socket 为 false 时也跳出，源不会
+   end
+   hosts.each { |h| connect(h) }  # hosts 含 nil 元素时对 nil 调用方法
+   # 正确：显式 nil 判定 + 过滤 nil 元素
+   break if socket.nil?
+   hosts.compact.each { |h| connect(h) }
+   ```
+6. **信息不足或实现相关时的处理**：某变量是否可能取 `false`（而不仅是 `nil`）、集合中是否允许出现 `nil` 元素、以及源里 `$null` 的出现位置是“赋值占位”还是“真实取值”，都必须先确认；确认不了就停下标注，不要用 `unless` 或 `|| ''` 合并语义。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)；[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)。
+
+### 规则 PS-RB-06：PowerShell 条件式 `switch` 与 `-match` 大小写语义向 Ruby `case/if` 与正则敏感度映射
+1. **源码触发条件**：源码用条件脚本块或正则驱动分支，例如 `switch ($Path) { { ([regex]::Match($PSItem, "...").Groups | Where-Object -Property "Name" -eq "fileName" | Select-Object -ExpandProperty "Success") -eq $false } { ... } Default { ... } }`、`if ($extended.ToLower() -eq 'extended')`、`if ($Type -eq "group") -or ($Type -eq "user")`、`if ($iHost -match $IPRangeRegex)`、`Where {($_.Access|select -ExpandProperty IdentityReference) -match "Everyone"}`、`'Checking registry ...' = 'Test-Path -Path "..."'` 这类被后续 `Invoke-Expression` 执行的字符串分支。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-SWITCH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_switch), [MS-PS-COMPARE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators)）；目标语言 CRuby 3.4（[RB-DOC-CASE](https://docs.ruby-lang.org/en/3.4/syntax/control_expressions_rdoc.html), [RB-DOC-REGEXP](https://docs.ruby-lang.org/en/3.4/Regexp.html)）。
+3. **原可观察行为**：PS `switch` 支持条件脚本块分支（按顺序求值，命中即执行并继续匹配其余分支，除非 `break`），`Default` 为兜底；`-eq`/`-match` 在 PS 中默认大小写不敏感，`-ceq`/`-cmatch` 才敏感；字符串化后交给 `Invoke-Expression` 的“命令表”在源里只是字符串，没有正则语义。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：条件式分支映射为 `if/elsif/else`（Ruby 的 `case/when` 也支持 `when ->(x) { ... }` 形式的条件，但 PS 的“命中后继续匹配其余分支”语义需要显式拆成顺序 `if` 并配合提前返回）；大小写不敏感匹配用 `/pattern/i =~ s` 或 `s.match?(/pattern/i)`（对应 `-match`），敏感匹配用不带 `i` 的正则（对应 `-cmatch`）；字面量命令表用普通字符串数组/哈希，不要引入正则。
+   - *不适用条件*：严禁把 PS 的条件式 `switch` 机械写成 Ruby 的 `case expr; when cond`（Ruby 的 `when` 是值匹配或 `===`，不是对 `$_` 求值脚本块）；严禁把默认不敏感的 `-match` 写成不带 `i` 的正则（漏命中）；也严禁把源的纯字符串命令表当正则处理。
+5. **错误机械替换反例**：
+   ```ruby
+   # 错误：把条件式 switch 当值匹配，且丢掉 -match 的默认不敏感
+   case path
+   when ->(p) { p =~ %r{^.+[/\\]$} }   # PS 条件脚本块被误当"值"
+     path += "/"
+   end
+   if identity =~ /Everyone/            # 源 -match 不敏感，这里却大小写敏感
+     warn "world-writable"
+   end
+   # 正确：改成顺序 if，并显式补 IgnoreCase
+   if path.match?(%r{^.+[/\\]$})
+     path += "/"
+   end
+   if identity.match?(/Everyone/i)
+     warn "world-writable"
+   end
+   ```
+6. **信息不足或实现相关时的处理**：源用的是 `-match` 还是 `-cmatch`、`switch` 分支命中后是否有 `break`/是否依赖继续匹配、以及分支条件是值还是表达式，都必须先确认；确认不了就停下标注，不要默认按值匹配或默认大小写敏感。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-REGEXP](https://docs.ruby-lang.org/en/3.4/Regexp.html)；[MS-PS-COMPARE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators)。
 
 ## 转换与验证边界
 

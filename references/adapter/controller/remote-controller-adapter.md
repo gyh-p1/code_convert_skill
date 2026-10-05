@@ -2,7 +2,7 @@
 
 > 文档类型：外部评估基础设施的连接与提交适配（reference）
 > 状态：ACTIVE（本项目对接已授权隔离第三方 VM Controller 的唯一连接说明）
-> 更新：2026-09-28
+> 更新：2026-10-05（**runner 能力口径已迁出**：改用[Runner 能力矩阵](runner-capability-matrix.md)作为唯一事实来源；本页只保留连接、capsule 组装、提交流程与回填规则）
 > 首次验证：fe run-01 双侧 build，jobId `eval-20260928-033750-71724720`，`COMPLETED`（本会话直连 HTTP 8443 提交并回传真实证据）
 
 本项目**不建设**运行时或评测平台；编译/运行证据一律由已授权的隔离第三方 VM Controller 返回。本文只记录**如何连接该 Controller、如何组装并提交 comparison capsule、如何回传证据**，供转换 Agent 在评估步骤直接复用。凭据不入库（见“安全边界”）。
@@ -11,10 +11,21 @@
 
 | 角色 | 地址 | 说明 |
 |---|---|---|
-| Controller（FastAPI HTTP API） | `http://192.168.101.250:8443` | 接收 job、编排 VM Agent、回传证据 |
-| 本机（开发/提交端） | `192.168.101.105` | 与 Controller 同 `/24` 段，**可直达 8443**，无需 SSH 隧道 |
-| Windows VM Agent | `http://192.168.195.128:9000` | VM `windows-eval`，支持 c/cpp/python/powershell/go/dotnet |
-| Linux VM Agent | `http://192.168.195.129:9000` | VM `linux-eval`（按需启用） |
+| Controller（FastAPI HTTP API） | `http://192.168.101.250:8443` | 接收 job、编排 VM Agent、回传证据；2026-10-05 复核 `/api/health` 返回 200、`ready=true` |
+| 本机（开发/提交端） | `192.168.101.101` | 与 Controller 同 `192.168.101.0/24` 段，**可直达 8443**，无需 SSH 隧道 |
+| VM Agent（三个现役 runner） | 由 Controller 按 `runnerId` 编排 | 提交方**不直连** Agent |
+
+**现役 runner 速查（2026-10-05 由 `GET /api/runners` 实测；完整说明见 [Runner 能力矩阵](runner-capability-matrix.md)）**：
+
+| runnerId | os/x64 | supportedLanguages | 基线快照 | 快照回滚 | 状态 |
+|---|---|---|---|---|---|
+| `linux-vm-agent-x64` | linux | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Linux-8Lang-R11` | true | READY/clean |
+| `windows-vm-agent-x64` | windows | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Windows-8Lang-R11` | true | READY/clean |
+| `macos-vm-agent-x64` | macos | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Mac-7Lang-R2` | true | READY/clean |
+
+**Ruby runner 实测**：Windows、Linux、macOS 三台均已登记 `ruby`。Windows/Linux Agent 与 Controller 配置已对齐至各自 R11 快照；无副作用双侧 Ruby job `eval-20261005-055954-f055ab5b` 的两侧语法检查、运行与清理均通过。逐例依赖和具体转换结果仍须单独取证，详见 [Runner 能力矩阵](runner-capability-matrix.md) §1.1。
+
+> 提交前用 `GET /api/runners` 复核 `supportedLanguages`、`lifecycleState`、`baselineSnapshot`、`contaminated`；不要引用其它文档里的历史 runner 清单。
 
 - **首选：直连 HTTP 8443**。本机与 Controller 同网段时，所有 `POST /api/jobs`、轮询、取证据均直接走 HTTP。
 - **回退：SSH 端口转发**。若本机不在同段（无法直达 8443），用 `ssh -L 8443:127.0.0.1:8443 Administrator@192.168.101.250` 建隧道后按同样契约连本地 `http://127.0.0.1:8443`。SSH 私钥只在操作者本机 `~/.ssh`，永不入库/入 zip/入 VM 配置/入日志。
@@ -54,7 +65,7 @@ capsule.zip
 - 源无可运行入口（库翻译单元无 `main`）时，默认按冻结记录补写最小入口/驱动（fe 用形态 B：`-DFE_STANDALONE` 编入 REPL `main`），并在 `frozen-inputs.md` 标注补写内容。
 - 组装临时目录里**不要**留 `__pycache__`/`*.pyc`；打包前清理，避免污染 zip 与 git。
 
-fe run-01 的实样落于 `docs/test/dataset/c-to-cpp/fe-lisp-c-to-cpp/output/no-rag/run-01/04-evaluation/job-01-dual-build/`，回传证据落于其 `returned-evidence/`，可作组装与回填模板。
+本地数据集存在时，fe run-01 的实样落于 `docs/test/dataset/c-to-cpp/fe-lisp-c-to-cpp/output/no-rag/run-01/04-evaluation/job-01-dual-build/`，回传证据落于其 `returned-evidence/`，可作组装与回填模板。
 
 ## 提交—轮询—取证流程（本会话实测）
 

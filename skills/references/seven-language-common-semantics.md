@@ -50,3 +50,15 @@
      - 通用并发场景：[`skills/scenes/concurrency/SKILL.md`](../scenes/concurrency/SKILL.md)
      - 涉及 Linux 与 Windows 跨系统转换时：[`skills/systems/posix-windows-threads/SKILL.md`](../systems/posix-windows-threads/SKILL.md)
    - *语言层核心职责*：管理线程生命周期与同步所有权契约，具体 OS 调度与同步原语映射由 B 类规则裁定。
+
+4. **进程创建、替换、等待与身份/特权行为**：
+   - *源码触发条件*：源码创建子进程、替换自身映像、等待或观测退出状态、终止进程（树），或查询/切换自身身份与特权。
+   - *必须加载的既有 B 类规则*：
+     - 通用进程执行场景：[`skills/scenes/process-execution/SKILL.md`](../scenes/process-execution/SKILL.md)
+     - 涉及 POSIX/Linux 与 Windows 跨系统转换时：[`skills/systems/posix-windows-process-identity/SKILL.md`](../systems/posix-windows-process-identity/SKILL.md)
+   - *语言层核心职责*：保持进程生命周期、退出状态传递与错误模型；`fork`/`exec`/`CreateProcess` 的模型差异、令牌与特权映射由 B 类规则裁定。
+
+5. **Windows 注册表与服务控制行为**：
+   - *源码触发条件*：源码读写 Windows 注册表键值，或通过 SCM 创建、配置、启动、停止、删除服务（含目标语言/脚本对同一子系统的封装调用）。
+   - *必须加载的既有 B 类规则*：[`skills/systems/windows-registry-service-subsystem/SKILL.md`](../systems/windows-registry-service-subsystem/SKILL.md)
+   - *语言层核心职责*：保持键/值类型与长度约定、服务状态机与配置回滚义务；POSIX 侧没有等价子系统，须按不可映射项处理，不得用配置文件替代注册表并宣称等价。

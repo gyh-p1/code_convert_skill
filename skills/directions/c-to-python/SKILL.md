@@ -7,7 +7,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 > **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 Python 3.12 / CPython 3.12 ([PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html), [CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/))
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 Python](../../references/languages/python.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/c-to-python/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/c-to-python/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **真实构建证据口径**：当前仓库中以 C 为源、Python 为目标的方向处于**`未验证/阻断`**状态（Controller 虽声明支持 `python`，但本任务未取得版本、安装清单、BOM 或目标构建证据）；本 Skill 仅提供静态决策依据。
 > **规范硬约束**：严格遵循 Python 3.12 标准，排除 Python 3.13+ 特性；严格区分 Python 语言规范与 CPython 解释器专有实现（如 GIL、引用计数）。
 
@@ -113,6 +113,60 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 ---
 
+### 规则 5：C 指针修改外部结构体向 Python 返回值重构映射
+
+1. **触发条件**：C 源码中函数通过指针参数修改外部对象（如 `void update_state(struct State* s)`）。
+2. **适用前提**：源语言 ISO C11，目标语言 Python 3.12。
+3. **应保留行为**：保持函数对外部状态的修改可见性；保证调用方能观察到修改后的值。
+4. **可选映射与不适用条件**：
+   - *可选映射*：对于不可变对象（`int`、`str`、`bytes`、`tuple`），无法通过传参原地修改，必须将修改后的新值作为返回值；对于可变对象（`list`、`dict`、自定义类实例），可保持传参并原地修改；若需要修改多个值，使用元组多返回值 `return (val1, val2)` 或返回字典；
+   - *不适用条件*：严禁假设 Python 函数参数可以像 C 指针一样修改基本类型的外部变量（如整数、字符串）；严禁混淆可变与不可变对象的修改语义。
+5. **错误机械替换反例**：
+   ```python
+   # 错误反例：试图通过参数修改不可变的整数，调用方无法观察到变化
+   # C 原型: void increment(int* x) { (*x)++; }
+   def increment(x):  # 错误：x 是整数对象引用，重新赋值不影响外部
+       x = x + 1
+       # 调用方的变量不会改变！
+
+   # 正确做法：返回新值
+   def increment(x):
+       return x + 1
+   # 调用方：val = increment(val)
+   ```
+6. **不确定性处理**：若 C 函数既通过指针修改参数，又有返回值表示成功/失败，在 Python 中应返回 `(success, modified_values)` 元组，并在文档注释中说明返回值结构。
+7. **官方依据**：[PY-REF-DATA §3.1 Objects, values and types](https://docs.python.org/3.12/reference/datamodel.html)；[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 6：C 多线程与 POSIX/Win32 原生线程向 Python threading 与 GIL 约束映射
+
+1. **触发条件**：C 源码中使用 `pthread_create`、`CreateThread` 或 C11 `thrd_create` 创建多线程并发任务。
+2. **适用前提**：源语言 ISO C11，目标语言 Python 3.12 / CPython。
+3. **应保留行为**：保持线程创建数量、入口函数、参数传递、同步与 join 的可观察行为；保持线程间共享状态的同步语义。
+4. **可选映射与不适用条件**：
+   - *可选映射*：映射为 Python `threading.Thread(target=func, args=(...))`；互斥锁映射为 `threading.Lock()`；条件变量映射为 `threading.Condition()`；**必须在转换报告中明确标注 CPython GIL 约束**：由于全局解释器锁，Python 多线程无法并行执行 CPU 密集计算（同一时刻仅一个线程执行字节码），仅适用于 I/O 密集任务；CPU 密集计算需使用 `multiprocessing` 多进程；
+   - *不适用条件*：严禁假设 Python 多线程可以充分利用多核 CPU 进行 CPU 密集计算；严禁在未加锁情况下并发修改共享的可变对象（`list`、`dict`）。
+5. **错误机械替换反例**：
+   ```python
+   # 错误反例：期望多线程并行加速 CPU 密集计算，实际受 GIL 限制性能反而下降
+   import threading
+
+   def cpu_intensive_work(data):
+       result = 0
+       for i in range(10000000):  # CPU 密集循环
+           result += i * data
+       return result
+
+   # 错误：启动多线程期望并行加速，但 GIL 导致线程串行执行且上下文切换开销更大！
+   threads = [threading.Thread(target=cpu_intensive_work, args=(i,)) for i in range(4)]
+   # 正确：CPU 密集任务应使用 multiprocessing.Pool
+   ```
+6. **不确定性处理**：若 C 源码涉及复杂的线程属性、信号掩码、线程取消或线程局部存储（TLS），Python `threading` 模块不完全对等，必须加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md) 并标注语义差异。
+7. **官方依据**：[PY-THREADING](https://docs.python.org/3.12/library/threading.html)；[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)；[WG14-N1570 §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
 ## 四、跨场景与系统规则按需加载
 
 > 若源码实际涉及线程、socket、文件或跨 OS API，加载对应 B 类场景/系统 Skill；A 类规则仅说明需要保留的语言层错误、资源、并发、文本或所有权契约。
@@ -120,6 +174,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 - **网络套接字场景**：涉及原始 `socket` 调用时，加载 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)；跨 POSIX/Windows 时加读 [`skills/systems/posix-winsock/SKILL.md`](../../systems/posix-winsock/SKILL.md)。
 - **文件与路径场景**：涉及系统路径操作时，加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)；跨 OS 路径分隔符加载 [`skills/systems/posix-windows-filesystem/SKILL.md`](../../systems/posix-windows-filesystem/SKILL.md)。
 - **多线程与并发场景**：使用 Python `threading` 模块时，必须明确受到 CPython GIL 约束（无法多核并行 CPU 密集型任务），并加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)。
+- **进程与身份/权限场景**：涉及进程创建、替换、等待、终止或身份与特权查询/切换时，共同加载 [`skills/systems/posix-windows-process-identity/SKILL.md`](../../systems/posix-windows-process-identity/SKILL.md)。
 
 ---
 

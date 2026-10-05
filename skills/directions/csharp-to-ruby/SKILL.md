@@ -7,7 +7,7 @@ description: Use when converting C# source to Ruby; apply this direction's langu
 
 > **适用基线**：C# 12 / .NET 8 → CRuby 3.4。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C#](../../references/languages/csharp.md)与[目标语言 Ruby](../../references/languages/ruby.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/csharp-to-ruby/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/csharp-to-ruby/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -84,6 +84,80 @@ description: Use when converting C# source to Ruby; apply this direction's langu
    ```
 6. **信息不足或实现相关时的处理**：若需多核纯并行，声明切换为 `Ractor` 或多进程并记录未验证状态。
 7. **直接官方 HTTPS 依据链接**：[RB-DOC-THREAD](https://docs.ruby-lang.org/en/3.4/Thread.html)。
+
+### 规则 CS-RB-04：C# null 合并与可空判定向 Ruby nil/false 真值差异映射
+1. **源码触发条件**：C# 源码使用 `??` 提供缺省值（`(_targetUser ?? "无")`、`cred.TicketBlob?.Length ?? 0`）、`?.` 空条件调用、`string.IsNullOrEmpty(...)`，或把 `bool` 字段/可空 `bool` 与 `null` 放在同一条件里判断。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8；目标语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）。
+3. **原可观察行为**：`??` 只在左值为 `null` 时求值右值，`false` 与 `0`、`""` 都不会触发右值；可空布尔（`bool?`）有"未提供"与"false"两种可区分状态。Ruby 中没有 `null`，缺值用 `nil` 表示，且 **`nil` 与 `false` 同为假值，`0`、`""`、`[]` 全为真值**，`a || b` 在 `a` 为 `false` 时同样取 `b`。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：缺值判定写 `x.nil?`，缺省值写 `x.nil? ? default : x`；空字符串用 `x.to_s.empty?`（同时覆盖 `nil` 与 `""`）；`?.` 链改写为 `x&.member`；可空布尔用 `true/false/nil` 三态并在报告中标注必须显式比较 `== false`。
+   - *不适用条件*：严禁把 `??` 机械替换为 `||`——当右值是 `false` 或 `""` 的有效取值时，`||` 会把"业务假值"一并替换掉；严禁把 `if (path != "")` 之类的空串判定直接搬成 Ruby（`""` 在 Ruby 中为真，判定恒成立）；严禁用 `if (flag)` 语义判定可空布尔（`nil` 与 `false` 在 Ruby 中无法区分）。
+5. **错误机械替换反例**：
+   ```ruby
+   # C# 原型：bool persist = OptBool("persist") ?? false;   // 只对 null 回退
+   persist = opt_bool("persist") || false   # 错误：|| 把 false 也当成需要回退的缺值
+   # C# 原型：if (path != "" && !path.StartsWith("\"")) { ... }
+   if path != ""                            # 错误：Ruby 中空字符串为真，条件恒成立
+     report(path)
+   end
+   # 正确：区分 nil 与 false，空串用 empty? 判定
+   persist = opt_bool("persist")
+   persist = false if persist.nil?
+   report(path) unless path.to_s.empty?
+   ```
+6. **信息不足或实现相关时的处理**：若字段在源语言里是"可空"而目标侧的 `nil` 会被下游按 `false` 处理，或 C# `bool?` 的三态必须保留，先确认每个字段的缺值语义（未提供 / false / 0），不得统一折叠成一种假值。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+
+### 规则 CS-RB-05：C# 查找失败返回 -1 向 Ruby nil 与显式范围检查映射
+1. **源码触发条件**：C# 源码用 `IndexOf`/`LastIndexOf` 的返回值参与算术或切片（`path.Substring(0, path.ToLower().IndexOf(".exe") + 4)`、`var pos2 = ant.IndexOf('"', pos + domainPrefix.Length)`），或用 `Contains(...)`、`Substring`、`Split` 结果长度做分支。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-STRING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/strings/)）；目标语言 CRuby 3.4（[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)）。
+3. **原可观察行为**：C# 的 `IndexOf` 未命中返回 `-1`（不是异常），`Substring(0, -1 + 4)` 这类表达式会静默取到错误区间，`Substring` 起点越界抛 `ArgumentOutOfRangeException`。Ruby 的 `String#index` 未命中返回 `nil`，`nil + 4` 直接抛 `NoMethodError`，`String#[]` 与 `String#slice` 越界返回 `nil` 而不抛异常，`String#split` 不保留尾部空字段。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：未命中写 `idx = s.index('.exe'); next if idx.nil?`，命中后显式换算长度（`s[0, idx + 4]`）；包含判定用 `s.include?(sub)`；切分用 `s.split(sep)` 并确认尾部空字段语义；空白与缺值用 `s.to_s.strip.empty?`。
+   - *不适用条件*：严禁把 `-1` 参与运算的表达式直译成 Ruby（`nil` 会以 `NoMethodError` 在另一处失败，失败位置与源语言不同）；严禁依赖 Ruby 切片越界返回 `nil` 来复现 C# 的越界异常语义；严禁把 `Contains` 的大小写不敏感重载（`StringComparison.OrdinalIgnoreCase`）直译为 `include?`（Ruby 默认区分大小写，需 `downcase` 或正则）。
+5. **错误机械替换反例**：
+   ```ruby
+   # C# 原型：path.Substring(0, path.ToLower().IndexOf(".exe") + 4)
+   exe_path = path[0, path.downcase.index('.exe') + 4]   # 错误：未命中时 index 为 nil -> NoMethodError
+   # 正确：先取下标并显式判空，再切片
+   idx = path.downcase.index('.exe')
+   next if idx.nil?
+   exe_path = path[0, idx + 4]
+   # C# 原型：path.ToLower().Contains(" ")  // 若源为 OrdinalIgnoreCase 比较
+   spaced = path.downcase.include?(' ')   # 正确：显式 downcase 才能等价
+   ```
+6. **信息不足或实现相关时的处理**：若源码依赖 `IndexOf` 的 `-1` 参与后续算术而未做判空（即源语言本身已依赖"错误区间"），必须先把该分支的真实期望行为问清、写为待确认，不得自行补一个 `nil` 判定改变失败路径。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)。
+
+### 规则 CS-RB-06：C# 按类型分派的 catch 层次向 Ruby rescue 类层次与 ensure 映射
+1. **源码触发条件**：C# 源码用多个按类型排列的 `catch`（`catch (DirectoryNotFoundException)`、`catch (FileNotFoundException)`、`catch (UnauthorizedAccessException)`、末尾 `catch (Exception e)`）分派不同处理，或在 `catch` 中 `throw` 重新抛出、用 `finally` 保证清理。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)）；目标语言 CRuby 3.4（[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)）。
+3. **原可观察行为**：C# 按异常对象类型自上而下匹配第一个兼容的 `catch`，`finally` 在所有出口执行；`throw;` 重抛保留原始堆栈与异常对象。Ruby 的 `begin/rescue` 顺序匹配且 **不带类名的 `rescue` 只捕获 `StandardError` 及其子类**，`SystemExit`、`Interrupt`、`SignalException`、`NoMemoryError` 不会被捕获；`ensure` 对应 `finally`；裸 `raise`（无参数）在 `rescue` 体内重抛原异常。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：每个 C# `catch` 对应一个 `rescue` 子句并显式列出异常类（`rescue Errno::ENOENT, Errno::EACCES => e`），顺序保持"具体在前、宽泛在后"；`finally` 改 `ensure`；重抛用裸 `raise`；需要异常对象时用 `=> e` 绑定，`raise e` 只在确需替换时使用。
+   - *不适用条件*：严禁把 `catch (Exception)` 直译成裸 `rescue` 后自认为覆盖了全部异常（`SystemExit`/`Interrupt` 会穿透，进程退出与信号语义被改变）；严禁把宽泛 `rescue` 放在具体 `rescue` 之前（后续子句永远不会命中）；严禁用内联 `expr rescue nil` 修饰符替代带清理与重抛的完整 `begin/rescue/ensure`（它不能 `retry`，也不保证 `ensure`）。
+5. **错误机械替换反例**：
+   ```ruby
+   # C# 原型：try { ... } catch (Exception e) { Console.WriteLine(e.Message); }
+   begin
+     copy_cert(exe, output)
+   rescue      # 错误：裸 rescue 只覆盖 StandardError；且把失败静默降级为继续执行
+     puts 'failed'
+   end
+   # 正确：显式类层次 + ensure 清理，需要时重抛
+   begin
+     copy_cert(exe, output)
+   rescue Errno::ENOENT => e
+     warn "input missing: #{e.message}"
+     raise                # 正确：保留原异常与堆栈
+   rescue StandardError => e
+     warn "copy failed: #{e.class}: #{e.message}"
+   ensure
+     cleanup_temp(output)
+   end
+   ```
+6. **信息不足或实现相关时的处理**：若源码的 `catch` 顺序构成有意义的失败拓扑（某类异常被静默吞掉、某类被转成返回值），必须逐类确认目标侧的对应类与处理动作，无法映射的类写为待确认，不得合并成一个 `rescue StandardError`。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)。
 
 ## 转换与验证边界
 

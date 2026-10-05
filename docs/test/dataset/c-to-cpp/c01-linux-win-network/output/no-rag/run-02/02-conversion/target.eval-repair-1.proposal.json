@@ -1,1 +1,0 @@
-{"decision":"REPAIR","old":"len = min(url_length, name_size - 1);","new":"len = (url_length < name_size - 1) ? url_length : (name_size - 1);","rationale":"std::min requires <algorithm>; ternary avoids new includes and preserves bounds behavior."}

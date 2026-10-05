@@ -7,7 +7,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 > **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 ISO C++17 ([WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf))
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 C++](../../references/languages/cpp.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/c-to-cpp/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/c-to-cpp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **真实构建证据口径**：当前仓库仅 `fe`、`stest`、`realpath`、`pwd`、`chain-reactor` 五个冻结样例在 MinGW-w64 g++ / C++17 目标环境下取得构建 PASS 记录；**功能均未验收**。MSVC 与 Clang 仅为候选工具链，无目标构建证据。
 > **规范硬约束**：严格排除 C++20 Concepts、协程及 C++23 `std::expected` 等超出 C++17 基线的特性。
 
@@ -123,6 +123,8 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 - **网络与套接字场景**：源码实际执行 socket I/O 时，共同加载 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)；跨 Linux/Windows 时加读 [`skills/systems/posix-winsock/SKILL.md`](../../systems/posix-winsock/SKILL.md)。
 - **文件 I/O 场景**：源码确有文件读写与路径操作时，共同加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)；跨 OS 路径操作加读 [`skills/systems/posix-windows-filesystem/SKILL.md`](../../systems/posix-windows-filesystem/SKILL.md)。
 - **并发场景**：跨 OS 线程调度与系统同步原语加读 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md) 与 [`skills/systems/posix-windows-threads/SKILL.md`](../../systems/posix-windows-threads/SKILL.md)。
+- **进程与身份/权限场景**：源码实际创建、替换、等待或终止进程，或查询、切换自身身份与特权时，共同加载 [`skills/systems/posix-windows-process-identity/SKILL.md`](../../systems/posix-windows-process-identity/SKILL.md)。
+- **Windows 注册表与服务场景**：源码读写注册表键值，或经 SCM 创建、配置、启动、停止、删除服务时，加载 [`skills/systems/windows-registry-service-subsystem/SKILL.md`](../../systems/windows-registry-service-subsystem/SKILL.md)；POSIX 侧无等价子系统，按不可映射项处理。
 
 ---
 

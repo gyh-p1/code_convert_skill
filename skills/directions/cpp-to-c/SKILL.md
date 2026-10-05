@@ -7,7 +7,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 
 > **适用基线**：源语言 ISO C++17 ([WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)) → 目标语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf))
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C++](../../references/languages/cpp.md)与[目标语言 C](../../references/languages/c.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/cpp-to-c/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/cpp-to-c/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **真实构建证据口径**：当前仓库中 C++ 作为源语言、C 作为目标语言的方向处于**`未验证/阻断`**状态（尚无项目级目标编译 PASS 证据）；本 Skill 仅提供静态决策依据，不代表转换产物已通过编译或功能验证。
 > **规范硬约束**：源基线以 ISO C++17 为限（不含 C++20 Concepts、协程等）；目标基线以 ISO C11 为限（不含 C23 特性）。
 
@@ -125,6 +125,73 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 
 ---
 
+### 规则 5：C++ std::string 显式长度与内部 NUL 语义向 C11 指针+长度对与所有权约定映射
+
+1. **触发条件**：C++ 源码用 `std::string` 承载可能含 `\0` 或非文本字节的数据（`std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());`、`std::string(buf, n)`、`s.substr(i, n)`），并把 `c_str()` 与 `size()` 一起交给字节接口（`send(s, frame.c_str(), static_cast<int>(frame.size()), 0)`）。
+2. **适用前提**：源语言 ISO C++17（[WG21-N4659 Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 ISO C11（[WG14-N1570 §7.22.3, §7.23](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标函数签名允许增加长度出参或由调用方提供缓冲。
+3. **应保留行为**：`size()` 独立于内容且允许内部 `\0`；`c_str()` 返回指向内部缓冲、以 `\0` 结尾的指针，该指针随对象改动或析构失效；按值返回 `std::string` 传递的是一份独立缓冲。
+4. **可选映射与不适用条件**：
+   - *可选映射*：C 侧一律用"指针 + 显式长度"参数对（`const char *data, size_t len`）表达同一数据；需要拥有权时用 `malloc` 复制并同时输出长度，或由调用方提供缓冲 + 容量 + 长度出参；所有权（谁分配、谁释放、何时失效）写入函数注释与每个调用点；
+   - *不适用条件*：严禁用 `strlen`/`strcpy`/`sprintf` 顶替 `size()` 与 `data()`/`c_str()`（数据含 `\0` 时发送/比较/复制的字节数会在该处静默截断）；严禁把 `c_str()` 得到的指针保存到源对象生命周期之外（C 侧等同悬垂指针）；不可假定 C 的 `char *` 赋值保留 C++ 的深拷贝语义（那只是别名）。
+5. **错误机械替换反例**：
+   ```c
+   /* 错误反例：用 strlen 顶替 size()，二进制分块在首个 \0 处被截断 */
+   size_t frame_len = 0;
+   char *frame = build_frame(i, chunks[i], &frame_len); /* 数据可能含 0x00 */
+   int n = send(s, frame, strlen(frame), 0);   /* 致命：长度按 NUL 截断，发送字节数变少 */
+   /* 正确：把同一个显式长度交给字节接口 */
+   int n2 = send(s, frame, (int)frame_len, 0);
+   ```
+6. **不确定性处理**：若无法确认 `std::string` 内的数据是否可能含 `\0`（尤其来自文件或网络的字节流），必须按"可能含 `\0`"处理并显式传长度；若返回的 `std::string` 所有权终点不明（是否被存入容器或全局），必须追溯并写明释放责任。
+7. **官方依据**：[WG21-N4659 Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §7.22.3, §7.23](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 6：C++ 引用式 range-for 就地修改与 char 无符号化转型向 C11 下标循环与显式转换映射
+
+1. **触发条件**：C++ 源码用引用式 range-for 就地改写字节（`for (char& c : out) c = static_cast<char>(static_cast<unsigned char>(c) ^ key);`）、用 `c ^= key`，或把字符先转无符号再交给 `<cctype>`（`static_cast<char>(std::toupper(static_cast<unsigned char>(ch)))`）。
+2. **适用前提**：源语言 ISO C++17（[WG21-N4659 Clause 6.9.1, Clause 7.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 ISO C11（[WG14-N1570 §6.2.5, §6.3.1.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+3. **应保留行为**：每个元素被就地改写（原缓冲被修改，而不是生成副本）；异或在"无符号 8 位"值上进行后再转回字符，因此 0x80 以上字节不会先变成负值；循环按元素顺序覆盖整个序列。
+4. **可选映射与不适用条件**：
+   - *可选映射*：改写为 `for (size_t i = 0; i < len; ++i) buf[i] = (char)((unsigned char)buf[i] ^ key);`，显式保留 `(unsigned char)` 中间转换；字符分类/大小写转换同样先转 `(unsigned char)` 后再转回 `char`；若原始数据不可写，先复制到可写缓冲并把长度一并传递；
+   - *不适用条件*：严禁省略 `(unsigned char)` 转换直接写 `buf[i] ^= key`——`char` 的符号性由实现定义，负值参与 `^` 前先做整型提升并按有符号位扩展，结果与 C++ 原写法不同（XOR 编解码不再可逆）；严禁把引用式 range-for 改写成"对元素副本循环"（原缓冲不再被修改，可观察行为改变）。
+5. **错误机械替换反例**：
+   ```c
+   /* 错误反例：丢掉 unsigned char 中间转换，负值按有符号提升后再异或 */
+   for (size_t i = 0; i < len; ++i) buf[i] ^= key;   /* 0x80 以上字节结果与 C++ 版不同 */
+   /* 正确：保留双重转换并就地改写 */
+   for (size_t i = 0; i < len; ++i) {
+       buf[i] = (char)((unsigned char)buf[i] ^ key);
+   }
+   ```
+6. **不确定性处理**：若源码未说明 `char` 是否被当作无符号字节使用，必须按"字节缓冲"处理并保留显式无符号转换；若元素类型是 `wchar_t` 或多字节编码单元，必须另行确认宽度与编码后再写循环，不得套用字节级规则。
+7. **官方依据**：[WG21-N4659 Clause 6.9.1, Clause 7.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §6.2.5, §6.3.1.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 7：C++ 流式输出与 std::to_string 向 C11 printf/fputs 格式化映射
+
+1. **触发条件**：C++ 源码用流输出拼装结果（`std::cout << "{\"bytes\":" << data.size() << "}" << std::endl;`、`oss << "-" << p;` 后 `return oss.str();`、`report << kv.first << "=" << kv.second << "\n";`），或把数值转字符串（`std::to_string(i)`）。
+2. **适用前提**：源语言 ISO C++17（[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)，输入/输出库与字符串转换函数一节）；目标语言 ISO C11（[WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)，`<stdio.h>` 一节）。
+3. **应保留行为**：`operator<<` 的重载按静态类型选择格式化方式（`bool` 默认输出 `1`/`0`）；`std::endl` 输出换行并强制刷新缓冲；`std::to_string` 按十进制输出且不带宽度/前导零设置；`size_t` 按完整宽度输出，不截断。
+4. **可选映射与不适用条件**：
+   - *可选映射*：`std::cout << x` 改写为 `printf`/`fputs`/`fwrite`，逐个实参按其 C 类型选择转换说明（`const char *` 用 `%s`、`int` 用 `%d`、`size_t` 用 `%zu`、`long long` 用 `%lld`）；需要与 `std::endl` 相同的刷新语义时显式 `fflush(stdout)`；多段拼接在 C 中用固定容量缓冲 + `snprintf` 的返回值做容量/截断检查，或连续 `fputs`/`fwrite`；
+   - *不适用条件*：严禁把 `std::cout << bool` 或三元表达式结果一律按 `%s` 输出而不核对实参类型（`printf` 的转换说明与实参类型不匹配是 UB，不是可捕获异常）；严禁把 `size_t` 用 `%d` 输出（宽度不足会截断或产生 UB）；严禁把 `std::endl` 直译为 `"\n"` 而丢掉刷新动作（重定向或异常终止场景下可观察差异）；严禁把 `std::ostringstream` 的无限增长拼接写成无容量检查的 `sprintf`/`strcat`。
+5. **错误机械替换反例**：
+   ```c
+   /* 错误反例：size_t 用 %d、布尔值用 %s，且丢掉 std::endl 的刷新语义 */
+   printf("{\"chunks\":%d,\"bytes\":%d}\n", sentChunks, data_size); /* 两者实为 size_t */
+   printf("decoded=%s\n", ok);                                      /* bool 传给 %s → UB */
+   /* 正确：按类型选说明、布尔显式转文本、需要时刷新 */
+   printf("{\"chunks\":%zu,\"bytes\":%zu}\n", sentChunks, data_size);
+   printf("decoded=%s\n", ok ? "true" : "false");
+   fflush(stdout);
+   ```
+6. **不确定性处理**：若源码依赖流的格式化状态（`std::hex`、`std::setw`、`std::setprecision`）或区域设置，或依赖 `std::cout` 与 `std::cerr` 的相对输出顺序与同步设置，必须先确认这些状态再改写；无法确认时必须停标，不得默认"十进制、无宽度、与 C 的 stdout 同序"。
+7. **官方依据**：[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)（输入/输出库与字符串转换函数一节）；[WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)（`<stdio.h>` 一节）。
+
+---
+
 ## 四、跨场景与系统规则按需加载
 
 > 若源码实际涉及线程、socket、文件或跨 OS API，加载对应 B 类场景/系统 Skill；A 类规则仅说明需要保留的语言层错误、资源、并发、文本或所有权契约。
@@ -132,6 +199,8 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 - **网络与套接字调用**：当 C++ 源码中出现网络通信、套接字调用时，加载 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)；跨 POSIX/Windows 平台时加读 [`skills/systems/posix-winsock/SKILL.md`](../../systems/posix-winsock/SKILL.md)。
 - **文件 I/O 与路径**：源码中存在文件读写时，加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)；跨 OS 路径加载 [`skills/systems/posix-windows-filesystem/SKILL.md`](../../systems/posix-windows-filesystem/SKILL.md)。
 - **并发与原生线程**：源码中使用 `std::thread` 或互斥锁时，加读 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)；跨平台线程原语加读 [`skills/systems/posix-windows-threads/SKILL.md`](../../systems/posix-windows-threads/SKILL.md)。
+- **进程创建与身份/权限**：当 C++ 源码中出现进程创建、替换、等待、终止或身份与特权查询/切换时，共同加载 [`skills/systems/posix-windows-process-identity/SKILL.md`](../../systems/posix-windows-process-identity/SKILL.md)。
+- **Windows 注册表与服务**：当 C++ 源码读写注册表键值或经 SCM 创建、配置、启动、停止、删除服务时，加载 [`skills/systems/windows-registry-service-subsystem/SKILL.md`](../../systems/windows-registry-service-subsystem/SKILL.md)；POSIX 侧无等价子系统，按不可映射项处理。
 
 ---
 

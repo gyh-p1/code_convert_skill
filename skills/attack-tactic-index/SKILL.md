@@ -9,7 +9,7 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 
 > 战术名称与 ID 以 [MITRE 官方 Enterprise 战术列表](https://attack.mitre.org/tactics/enterprise/) 为准。下表按 2026-09-25 核对的 MITRE 官方 Enterprise 列表记录 15 个战术（TA0005 为 Stealth，并包含 TA0112 Defense Impairment）;使用前仍须核对官方列表;引用本索引不代表该战术已有专属转换能力。
 
-> **2026-10-02 外部样本标签**：按方向归档的候选见[数据集交接盘点](../../docs/test/dataset/handoff-2026-10-02.md)。外部清单的 EXEC/PER/DE 等 11 类缩写是旧资料的**未核实标签**，不是本索引的战术覆盖证据；特别是旧资料以“防御规避”称 TA0005，而本索引按 2026-09-25 核对的现行名称为 Stealth。逐例分类前需按当前官方 ID/名称与源码实际行为重新核对。七语言转换知识仍位于根[通用入口](../../SKILL.md)、`skills/directions/` 和 `skills/references/`，不把语言规则复制进战术索引。
+> 外部样本目录与旧资料中的战术缩写只作线索；逐例分类须按当前官方 ID/名称和源码实际行为核对。七语言转换知识仍位于根入口、`skills/directions/` 与 `skills/references/`。
 
 ## 如何使用
 
@@ -27,13 +27,13 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 | Reconnaissance (TA0043) | 主机/网络信息收集 | 涉及网络时用 [网络 I/O](../scenes/network-io/SKILL.md);主机/环境枚举场景缺口 |
 | Resource Development (TA0042) | 多为工具/基础设施准备,常不在被转换目标代码内 | 通常无直接代码场景;按实际行为判断 |
 | Initial Access (TA0001) | 投递、入口利用,常含网络 I/O 与文件写入 | 网络部分用 [网络 I/O](../scenes/network-io/SKILL.md) + [安全行为](../scenes/network-io/references/security-behavior.md);文件写入用 [文件 I/O](../scenes/file-io/SKILL.md) |
-| Execution (TA0002) | 命令/进程启动、脚本解释 | 进程调用场景缺口(暂无对应 Skill) |
-| Persistence (TA0003) | 服务/计划任务/启动项/文件落地 | 文件落地用 [文件 I/O](../scenes/file-io/SKILL.md);服务/计划任务等进程场景缺口 |
-| Privilege Escalation (TA0004) | 令牌/权限/提权系统 API | 系统/进程知识缺口 |
+| Execution (TA0002) | 命令/进程启动、脚本解释 | [进程执行](../scenes/process-execution/SKILL.md)；按 shell/argv、输出、超时与后代回收边界选择 |
+| Persistence (TA0003) | 服务/计划任务/启动项/文件落地 | 文件落地用 [文件 I/O](../scenes/file-io/SKILL.md);服务与启动项写注册表时用 [Windows 注册表与服务子系统](../systems/windows-registry-service-subsystem/SKILL.md);计划任务本身仍缺口 |
+| Privilege Escalation (TA0004) | 令牌/权限/提权系统 API | 跨 POSIX↔Windows 的身份与特权差异用 [进程创建与身份/权限](../systems/posix-windows-process-identity/SKILL.md);具体提权漏洞利用链不属现有知识 |
 | Stealth (TA0005) | 隐匿/隐藏操作、呈现为正常活动 | 按源码实际行为选场景;文件行为可读 [文件 I/O](../scenes/file-io/SKILL.md);不因普通网络/文件功能自动归类;注意安全边界 |
-| Defense Impairment (TA0112) | 直接削弱、关闭或篡改防御机制 | 需识别具体系统/进程行为;相关系统与进程知识当前存在缺口;不把普通服务/日志差异推断为该战术 |
+| Defense Impairment (TA0112) | 直接削弱、关闭或篡改防御机制 | 需识别具体系统/进程行为;进程终止用 [进程执行](../scenes/process-execution/SKILL.md) 与 [进程创建与身份/权限](../systems/posix-windows-process-identity/SKILL.md);服务篡改用 [Windows 注册表与服务子系统](../systems/windows-registry-service-subsystem/SKILL.md);PE 解析/驱动与安全产品交互仍缺口;不把普通服务/日志差异推断为该战术 |
 | Credential Access (TA0006) | 凭证读取与比较 | 校验/恒定时间比较见 [安全行为](../scenes/network-io/references/security-behavior.md);凭证存储涉及文件时用 [文件 I/O](../scenes/file-io/SKILL.md) |
-| Discovery (TA0007) | 本地/网络发现 | 网络部分用 [网络 I/O](../scenes/network-io/SKILL.md);系统信息读取场景缺口 |
+| Discovery (TA0007) | 本地/网络发现 | 网络部分用 [网络 I/O](../scenes/network-io/SKILL.md);进程与身份查询用 [进程创建与身份/权限](../systems/posix-windows-process-identity/SKILL.md);注册表读取用 [Windows 注册表与服务子系统](../systems/windows-registry-service-subsystem/SKILL.md);其余主机/环境枚举场景缺口 |
 | Lateral Movement (TA0008) | 远程服务、跨主机网络 | [网络 I/O](../scenes/network-io/SKILL.md) + 跨 OS 时 [POSIX↔Winsock](../systems/posix-winsock/SKILL.md);无横向移动专门场景 |
 | Collection (TA0009) | 文件/输入/剪贴板采集 | 文件采集用 [文件 I/O](../scenes/file-io/SKILL.md);输入/剪贴板场景缺口 |
 | Command and Control (TA0011) | 网络通信、自定义/伪装协议 | 最贴合现有知识:[网络 I/O](../scenes/network-io/SKILL.md) + [安全行为](../scenes/network-io/references/security-behavior.md) + [POSIX↔Winsock](../systems/posix-winsock/SKILL.md) |
@@ -42,7 +42,7 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 
 ## 覆盖现状
 
-当前转换知识含网络、文件和并发场景；具体 OS 规则仍按已建 Skill 逐项检查。仍属缺口的是:**进程/命令执行**(Execution、部分 Persistence)、**系统信息/枚举**及未建模的系统方向。ATT&CK 15 战术均仅作分类入口，不代表本项目为每个战术提供了转换能力。本表既是检索入口,也是缺口地图;补齐要按"有真实行为消费者才建"的规则推进,不为凑满战术预建空 Skill。
+当前转换知识含网络、文件、进程执行和并发场景；系统方向含 POSIX ↔ Winsock、POSIX ↔ Windows 文件路径（含 macOS 路径位置约定）、进程创建与身份/权限、线程，以及 Windows 注册表与服务子系统。仍属缺口的是:**PE 解析**、**Linux 内核接口**（`ptrace`/`seccomp`）与 **macOS 专有子系统**（Keychain/launchd/CoreFoundation），以及系统信息/枚举类行为中的其余未建模部分。ATT&CK 15 战术均仅作分类入口，不代表本项目为每个战术提供了转换能力。本表既是检索入口,也是缺口地图;补齐要按"有真实行为消费者才建"的规则推进,不为凑满战术预建空 Skill。
 
 ## 依据
 

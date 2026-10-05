@@ -7,7 +7,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
 
 > **适用基线**：Go 1.27 → PowerShell 7.6。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 PowerShell](../../references/languages/powershell.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/go-to-powershell/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/go-to-powershell/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -68,6 +68,75 @@ description: Use when converting Go source to PowerShell; apply this direction's
    ```
 6. **信息不足或实现相关时的处理**：若必须常驻，向用户提示脚本宿主生命周期限制。
 7. **直接官方 HTTPS 依据链接**：[MS-PS-THREADJOB](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)。
+
+### 规则 GO-PS-04：Go []byte 字节切片向 PowerShell [byte[]] 与文本编码边界的映射
+1. **源码触发条件**：Go 源码在字节层读写与变换数据，例如 `_ = os.WriteFile(in, []byte("operator=translator\nmode=controlled\n"), 0o644)`、`raw, _ := os.ReadFile(in)`、`[]byte(strings.TrimSpace(string(raw)))`、以及底层的 `sha256.Sum256(data)`/`base64.StdEncoding.EncodeToString`。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #String_types](https://go.dev/ref/spec)）；目标语言 PowerShell 7.6（[MS-PS-CONTENT](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content)、[MS-PS-ENCODING](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)）。
+3. **原可观察行为**：Go 字符串是只读字节序列、允许包含 `0x00`；`[]byte(s)` 与 `string(b)` 互转按原始字节解释且长度按字节计；`os.WriteFile` 写出的正是给的这些字节，不做换行或 BOM 增删。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：字节数组用 `[byte[]]`；需要精确字节级写入时用 `[System.IO.File]::WriteAllBytes($path, $bytes)`，需要精确字节级读取时用 `[System.IO.File]::ReadAllBytes($path)`；确需 cmdlet 路径时使用面向字节的参数（`Set-Content -AsByteStream` / `Get-Content -AsByteStream`），并显式指定 `-Encoding utf8NoBOM` 以固定编码而不依赖宿主默认。
+   - *不适用条件*：严禁用 `Set-Content`/`Add-Content`/`Out-File` 默认的文本管道承接字节切片——数组元素会被按行连接、默认追加行尾换行、并按默认编码重新编码，字节内容与长度都会与原字节不一致；严禁把二进制数据当 `[string]` 走 `-Encoding` 往返后再当作原字节使用。
+5. **错误机械替换反例**：
+   ```powershell
+   # 错误：把 Go 的 os.WriteFile(path, []byte(content), 0o644) 写成默认文本写入
+   $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+   Set-Content -Path $in -Value $bytes          # 元素被逐行连接 + 追加换行 + 默认编码
+   # $bytes.Length 与文件实际字节数不再一致
+   # 正确：字节进字节出
+   [System.IO.File]::WriteAllBytes($in, $bytes)
+   $roundTrip = [System.IO.File]::ReadAllBytes($in)   # 长度与内容逐字节对应
+   ```
+6. **信息不足或实现相关时的处理**：若无法确认原数据的编码（UTF-8 还是本地代码页）以及是否要求“逐字节一致”，必须标注“字节内容与编码前提待确认”，不得用任何默认编码猜测替代。
+7. **直接官方 HTTPS 依据链接**：[GO-SPEC #String_types](https://go.dev/ref/spec)；[MS-PS-CONTENT](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content)、[MS-PS-ENCODING](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)。
+
+### 规则 GO-PS-05：Go Goroutine 与 Channel 汇聚向 PowerShell Runspace 并行的近似映射
+1. **源码触发条件**：Go 源码用固定数量工作协程处理任务并汇聚结果，例如 `parallel_cmd_runner.go` 的 `results := make([]cmdResult, len(cmds))` + `var wg sync.WaitGroup` + `go func() { defer wg.Done(); ... }()`，`tcp_port_scanner.go` 的 `portChan` + 多个 `go scanWorker(portChan)`。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Go_statements](https://go.dev/ref/spec)、[GO-MEM](https://go.dev/ref/mem)）；目标语言 PowerShell 7.6（[MS-PS-PARALLEL](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/foreach-object)、[MS-PS-JOBS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)）。
+3. **原可观察行为**：并发任务各自执行、共享状态受显式同步保护；`wg.Wait()` 之后全部结果已就绪；结果写入互不覆盖（每个任务写自己的下标/自己的队列位置）；channel 的缓冲容量决定发送端是否阻塞。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：有界并行用 `ForEach-Object -Parallel { ... } -ThrottleLimit N`（外部变量以 `$using:` 引入，结果经管道回收）；需要作业对象与显式等待时用 `Start-ThreadJob`/`Start-Job` 配 `Wait-Job`/`Receive-Job`。
+   - *不适用条件*：严禁假定并行块内对父作用域变量的写入会回写父作用域——Runspace 之间不共享变量，写入会静默丢弃；结果必须经管道输出或 `Receive-Job` 收集；也不得依赖并行输出的顺序（与 Go 中显式按索引写 `results[i]` 的确定性不同），需要稳定顺序时必须显式排序。
+5. **错误机械替换反例**：
+   ```powershell
+   # 错误：以为并行块里能像 Go 协程写共享切片那样直接写父作用域变量
+   $results = @()
+   1..4 | ForEach-Object -Parallel { $results += $_ }   # 每次迭代都是新 Runspace，写入丢失！
+   $results.Count                                          # 仍为 0
+   # 正确：经管道回收结果，并显式排序以固定顺序
+   $results = 1..4 | ForEach-Object -Parallel { $_ } | Sort-Object
+   ```
+6. **信息不足或实现相关时的处理**：若源码依赖 channel 的阻塞背压、`select` 多路复用或 `context` 级联取消，必须标注“PowerShell 无 channel/select 对等物，背压与取消需重新设计”，交由并发场景 Skill 决定，不得声称行为等价。
+7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[MS-PS-PARALLEL](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/foreach-object)、[MS-PS-JOBS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)。
+
+### 规则 GO-PS-06：Go error 返回与 defer 清理向 PowerShell 错误流、$? 与 finally 的映射
+1. **源码触发条件**：Go 源码以 `(T, error)` 返回并在调用点 `if err != nil` 分流，同时用 `defer` 登记清理（如 `overwrite_rollback_check.go`/`recoverable_overwrite.go` 的备份—覆写—回滚顺序、`inbox_kv_parse.go` 的 `strings.Split` 解析失败分支），`parallel_cmd_runner.go` 还有 `defer cancel()` 与 `context.WithTimeout` 的超时错误分支。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Errors, #Defer_statements](https://go.dev/ref/spec)）；目标语言 PowerShell 7.6（[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)、[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)）。
+3. **原可观察行为**：错误经返回值显式传递，调用方必须检查 `err != nil` 才会失败；未检查则继续执行；`defer` 在外层函数返回前按 LIFO 逆序执行，且对正常返回、`return` 提前退出与 `panic` 展开都生效。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：把“可继续的失败”写成非终止错误（`Write-Error`/`$PSCmdlet.WriteError()`）并保留后续处理，把“必须中断的失败”写成终止错误（`throw`/`-ErrorAction Stop`）；需要 `catch` 兜住 Cmdlet 的非终止错误时显式加 `-ErrorAction Stop`；清理动作放进 `finally`，按 Go 的逆序排列；判断外部进程结果时读 `$LASTEXITCODE`，判断 Cmdlet 结果时读 `$?`。
+   - *不适用条件*：严禁用 `$?` 或 `$LASTEXITCODE` 作为跨多条语句的统一错误判断——`$?` 会被任何后续语句覆盖，`$LASTEXITCODE` 只在外部原生进程执行后更新，对纯 Cmdlet 流程不反映成败；`try`/`catch` 默认不捕获非终止错误；`exit` 会终止宿主、可能不执行 `finally`，因此**不得用 `exit` 代替 Go 中会在函数返回时执行的 `defer` 清理**。
+5. **错误机械替换反例**：
+   ```powershell
+   # 错误：用 $? 承接 Go 的 err 检查，并用 exit 代替 defer 清理
+   function Invoke-Stage {
+       Write-FileAtomic $target $payload       # 内部以非终止错误报告失败
+       if ($?) { Write-Host "ok" }             # 上一条语句已覆盖 $?，判断不可靠
+       if (-not $?) { exit 1 }                 # exit 绕过 finally：备份/临时文件未清理
+   }
+   # 正确：终止错误 + finally 承接 defer 的清理职责
+   function Invoke-Stage {
+       try {
+           Write-FileAtomic $target $payload -ErrorAction Stop
+       } catch {
+           Write-Error "stage failed: $($_.Exception.Message)"   # 对照 Go 的 error 返回
+           throw                                                  # 对照 Go 的必须中断
+       } finally {
+           Remove-Item -LiteralPath $staging -ErrorAction SilentlyContinue  # 对照 defer
+       }
+   }
+   ```
+6. **信息不足或实现相关时的处理**：若无法确认某个 Go 错误在原程序中是“必须中断”还是“可忽略继续”，必须标注“错误严重级别待确认”，不得默认按终止错误处理；若原 Go 代码用 `panic`+`recover` 表达非局部失败，标注“panic/recover 与 PowerShell 错误流的对应关系待确认”。
+7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Errors, #Defer_statements](https://go.dev/ref/spec)；[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)、[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)。
 
 ## 转换与验证边界
 

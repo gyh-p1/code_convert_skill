@@ -7,7 +7,7 @@ description: Use when converting Ruby source to C++; apply this direction's lang
 
 > **适用基线**：CRuby 3.4 → ISO C++17。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Ruby](../../references/languages/ruby.md)与[目标语言 C++](../../references/languages/cpp.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/ruby-to-cpp/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/ruby-to-cpp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -75,6 +75,77 @@ description: Use when converting Ruby source to C++; apply this direction's lang
    ```
 6. **信息不足或实现相关时的处理**：若代码涉及原子标量，改用 `std::atomic<T>`。
 7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 33](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[RB-DOC-THREAD](https://docs.ruby-lang.org/en/3.4/Thread.html)。
+
+### 规则 RB-CPP-04：Ruby 块/闭包捕获向 C++17 std::function 与 lambda 的捕获生命周期映射
+1. **源码触发条件**：Ruby 源码把块当作可传递的一等过程使用，例如 `getfile.each do |file| ... end`、`datastore['FILE_GLOBS'].split(',').each do |glob| ... end`、`hashes.each do |hash| ... end`，以及把块写入变量、作为参数多次转发（`&blk`）或在容器里保存后再调用。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-PROC](https://docs.ruby-lang.org/en/3.4/Proc.html)）；目标语言 ISO C++17（[WG21-N4659 Clause 11.3, Clause 20.14](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+3. **原可观察行为**：块是携带词法环境的一等对象，可被转发、延迟执行与多次调用；每次调用看到的是定义处捕获的那些变量（按引用看到变量本身，因此调用时机影响可观察结果）；块内的 `break`/`next`/`return` 由调用方方法决定其控制流含义。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：同步、单次、立即调用的迭代体用 lambda（`[&](const auto& item){ ... }`）或范围 `for` 直接展开，避免引入间接层；需要存储或转发时用 `std::function<R(Args...)>` 并**按值捕获**（`[=]`/`[x]`）需要跨作用域存活的状态；只被同步调用且明显不逃逸时才用引用捕获，并把“被捕获变量的作用域覆盖所有调用点”写进报告。
+   - *不适用条件*：严禁在源 lambda 中用引用捕获（`[&]`）后把它存进 `std::function` 再于原作用域之外调用——被引用对象已析构，属未定义行为；也严禁把 Ruby 的“块捕获”直接当作 `std::function` 按值捕获处理：Ruby 里块看到的是变量本身的变化，按值捕获会冻结调用时刻的值。
+5. **错误机械替换反例**：
+   ```cpp
+   // 错误：引用捕获后存起来延迟调用，块看到的对象已析构
+   std::function<void()> make_cb() {
+       std::string glob = "*.config";
+       return [&]() { use(glob); };   // UB：glob 在返回后即销毁
+   }
+   // 正确：按值捕获，或让 lambda 只作同步调用
+   std::function<void()> make_cb() {
+       std::string glob = "*.config";
+       return [glob]() { use(glob); };
+   }
+   ```
+6. **信息不足或实现相关时的处理**：块被保存后何时调用、被谁调用在源码中不明确时（例如存进容器、随对象字段携带），必须标注"调用时机与存活期未定"并询问，不得默认按同步调用处理；块内若出现 `break`/`next`/`return`，需先确认这些控制流应落到哪一层（`std::function` 无法表达从调用方返回）。
+7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 11.3, Clause 20.14](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[RB-DOC-PROC](https://docs.ruby-lang.org/en/3.4/Proc.html)。
+
+### 规则 RB-CPP-05：Ruby Symbol 与 Hash 向 C++17 enum class / std::unordered_map 的键身份与遍历顺序映射
+1. **源码触发条件**：Ruby 源码以 `Symbol` 作状态标记或哈希键，例如 `origin_type: :session`、`private_type: :ntlm_hash`、`update: :unique_data`、`data: { :company => company }`，以及读取 `sysinfo['Computer']`、`tokens['delegation']` 这类字符串键映射。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-SYMBOL](https://docs.ruby-lang.org/en/3.4/Symbol.html)、[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)）；目标语言 ISO C++17（[WG21-N4659 Clause 9.6, Clause 26.2.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+3. **原可观察行为**：`Symbol` 是全局唯一、不可变的原子标识符（同一字面量处处同一对象），相等比较按身份；`Hash` 保留键的**插入顺序**，`each` 按插入顺序产出 `[key, value]`，且允许 `nil` 值存在而键仍在。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：取值集合在编译期封闭的 Symbol（如状态、类型标记）映射为 `enum class`，与外部交换时显式提供 `to_string`/`from_string`；键集合动态或来自外部输入的映射为 `std::unordered_map<std::string, V>`（需要保留插入顺序以匹配 Ruby 遍历语义时改用 `std::vector<std::pair<K,V>>` 或 `std::map` 并在报告里说明顺序来源）；捕获环境里的固定键改用 `static constexpr std::string_view` 常量，避免重复构造 `std::string`。
+   - *不适用条件*：严禁把 Ruby 的 Symbol 一律落成散落的字符串字面量比较（丢失"编译期封闭、拼写受检查"的性质，且每次比较构造临时 `std::string`）；严禁依赖 `std::unordered_map` 的遍历顺序去复现 Ruby `Hash` 的插入顺序——规范不保证任何顺序，重哈希后顺序可变。
+5. **错误机械替换反例**：
+   ```cpp
+   // 错误：Symbol 退化成散落字符串，Hash 顺序被 unordered_map 打乱
+   std::unordered_map<std::string, std::string> info;
+   for (const auto& kv : info) {          // 错误：顺序与 Ruby Hash 的插入顺序无关
+       if (kv.first == "Computer") { }    // 错误：拼写错误到运行期才暴露
+   }
+   // 正确：封闭取值用 enum class；需要顺序语义时用保序容器
+   enum class CredType { Session, NtlmHash };
+   std::vector<std::pair<std::string, std::string>> info_ordered;
+   ```
+6. **信息不足或实现相关时的处理**：Symbol 的取值集合是否封闭（是否来自 `datastore`、外部 JSON 或用户输入）必须先从源码确认；无法确认时标注"键集合开放"并询问，不得强行用 `enum class` 收窄；Ruby `Hash` 是否允许 `nil` 值与"键存在但值为空"的区分要在报告中标出（C++ 侧 `operator[]` 会默认构造插入，与 Ruby 的 `[]` 只读不同）。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-SYMBOL](https://docs.ruby-lang.org/en/3.4/Symbol.html)；[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)；[WG21-N4659 Clause 26.2.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+
+### 规则 RB-CPP-06：Ruby 异常展开与 ensure 向 C++17 异常安全作用域与 RAII 清理映射
+1. **源码触发条件**：Ruby 源码使用 `begin ... rescue A ... rescue B ... ensure ... end`（可带 `raise` 重新抛出），例如 `rescue StandardError`、`rescue Timeout::Error`、`rescue ::Rex::Post::Meterpreter::RequestError => e` 后按 `e.message =~ /.../` 分派、以及在同一段里 `ensure` 做清理。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)）；目标语言 ISO C++17（[WG21-N4659 Clause 18, Clause 15.4](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+3. **原可观察行为**：异常沿栈展开，途经的 `ensure` **必被执行**（正常返回、抛出、`return` 都执行）；裸 `rescue` 只匹配 `StandardError` 及其子类，`Exception` 的其他分支（如 `SystemExit`、`SignalException`、`NoMemoryError`）不被捕获；`rescue` 子句按书写顺序自上而下取第一个匹配者，`raise e` 保留原异常对象与回溯。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：每个 `rescue` 子句映射为一个 `catch` 块，类型按 Ruby 异常类逐一对到自定义 C++ 异常类型，`e.message =~ /.../` 这类分派改写为 `catch (const X& e)` 中的条件判断或 `catch` 顺序；`ensure` 的清理改由 RAII 对象在作用域退出时执行（`std::unique_ptr`、`std::lock_guard`、自定义析构器），需要"无论成败都要跑"的收尾动作放进包装对象的析构函数；重新抛出用裸 `throw;`。
+   - *不适用条件*：严禁把 Ruby 的裸 `rescue`（只捕获 `StandardError`）机械翻译为 `catch (...)`——后者会吞掉本应向上传播的不可恢复异常，改变失败路径拓扑；严禁用 `catch (const std::exception& e) { throw e; }` 代替 `throw;`（前者按 `std::exception` 切片复制，丢失派生类型与诊断信息）；也严禁让这些异常跨越 C ABI 边界。
+5. **错误机械替换反例**：
+   ```cpp
+   // 错误：裸 rescue 被翻成 catch(...)，且重新抛出时切片
+   try {
+       hashes = client.sam_hashes();
+   } catch (const std::exception& e) {
+       throw e;                       // 错误：按 std::exception 切片，派生类型丢失
+   } catch (...) {
+       report("access denied");       // 错误：连不可恢复异常一起吞掉，与 Ruby 裸 rescue 不符
+   }
+   // 正确：逐类捕获，保证清理由 RAII 完成
+   try {
+       hashes = client.sam_hashes();
+   } catch (const StdError& e) {      // 对应 rescue StandardError
+       report(e.what());
+   }
+   ```
+6. **信息不足或实现相关时的处理**：Ruby 侧抛出的异常类若来自框架（如 `Rex`/`Msf` 命名空间下的错误类型）或第三方库，必须先把"该类型在 C++ 侧有没有对应表示"标注为缺口并询问，不得用泛化的 `std::runtime_error` 顶替；`ensure` 中如果含有依赖顺序的多步清理（如先解锁后释放句柄），需明确声明期望的析构顺序。
+7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[WG21-N4659 Clause 18, Clause 15.4](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
 
 ## 转换与验证边界
 

@@ -68,6 +68,20 @@ FreeBSD base-system 源常含一批 **glibc 与 MinGW 均缺**的接口。转换
 
 uhttpd 的 POSIX 兼容层以 `realpath()` 包装 `GetFullPathName`；`DecodeHttpRequest` 先开路径再规范化并用 `memcmp` 做 docroot 前缀检查。这些源/目标差异列为行为待审项；本转换不把该检查描述为完整路径穿越防护。
 
+## 6. macOS 作为源或目标 OS 时的路径与位置约定（有限覆盖）
+
+本节是**有限**补充：本仓库当前只有两个真实的 macOS 平台路径消费者（`ruby-to-c/…/chrome_cookies.rb`、`ruby-to-python/…/firefox_creds.rb`，均为凭据/配置路径发现），因此只写有源码依据的位置与路径差异；Keychain、IOKit、launchd、CoreFoundation 等 macOS 专有子系统**仍无 Skill**，遇到按缺口报告。
+
+| 主题 | macOS | Linux | Windows | 转换必须处理的点 |
+|---|---|---|---|---|
+| 用户主目录 | `/Users/<name>` | `/home/<name>` | `C:\Users\<name>` | 不得把 `~/` 展开成硬编码前缀；`~` 的展开由 shell 或语言库完成，路径拼接要用目标平台的组合 API |
+| 应用数据位置 | `~/Library/Application Support/<Vendor>/<App>` | `~/.config/<app>`、`~/.<app>` | `%APPDATA%\<Vendor>\<App>` | 同一应用的三平台默认位置不同，属**可观察行为差异**（源里硬编码 macOS 路径时须显式改写并登记） |
+| 应用包结构 | `/Applications/<App>.app/Contents/MacOS/<bin>`（`.app` 是目录） | 无此结构 | `Program Files` 下的普通目录 | 不能把 `.app` 当普通文件；在目标平台须按实际安装布局重写 |
+| 密钥/凭据位置 | `~/Library/Keychains/*.keychain-db` | 取决于实现（文件/内核密钥环/桌面密钥环） | 凭据管理器/DPAPI | 路径差异之外还有**存储格式与保护机制**差异，不能只改路径就宣称等价 |
+| 大小写敏感性 | 默认卷通常大小写不敏感（可配制为敏感） | 通常敏感 | 不敏感 | 与 Windows 一样，大小写敏感性不能假定；比较路径时保留源语义 |
+
+**边界**：本节只覆盖"位置与路径文本"的可观察差异，覆盖方向为 macOS ↔ Linux 与 macOS ↔ Windows 的对应行；文件 API（`open`/`stat`/`opendir` 等）在 macOS 上大部分与 POSIX 一致，但仍需按目标 SDK 核对（例如 `st_birthtimespec` 等专有字段）。macOS 专有子系统与工具链（`security`、`codesign`、`launchctl`、CoreFoundation）没有项目内证据，**不在此建立映射**。
+
 ## 依据
 
 - The Open Group：[`realpath`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/realpath.html)、[`opendir`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/opendir.html)、[`fnmatch`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/fnmatch.html)、[`access`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/access.html)

@@ -7,7 +7,7 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
 
 > **适用基线**：源语言 Go 1.27 ([GO-SPEC](https://go.dev/ref/spec), [GO-RT-DOC](https://go.dev/doc/gc-guide)) → 目标语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf))
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 C](../../references/languages/c.md)。
-> **方向案例与证据**：[同方向数据集](../../../docs/test/dataset/go-to-c/README.md)；候选、冻结任务与第三方回传须分层记录。
+> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/go-to-c/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **真实构建证据口径**：当前仓库中 Go→C 方向处于**`未验证/阻断`**状态（尚无项目级目标编译 PASS 证据）；本 Skill 仅提供静态决策依据，不代表转换产物已通过编译或功能验证。
 > **规范硬约束**：严格遵循 Go 1.27 语言规范与 ISO C11 标准；C 语言无内建并发等价物，语言级并发契约丢失，需根据调用语义选择单线程顺序化、事件循环或工作池；若需系统级线程库则委托 B 类 Skill。
 
@@ -127,6 +127,102 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    ```
 6. **不确定性处理**：若 Go 源码在 `defer` 中修改了具名返回值（如 `defer func() { err = fmt.Errorf(...) }()`），在 C 中必须在 `cleanup` 标签之后提供显式的状态重写逻辑，并标明具名返回值副作用依赖。
 7. **官方依据**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec)；[WG14-N1570 §6.8.6.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 5：Go 多返回值 `(T, error)` 向 C 返回码加出参指针映射
+
+1. **触发条件**：Go 源码中函数以 `(T, error)`、`([]byte, error)` 或 `(T, bool)` 返回（如 `obfuscateData(data []byte, key []byte) ([]byte, error)`、`parsePorts(portStr string) ([]int, error)`），调用方以 `if err != nil` 分流。
+2. **适用前提**：源语言 Go 1.27（[GO-SPEC #Errors](https://go.dev/ref/spec)）；目标语言 ISO C11（[WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+3. **应保留行为**：失败时调用方能观察到“无结果”这一事实，且失败原因可区分；成功时调用方能取到完整结果与真实长度；失败路径不得让调用方读到未初始化的出参。
+4. **可选映射与不适用条件**：
+   - *可选映射*：以 `int`（或自定义 `enum`）返回码表示错误类别，结果与长度通过出参指针回传，例如 `int obfuscate_data(const uint8_t* in, size_t in_len, const uint8_t* key, uint8_t** out, size_t* out_len);`；错误详情用线程局部的错误信息缓冲区或错误结构体另行回传；不可恢复的致命故障才用 `abort()`，不把 `panic` 机械写成 `exit`。
+   - *不适用条件*：严禁在错误路径上“`goto cleanup` 后又落到成功标签”而把未初始化的出参交回调用方；严禁把 Go 中“成功但值为零值”（如长度为 0 的结果、`false` 的第二返回值）与“失败”合并成同一个返回码——这会让调用方无法区分两者。
+5. **错误机械替换反例**：
+   ```c
+   // 错误反例：用指针返回值表达一切，失败返回 NULL 且无法区分“空结果”
+   uint8_t* obfuscate_data(const uint8_t* in, size_t n, size_t* out_len) {
+       if (n == 0) { return NULL; }          // Go 中这里返回的是 (空切片, nil)：成功！
+       /* ... */
+       return out;                            // *out_len 未初始化，调用方读到垃圾长度
+   }
+   // 正确写法：返回码表示成败，出参先置零再按需填充
+   int obfuscate_data(const uint8_t* in, size_t n, const uint8_t* key,
+                      uint8_t** out, size_t* out_len) {
+       *out = NULL; *out_len = 0;             // 失败路径也必须留下确定值
+       if (n == 0) { return 0; }              // 空输入成功，结果为空，长度 0
+       /* ... 分配并填充 *out / *out_len，失败时释放并返回非零错误码 ... */
+       return 0;
+   }
+   ```
+6. **不确定性处理**：若 Go 源码用 `errors.Is`/类型断言/`%w` 包装区分错误类别，而 C 侧尚未冻结错误码到类别的对应表，必须停下标注“错误分类映射待确认”，不得自行编造错误码取值。
+7. **官方依据**：[GO-SPEC #Errors](https://go.dev/ref/spec)；[WG14-N1570 §6.8.4.1, §7.22.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 6：Go 切片向 C 指针加长度对映射与“禁止以 NUL 终止符推断长度”
+
+1. **触发条件**：Go 源码在字节/字符序列上使用切片、子切片与 `append`，例如 `data[k:blockSize]`、`ciphertext[aes.BlockSize:]`、`append(data, padText...)`、`hex.EncodeToString(sum[:])`，以及 `string(output)` 与 `[]byte(text)` 互转。
+2. **适用前提**：源语言 Go 1.27（[GO-SPEC #Slice_types](https://go.dev/ref/spec)）；目标语言 ISO C11（[WG14-N1570 §7.24](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+3. **应保留行为**：元素总数（`len`）是内容的一部分；字节切片允许在任意位置包含 `0x00`（如 AES-IV 前缀与分组密文）；子切片在未扩容前与原切片共享底层数组，写入可通过两条路径被观察到。
+4. **可选映射与不适用条件**：
+   - *可选映射*：用“指针 + 显式长度”表示连续序列，例如 `typedef struct { uint8_t* data; size_t len; } Bytes;`，或以 `(const uint8_t* buf, size_t buf_len)` 成对传参；每次取子切片都重新计算指针偏移与长度，并把长度来源（容器元数据还是调用方实参）写在注释与接口文档中。
+   - *不适用条件*：**严禁用 `strlen`/`strcpy`/`strcat` 等 NUL 终止符函数处理由 Go `string`/`[]byte` 映射而来的数据**：内部含 `0x00` 的内容会被截断，未以 `0x00` 结尾的缓冲区会被越界读取（未定义行为）；`strlen` 的返回值不是 `len`，在等长比较、长度字段与完整性校验上会静默产生错误；也不得直接对未终止缓冲区调用 `printf("%s")`。
+5. **错误机械替换反例**：
+   ```c
+   // 错误反例：把 Go 的 len(decrypted) 换成 strlen，忽略分组密文中的 0x00
+   Bytes deobfuscate(const uint8_t* data) {
+       Bytes r;
+       r.data = (uint8_t*)data;
+       r.len  = strlen((const char*)data);   // 密文/IV 含 0x00 时此处立即截断
+       return r;
+   }
+   // 正确写法：长度沿用 Go 侧已有的 len 语义显式传递
+   int deobfuscate(const uint8_t* data, size_t data_len, Bytes* out) {
+       if (data_len < 16) { return ERR_TRUNCATED; }  // 对应 len(decoded) < aes.BlockSize
+       /* 以 data_len 为准做全部边界判断与拷贝，绝不调用 strlen */
+       return 0;
+   }
+   ```
+6. **不确定性处理**：若无法确定某缓冲区当前长度是来自容器元数据还是调用方实参，或该缓冲区是否被推断为 NUL 结尾，必须标注“长度来源与终止符约定待确认”而不得默认补 `'\0'`。
+7. **官方依据**：[GO-SPEC #Slice_types, #String_types](https://go.dev/ref/spec)；[WG14-N1570 §6.4.5, §7.24.6.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 7：Go 并发结果汇聚向 C11 `_Atomic`/`<threads.h>` 同步基元的委托边界
+
+1. **触发条件**：Go 源码用多个 `go worker(...)` 处理任务队列并把结果写入共享可变状态（如全局 `openPorts` 上的 `mu.Lock()`/`openPorts = append(openPorts, port)`、`var wg sync.WaitGroup` 配 `defer wg.Done()` 的汇聚、`atomic` 计数），再在主流程 `wg.Wait()` 后汇总。
+2. **适用前提**：源语言 Go 1.27（[GO-SPEC #Go_statements](https://go.dev/ref/spec)、[GO-MEM](https://go.dev/ref/mem)）；目标语言 ISO C11（[WG14-N1570 §7.17, §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+3. **应保留行为**：任一时刻对同一共享对象的读写都被同步；汇聚点之后的汇总结果包含全部已完成任务的结果，且不含撕裂读写入的半成品元素；任务计数与完成计数不丢失。
+4. **可选映射与不适用条件**：
+   - *可选映射*：先用 `_Atomic size_t` 表达完成计数与无锁标志（注意 C11 不保证每个 `_Atomic` 类型无锁，必要时回退为“互斥量保护普通变量”）；需要“保护共享容器 + 阻塞等待任务 + 汇聚”时，用 `mtx_t`/`cnd_t` 实现带条件的队列并由一个汇聚线程取结果；线程创建与取消等系统级细节委托 B 类并发 Skill（[`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)、[`skills/systems/posix-windows-threads/SKILL.md`](../../systems/posix-windows-threads/SKILL.md)）。若 `<threads.h>` 在目标工具链缺失，则整个并发方案需重新选型而不在本 A 类规则内决定。
+   - *不适用条件*：严禁在 `mtx_lock` 保护下执行可能阻塞或再次取同一把锁的操作（包括写日志、分配内存、调用回调）；严禁把 Go 习惯的“每个写者各自 `append`”直接搬成无锁的 `realloc` 追加序列——`realloc` 迁移地址且并发访问未同步属于未定义行为；不得把 `sync.WaitGroup` 机械写成忙等 `while (done < n);`。
+5. **错误机械替换反例**：
+   ```c
+   // 错误反例：把 Go 侧受 sync.Mutex 保护的计数与追加改成无同步访问
+   static size_t done;
+   static int* open_ports;
+   static size_t open_len;
+   void scan_worker(void* arg) {
+       done++;                                            /* 未同步：丢计数 */
+       open_ports = realloc(open_ports, (open_len + 1) * sizeof(int)); /* 并发 realloc */
+       open_ports[open_len++] = *(int*)arg;               /* 撕裂写入，长度已失真 */
+   }
+   // 正确写法：计数用原子类型，容器与长度成对由同一把互斥量保护
+   static _Atomic size_t done;
+   static mtx_t ports_mtx;
+   static int* open_ports;
+   static size_t open_len;
+   void scan_worker_correct(void* arg) {
+       mtx_lock(&ports_mtx);
+       int* grown = realloc(open_ports, (open_len + 1) * sizeof(int));
+       if (grown) { open_ports = grown; open_ports[open_len++] = *(int*)arg; }
+       mtx_unlock(&ports_mtx);
+       atomic_fetch_add_explicit(&done, 1, memory_order_release);
+   }
+   ```
+6. **不确定性处理**：若源码依赖 `select` 多路复用、`context.Context` 级联取消或 channel 关闭的可观察语义，必须标注“语言级通信与取消语义在 C 中缺失”，交由 B 类 Skill 与架构审阅决定等价方案，不得声称行为等价。
+7. **官方依据**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[GO-MEM](https://go.dev/ref/mem)；[WG14-N1570 §7.17.7, §7.26.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
 
 ---
 
