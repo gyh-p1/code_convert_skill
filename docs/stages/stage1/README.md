@@ -1,8 +1,8 @@
 # Stage 1｜第三方评估平台升级方案
 
-> 状态：`PLANNING_ONLY`  
-> 计划冻结日期：2026-10-06  
-> 适用对象：现役 Remote Controller + Windows/Linux/macOS VM Agent 评估链路  
+> 状态：`PLANNING_ONLY`
+> 计划冻结日期：2026-10-06
+> 适用对象：现役 Remote Controller + Windows/Linux/macOS VM Agent 评估链路
 > 目标：把“安全阻断”从一次性人工判断升级为可复核的 Evaluation Disposition、分级 Execution Profile、环境 Attestation、Execution Permit 和证据归档闭环。
 
 ## 本阶段不是什么
@@ -31,4 +31,3 @@
 3. 只有 `DIRECT_SAFE_RUN`、`ISOLATED_NET_RUN`、`RESTRICTED_PROCESS_RUN` 中确实提交并获得证据的任务，才可报告真实执行证据；`FIXTURE_EQUIVALENCE` 只能报告“受控观察面上的义务匹配”，不能报告真实目标、真实凭据、真实漏洞或真实持久化成功。
 4. 任何入口越过已证明的网络、数据、进程或权限边界，Permit 必须拒绝；不能通过删掉核心行为、空跑、伪造输出或只运行转换后的安全子集来制造 PASS。
 5. 本仓库只产出规划、契约、任务和静态一致性审阅；Controller/Agent 的编译、运行、网络探针和样本评估须在另行批准且与公网/生产网隔离的一次性环境完成。
-

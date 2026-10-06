@@ -6,7 +6,7 @@
 
 **目的：** 验证 Controller 能否区别“runner READY”与“网络 profile 已证明”。
 
-**固定项：** runner、无害 probe、Controller contract、快照、输出协议不变。  
+**固定项：** runner、无害 probe、Controller contract、快照、输出协议不变。
 **唯一变量：** 是否启用 `NETWORK_ISOLATED` 的现场 Attestation 和 Permit。
 
 **步骤：**
