@@ -8,6 +8,10 @@
 
 完整逐项证据与历史用量留在本地被 Git 忽略的 `docs/test/dataset/batch-01/`；远端提交只包含规则与这份分层汇总，不把本地测试数据冒充可随仓库复现的公开基线。
 
+## 第三方评估平台升级规划
+
+用户明确要求建立的 Stage 1 规划包位于 [docs/stages/stage1](docs/stages/stage1/README.md)，包含 plans/specs/tasks。当前仅为 PLANNING_ONLY 的移交方案，不代表 Controller/VM Agent 已具备隔离证明、Execution Profile、Attestation、Permit 或 fixture runtime；状态与阶段门仍以 [项目开发规范](docs/项目开发规范.md) 为准。
+
 ## 使用方式
 
 - 平台无关知识入口：[根 SKILL.md](SKILL.md)；按源码画像按需读取语言方向、实际场景、系统方向和长文件工作流；一次提交包含多项任务时另读[批量转换工作流](skills/workflows/batch-conversion/SKILL.md)。
