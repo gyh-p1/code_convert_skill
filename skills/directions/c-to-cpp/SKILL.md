@@ -7,8 +7,6 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 > **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 ISO C++17 ([WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf))
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 C++](../../references/languages/cpp.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/c-to-cpp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
-> **真实构建证据口径**：当前仓库仅 `fe`、`stest`、`realpath`、`pwd`、`chain-reactor` 五个冻结样例在 MinGW-w64 g++ / C++17 目标环境下取得构建 PASS 记录；**功能均未验收**。MSVC 与 Clang 仅为候选工具链，无目标构建证据。
 > **规范硬约束**：严格排除 C++20 Concepts、协程及 C++23 `std::expected` 等超出 C++17 基线的特性。
 
 ---
@@ -111,6 +109,110 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    ```
 6. **不确定性处理**：若 C 源码涉及操作系统专有线程属性、信号掩码或取消机制（`pthread_cancel`），A 类规则仅说明语言层原子性与同步契约，具体 OS 调度与线程 API 必须委托对应 B 类规则。
 7. **官方依据**：[WG21-N4659 Clause 32 Atomics, Clause 33 Threads](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §7.17, §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+---
+
+### 规则 5：`getopt_long` 的参数置换与长选项唯一前缀必须重建
+
+> **归属说明**：实参绑定的**共享事实**（位置/命名/默认值的绑定规则）归语言层，见 [C 语言页 §五](../../references/languages/c.md)、[C++ 语言页 §五](../../references/languages/cpp.md)。本规则**只写 C→C++ 方向特有**的两点：`getopt_long` 的置换与唯一前缀语义。
+
+1. **触发条件**：C 源码使用 `getopt`/`getopt_long` 解析命令行，且（a）存在**选项与操作数交错**的调用形态（如 `prog <path> -q`），或（b）使用长选项。
+2. **适用前提**：源语言 ISO C11 + glibc `getopt(3)`/`getopt_long(3)` 行为；目标语言 ISO C++17。**非 glibc 实现（BSD/musl）行为不同**，须先确认源运行时的实现。
+3. **应保留行为**：
+   - **参数置换**：glibc 默认置换 `argv`，使 `realpath <path> -q` 与 `realpath -q <path>` 在源相应选项语义下等价；解析结束后 optind 指向剩余操作数起始，不能把它当作全部操作数之后。
+   - **长选项唯一前缀**：`getopt_long` 允许**唯一前缀**匹配，`--s` 可匹配 `--si`。
+   - **未知选项**：glibc 会**先自行输出诊断行**（形如 `prog: invalid option -- 'x'`）再返回 `'?'`；该输出属可观察行为。见 [C 语言页 §五 规则 L1-C-04](../../references/languages/c.md)。
+4. **可选映射与不适用条件**：
+   - *可选映射*：用手写循环替换 `getopt` 时，必须显式重建置换顺序与唯一前缀匹配，否则命令行形态等价性丢失。
+   - *不适用条件*：POSIXLY_CORRECT/前导 `+` 使解析在首操作数停止；前导 `-` 则以返回值 1 处理非选项，是另一模式，不能等同“停止”。须按实际配置冻结；短选项无交错时不涉及长选项缩写。
+5. **错误机械替换反例**：
+   ```cpp
+   // 错误：只接受精确长选项串，--s 落到 usage()
+   if (arg == "si") { /* ... */ } else { usage(); }      // glibc 下 --s 应匹配 --si
+   // 错误之二：按位置硬取 argv[1] 作为路径，丢失置换
+   const char* path = argv[1];                           // prog -q <path> 时取到的是 "-q"
+   // 原 du repair-2 的单长选项 "si" 路径：
+   // len > 0 && strncmp(longopt, "si", len) == 0
+   // 多选项实现必须另做精确匹配优先/歧义检测，不用“字符串相等”冒充前缀
+   ```
+6. **不确定性处理**：无法确认源 `getopt` 实现（glibc/BSD/musl）或是否设置 `POSIXLY_CORRECT` 时，标为“参数置换与前缀语义待确认”，不得默认 glibc 行为。
+7. **官方依据**：[glibc `getopt_long`（含参数置换与唯一前缀）](https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Options.html)、[glibc `getopt`（`POSIXLY_CORRECT`）](https://www.gnu.org/software/libc/manual/html_node/Using-Getopt.html)；[POSIX `getopt`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/getopt.html)。
+
+### 规则 6：`argc`/`argv` 指针推进式消费必须完整重建
+
+1. **触发条件**：C 源码对 `argc`/`argv` 做**算术推进**（`argc -= optind; argv += optind;`）后再解析剩余参数，或把 `argv` 传给另一个解析器。
+2. **适用前提**：源语言 ISO C11；目标语言 ISO C++17。参数置换前提见规则 5。
+3. **应保留行为**：推进后 `argc` 是**剩余参数个数**、`argv` 指向**第一个剩余参数**；后续所有“以 `argv[0]` 为程序名”的逻辑在推进后会指向错误对象。源里 `static int optind = 1;` 之类的**定义位置**（文件作用域 vs 函数内）会改变多次解析时的行为。
+4. **可选映射与不适用条件**：
+   - *可选映射*：用容器或视图承接参数时，必须显式记录“哪一段已被消费”，并把 `argc`/`argv` 的推进改写为对剩余范围的切片；不得把推进后的 `argv[0]` 当作程序名。
+   - *不适用条件*：源码从不对 `argc`/`argv` 做算术推进（只按固定下标读取）时，不适用本规则。
+5. **错误机械替换反例**：
+   ```cpp
+   // 源
+   static int pwd_optind = 1;
+   /* ... 解析 ... */
+   argc -= pwd_optind; argv += pwd_optind;
+   if (argc > 0) target = argv[0];        // 第一个剩余参数
+   ```
+   ```cpp
+   // 错误：推进被丢弃，或推进后仍把 argv[0] 当程序名
+   if (argc > 0) target = argv[0];        // 未推进 → 取到的是程序名或选项
+   std::string prog = argv[0];            // 推进后 argv[0] 已不是程序名
+   // 正确：显式记录消费边界
+   int consumed = optind;
+   if (argc - consumed > 0) target = argv[consumed];
+   ```
+6. **不确定性处理**：无法确定 `optind` 类变量的定义位置与生命周期时，标为“参数消费边界待确认”；**不得**假定单次解析。
+7. **官方依据**：[POSIX `getopt`（`optind` 语义）](https://pubs.opengroup.org/onlinepubs/9799919799/functions/getopt.html)；[WG14-N1570 §5.1.2.2.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+
+### 规则 7：C→C++ 语法合法性预检（字面量 `const`、存储类、类型双关）
+
+> **归属说明**：本条是**目标语言 C++17 自身**的语法合法性预检，属该方向特有；共享的判空/错误/编码义务见语言页。
+
+1. **触发条件**：源码包含（a）字符串字面量传给 `char*` 形参，（b）`register` 存储类或显式寄存器变量，（c）`void**` 类型双关（如 `ComPtr<T>::addr()`），或（d）目标语言不存在的构造。
+2. **适用前提**：目标语言 ISO C++17；**C++11 起字符串字面量的类型是 `const char[N]`**，向 `char*` 的转换在 C 中是历史遗留允许、在 C++17 中**是错误**。
+3. **应保留行为**：这些是**编译期**问题，不影响运行语义，但会阻断目标 build。转换时必须逐处修正以保住可编译性，且**不得**用强制转换掩盖真正的写入企图。
+4. **可选映射与不适用条件**：
+   - *字面量 `const`*：把形参改为 `const char*`；若源确实要写入该缓冲区，说明源本身是 UB，标为“源已存在”并保留原样，**不得**通过 `const_cast` 制造可行的假象。
+   - *`register`*：C++17 中 `register` 不再是存储类说明符（C++17 弃用/移除了该用法），须删除该关键字；显式寄存器变量与内联汇编（GCC 扩展）须改为等价的标准写法或标为不可映射。
+   - *`void**` 双关*：`ComPtr<T>::addr()` 之类的 “取地址给 `void**` 由被调方回填” 模式，须改用目标 SDK 的官方访问器（如 `GetAddressOf()`/`ReleaseAndGetAddressOf()`）或显式 `reinterpret_cast`，并说明其前提。
+   - *不适用条件*：源码本就以 `const char*` 接收字面量、或未使用 `register` 时，不适用对应子项。
+5. **错误机械替换反例**：
+   ```cpp
+   // 错误一：字面量 const 丢失
+   void log_line(char* msg);              // 源 log_line("ok") 在 C 中可过，C++17 报错
+   log_line("ok");                        // invalid conversion from 'const char*' to 'char*'
+   // 错误二：用 const_cast 掩盖写入企图
+   log_line(const_cast<char*>("ok"));     // 若函数真写入，即对只读字面量写入 → UB
+   // 错误三：保留 C++17 已移除的存储类
+   register int i = 0;                    // 目标语言无此存储类用法
+   // 正确：形参改 const char*，删除 register
+   void log_line(const char* msg);
+   int i = 0;
+   ```
+ 6. **不确定性处理**：若字面量在源中确实被写入（源已存在 UB），如实登记为“源已存在缺陷，转换不得顺手修复”，**不**把它转成本方向的修复规则。
+7. **官方依据**：[WG21-N4659 Clause 5.13.5（字符串字面量类型）](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)、[Clause A.2（`register` 的移除）](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[Microsoft `ComPtr::GetAddressOf`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class)。
+
+### 规则 8：`fnmatch` 等字符类边角语义：修复本身不得引入新偏差
+
+1. **触发条件**：源码依赖 POSIX `fnmatch` 的模式匹配（尤其字符类），而目标平台无 `fnmatch` 或行为不同，需要手工重建。
+2. **适用前提**：源 POSIX `fnmatch` 语义；目标语言 ISO C++17。
+3. **应保留行为**：`fnmatch` 的字符类边角是**高风险改写点**：首字符 `]` 在 `[...]` 中**按字面**处理；范围表达式 `[]-a]` 表示“`]` 到 `a` 之间的字符”，与直觉相反；`[!...]` 与 `[^...]` 的取反写法在不同实现下有差异。
+4. **可选映射与不适用条件**：
+   - *可选映射*：优先使用目标平台的既有实现（`PathMatchSpec`/`std::regex`/自备解析器），并为边角形态写显式测试向量。
+   - *不适用条件*：源码不使用字符类（只用 `*`/`?`）时，不涉及这些边角。
+5. **错误机械替换反例**：
+   ```cpp
+   // 第 1 轮：把首字符 ']' 当作普通字符之外的语义处理，过度限制
+   // 第 2 轮“修复”为在 ']' 处关闭字符类 —— 反而违反了 fnmatch 的 []-a] 语义
+   // 错误：把 ']' 一律当作类结束符
+   if (c == ']') { class_end = true; }    // 首字符位置的 ']' 应属字面成员
+   // 正确：按 fnmatch 的边角规则处理首字符与范围
+   //   首字符 ']'   → 字面成员
+   //   []-a]        → 范围 ']'..'a'
+   ```
+6. **不确定性处理**：无法取得源 `fnmatch` 的准确语义（glibc/FreeBSD/musl 细节有差异）时，标为“字符类边角语义待确认”，并把每个边角形态列为 oracle 观察点；**不得**以“已修过一次”为由宣称收敛。
+7. **官方依据**：[POSIX `fnmatch`（模式与字符类语义）](https://pubs.opengroup.org/onlinepubs/9799919799/functions/fnmatch.html)；[Microsoft `PathMatchSpec`](https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspeca)。
 
 ---
 

@@ -54,7 +54,7 @@ description: Use for single-file code conversion when a source file is large or 
 5. 相关场景规则要求保留的输入输出、协议/字节、文件/进程副作用是否有对应实现；
 6. 每项未实现、降级或不确定的源行为是否在交付说明中指出。
 
-模型转换后可按 [C → C++ Skill](../../directions/c-to-cpp/SKILL.md) 做自评与 repair 预判；这只是非独立预检，用于发现疑点，不作语法正确性结论。后续进入[转换—自审—第三方评估闭环](../../../references/workflow/conversion-evaluation-loop.md)，由 Agent 按受限自修、预检门槛、第三方诊断分流与失败停止条件调度。按用户约定，语法结论由第三方评估机构在匹配工具链下编译回填；只有在获批且适用的评估环境中执行。语法结果与行为 oracle 结果分别报告；编译通过不代表行为等价。
+模型转换后按本次源→目标方向 Skill 和已选场景、系统规则做自审与 repair 预判；这只是非独立预检，用于发现疑点，不作语法正确性结论。后续进入[转换—自审—第三方评估闭环](../../../references/workflow/conversion-evaluation-loop.md)，由 Agent 按受限自修、预检门槛、第三方诊断分流与失败停止条件调度。语法结论由第三方评估机构在匹配工具链下编译回填；只有在获批且适用的评估环境中执行。语法结果与行为 oracle 结果分别报告；编译通过不代表行为等价。
 
 ## 5. 交付
 

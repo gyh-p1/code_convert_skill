@@ -7,8 +7,6 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
 
 > **适用基线**：源语言 Go 1.27 ([GO-SPEC](https://go.dev/ref/spec), [GO-RT-DOC](https://go.dev/doc/gc-guide)) → 目标语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf))
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 C](../../references/languages/c.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/go-to-c/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
-> **真实构建证据口径**：当前仓库中 Go→C 方向处于**`未验证/阻断`**状态（尚无项目级目标编译 PASS 证据）；本 Skill 仅提供静态决策依据，不代表转换产物已通过编译或功能验证。
 > **规范硬约束**：严格遵循 Go 1.27 语言规范与 ISO C11 标准；C 语言无内建并发等价物，语言级并发契约丢失，需根据调用语义选择单线程顺序化、事件循环或工作池；若需系统级线程库则委托 B 类 Skill。
 
 ---

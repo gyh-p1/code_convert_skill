@@ -7,7 +7,6 @@ description: Use when converting Go source to C#; apply this direction's languag
 
 > **适用基线**：Go 1.27 → C# 12 / .NET 8。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 C#](../../references/languages/csharp.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/go-to-csharp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -159,7 +158,47 @@ description: Use when converting Go source to C#; apply this direction's languag
    ```
 6. **信息不足或实现相关时的处理**：先查明文件可能已存在、umask、目标 OS 和源是否丢弃错误；未知时不声称最终权限字节或失败路径等价。`File.SetUnixFileMode` 会改变已有文件权限，不能直接充当本例“只在创建时给 mode”的替代。
 7. **直接官方 HTTPS 依据链接**：[Go `os.WriteFile`](https://pkg.go.dev/os#WriteFile)；[.NET 8 `File` 方法与重载](https://learn.microsoft.com/en-us/dotnet/api/system.io.file?view=net-8.0)；[.NET `FileStreamOptions.UnixCreateMode`](https://learn.microsoft.com/en-us/dotnet/api/system.io.filestreamoptions.unixcreatemode?view=net-8.0)。
-8. **来源与证据边界**：batch-01 B21（`handoff-2026-10-02-d27-autorun-manifest-write-go`）`self-review-1` 指出不存在的 `File.WriteAllBytes(..., UnixFileMode)` 重载，`target.self-repair-1.cs` 改用 `FileStreamOptions`；最终目标侧 build PASS（job `eval-20261005-080811-e6b394d1`）。该证据只证明此目标版本可构建，权限与失败路径行为仍 `UNVERIFIED`。
+
+### 规则 GO-CS-08：Go 标准库派生出的宿主元数据必须逐字段保真
+
+1. **源码触发条件**：Go 源码把**标准库派生出的字符串或默认值**写入输出/序列化载荷——`net.Flags` 的 `String()`（`up|broadcast|loopback|pointtopoint|multicast|running`）、`os.Environ()` 的原始条目（**含 `=C:=...` 这类以 `=` 开头的隐藏条目**）、`os/user.Current().Username` 的 `DOMAIN\username` 形式、`http.Client` 的**无超时**行为，或 `time` 格式串；或用**不限定方法**的 `ServeMux` 处理器注册。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[`net.Flags`](https://pkg.go.dev/net#Flags)、[`os.Environ`](https://pkg.go.dev/os#Environ)、[`http.Client`](https://pkg.go.dev/net/http#Client)）；目标语言 C# 12 / .NET 8（[`NetworkInterface`](https://learn.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface)、[`Environment.GetEnvironmentVariables`](https://learn.microsoft.com/en-us/dotnet/api/system.environment.getenvironmentvariables)、[`HttpClient.Timeout`](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.timeout)）。
+3. **原可观察行为**：
+   - `Flags.String()` 按**固定顺序**输出**全部**已置位标志，包括 `multicast` 与 `running`；`.NET` 的 `NetworkInterface` **没有**同构的“标志字符串”概念，`NetworkInterfaceType` 与 `SupportsMulticast`/`OperationalStatus` 是**不同维度**，不能互相推导。
+   - `os.Environ()` 返回**原始环境块**，**不剔除**以 `=` 开头的驱动器条目（`=C:=C:\...`）。这些串以 `0x3D` 开头，按字节序排序会**排在最前**，因此是否保留它们会改变“前 N 条”的**成员集合**。
+   - `http.Client` **默认无超时**（请求可无限阻塞）；`HttpClient.Timeout` **默认为 100 秒**。这不是“更安全”，而是改变了工作循环的终止时机。
+   - `os/user.Current().Username` 在 Windows 上返回 **`DOMAIN\username`** 形式（本机账户为 `MACHINE\user`）；`Environment.UserName` 只返回**裸账户名**，无域前缀。写入 JSON 与摘要行即产生字节差异。
+   - Go `ServeMux` 的 `mux.HandleFunc("/task", ...)` **不限定 HTTP 方法**——`POST /task` 与 `GET /register` 都会被接受；若目标把路由硬编码成“方法 + 路径”相等，服务面即被**收窄**。
+4. **目标可选写法和不适用条件**：
+   - *元数据字符串*：逐字段重建源的**完整集合与顺序**（标志集合、环境条目集合、用户名形式），不得只实现“常见的那几个”。Windows 用户名形式用 `WindowsIdentity.GetCurrent().Name`，或当域非空时拼 `Environment.UserDomainName + "\\" + Environment.UserName`，并保留失败时的原兜底值。
+   - *路由契约*：Go `ServeMux` 不限定方法时，目标路由**只按路径匹配**（镜像 `ServeMux`）；若确实要有意收窄，必须**显式登记为有意差异**，不得默认当作等价。
+   - *超时*：源无超时时写 `HttpClient { Timeout = Timeout.InfiniteTimeSpan }`；**不得**静默引入 100 秒默认值。若确实需要引入超时，须登记为**显式差异**。
+   - *不适用条件*：若源码本就给定了超时（`http.Client{Timeout: ...}`），则按源值设置；若源码自身就过滤了某些环境条目、或已按方法分派（显式检查 `r.Method`），则保留源码的逻辑，**不要**以“目标 API 的行为”为由增删过滤或放宽路由。
+5. **错误机械替换反例**：
+   ```csharp
+   // 错误一：只实现部分标志且顺序不同
+   var flags = new List<string>();
+   if (up) flags.Add("up");
+   if (broadcast) flags.Add("broadcast");        // 永远不输出 multicast / running
+   // 错误二：用 NetworkInterfaceType 推导 broadcast/pointtopoint（与 Go 的判定依据不同）
+   // 错误三：为“稳妥”给无超时的源加上默认超时
+   var httpClient = new HttpClient();            // Timeout 默认 100 秒 → 源不会失败处失败
+   // 错误四：以注释断言“Go 会省略 =C:= 条目”并据此过滤
+   if (key.Length == 0 || key[0] == '=') continue;   // 改变排序后前 15 条的成员
+   // 错误五：用裸账户名承接 Go 的 DOMAIN\username
+   username = Environment.UserName;                  // 缺少域前缀 → JSON 与摘要行字节不同
+   // 错误六：把不限定方法的路由收窄为“方法 + 路径”相等
+   if (path == "/task" && method == "GET") { ... } else { WriteResponse(stream, 404, ...); }
+   // 正确
+   if (nic.SupportsMulticast) flags.Add("multicast");       // 按 Go 的顺序追加
+   if (nic.OperationalStatus == OperationalStatus.Up) flags.Add("running");
+   var httpClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
+   if (key.Length == 0) continue;                            // 仅处理空键，不按 '=' 过滤
+   username = WindowsIdentity.GetCurrent().Name;              // DOMAIN\user 形式
+   if (path == "/task") { ServeTask(); }                      // 镜像 ServeMux：只按路径匹配
+   ```
+6. **信息不足或实现相关时的处理**：若目标 API **无法**surface 源的某个派生值（如 .NET 可能取不到 `=C:` 条目、`NetworkInterfaceType` 无法精确表达 broadcast 能力），必须**登记为不可恢复差异**并在交付说明中列明，**不得**把近似实现当作等价，也不得用注释把过滤/近似描述成源的行为。“按能力推导”的启发式须标注为**须由 oracle 验证的近似**。
+7. **直接官方 HTTPS 依据链接**：[Go `net.Flags`](https://pkg.go.dev/net#Flags)、[`os.Environ`](https://pkg.go.dev/os#Environ)、[`os/user.Current`](https://pkg.go.dev/os/user#Current)、[`http.Client`](https://pkg.go.dev/net/http#Client)、[`ServeMux`](https://pkg.go.dev/net/http#ServeMux)；[.NET `HttpClient.Timeout`](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.timeout)、[`NetworkInterface`](https://learn.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface)、[`Environment.GetEnvironmentVariables`](https://learn.microsoft.com/en-us/dotnet/api/system.environment.getenvironmentvariables)、[`WindowsIdentity.Name`](https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.windowsidentity.name)。
 
 ## 转换与验证边界
 

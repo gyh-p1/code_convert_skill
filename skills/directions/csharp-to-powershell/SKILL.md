@@ -7,7 +7,6 @@ description: Use when converting C# source to PowerShell; apply this direction's
 
 > **适用基线**：C# 12 / .NET 8 → PowerShell 7.6。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C#](../../references/languages/csharp.md)与[目标语言 PowerShell](../../references/languages/powershell.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/csharp-to-powershell/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -136,6 +135,30 @@ description: Use when converting C# source to PowerShell; apply this direction's
    ```
 6. **信息不足或实现相关时的处理**：若源码中的属性 getter 带副作用（缓存写入、计数递增），或 `ContainsKey` 与索引器之间存在并发修改窗口，先确认该副作用是否属于外部可观察行为，无法确认时写为待确认而不是直接内联展开。
 7. **直接官方 HTTPS 依据链接**：[MS-PS-OPS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)；[MS-API-DICTIONARY](https://learn.microsoft.com/en-us/dotnet/api/)。
+
+### 规则 CS-PS-08：保留基类构造调用，不把自审语法猜测当成编译诊断
+
+1. **源码触发条件**：C# 源码的派生类构造函数使用 **base 构造调用**（`public Derived(...) : base(...)`），且类层次含带参基类；或派生类依赖基类的字段初始化顺序。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8；目标语言 PowerShell 7.6（[about_Classes](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_classes)）。
+3. **原可观察行为**：C# 侧基类构造函数**先于**派生类构造体执行，且 `: base(...)` 的参数在派生类构造体之前求值；基类字段在派生类可见。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：PowerShell class 支持在构造参数列表之后、构造体之前写 `: base(...)`。核对实际基类、构造重载与参数类型，保留调用及顺序；**不得**仅因自审说“不支持”就改成字段赋值或组合。
+   - *不适用条件*：基类为**无参构造**且无需参数传递时，`class Derived : Base {}` 直接可用，不需要改写。
+5. **错误机械替换反例**：
+   ```powershell
+   # 错误：省略带参基类构造，以字段赋值代替其初始化与副作用
+   class Derived : Base {
+       Derived([int]$x) {
+           $this.BaseValue = $x
+       }
+   }
+   # 可选映射：实际基类提供匹配重载时保留构造链
+   class Derived : Base {
+       Derived([int]$x) : base($x) { }
+   }
+   ```
+6. **信息不足或实现相关时的处理**：基类实现/程序集缺失、重载不明时记录依赖缺口；语法支持不证明特定基类可加载，也不证明构造副作用等价。
+7. **直接官方 HTTPS 依据链接**：[about_Classes_Inheritance，Derived class constructors](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_classes_inheritance?view=powershell-7.6)；[C# 构造函数](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/constructors)。
 
 ## 转换与验证边界
 

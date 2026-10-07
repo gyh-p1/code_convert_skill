@@ -7,7 +7,7 @@
 ## 1. 何时适用
 
 - 片段、单文件、长单文件任一模式的转换完成后都走本收尾；片段任务若无评测需求，可只产出目标文件与 `result.md`，`evaluator_manifest.json` 视消费方要求决定是否生成。
-- “完成”至少指目标代码已产出、结构化模型自审/有限自修门槛已完成、静态全文件核对已做；不代表已验证语法或行为。若用户批准动态评估，还须遵循[转换—自审—第三方评估闭环](../workflow/conversion-evaluation-loop.md)。
+- “完成”至少指目标代码已产出、结构化模型自审/有限自修门槛已完成、静态全文件核对已做；不代表已验证语法或行为。动态评估按已有任务授权与[转换—自审—第三方评估闭环](../workflow/conversion-evaluation-loop.md)推进。
 - 进入编译或运行前逐项核对源码存在、工具链、代码行为与隔离环境；显式加载本契约不是执行授权。许可正文、版本号、上游 commit、仓库 URL 不作测试用例冻结或提交校验。
 
 ## 2. 固定产物集合与目录布局
@@ -39,7 +39,7 @@
 
 **`02-conversion/` 版本命名**（同一 run 内按先后，`<ext>` 为目标扩展名）：
 
-- `target.gen.<ext>`：首个模型稿（GENERATED）。未单独快照的同模型微调（如修订、constness 决策）并入本稿，另存元数据说明。
+- `target.gen.<ext>`：首个完整模型稿（GENERATED）。任何改变代码语义的后续修订都另存版本及差异；原稿与原始响应不改写。
 - `target.self-repair-<N>.<ext>`：第 N 次结构化自修稿（SELF_REPAIRED，默认 ≤2）。
 - `target.eval-repair-<N>.<ext>`：第三方评估失败后第 N 次修复稿（REPAIR_AFTER_EVAL，默认 ≤2）。
 - 每份代码稿配同 stem 元数据：`<stem>.model.json`（模型名、参数、token、finish_reason、输入/输出 SHA-256）、`<stem>.proposal.json`（机械应用时模型给出的补丁/建议）、`<stem>.provenance.json`（差异与来源哈希，若适用）、`<stem>.attempt-<k>-failed.json`（该轮失败/截断尝试及原因）。
@@ -49,7 +49,7 @@
 
 - `job-id.txt`：Controller job ID。
 - `report.json` / `report.md`：Controller canonical report。
-- `comparison.json`、`evidence-source.json`、`evidence-target.json`、`logs.json`：原始比较、双侧证据与生命周期日志。
+- `returned-evidence/`：保存原始 `evaluation_report.json`、`evaluation_report.md`、`evidence-source.json`、`evidence-target.json`、`comparison.json`、`controller.log` 及取回的状态；与[Controller 适配](../adapter/controller/remote-controller-adapter.md)一致。
 - `capsule.zip`：提交的输入 capsule；`source/`、`target/`：该 job 暂存的源/目标树（若保留）。
 - job 内 JSON 是第三方返回或提交时的**记录**：重命名文件不改其内部内容；内部出现的旧文件名是当时提交名的历史事实，不回改。
 
@@ -67,7 +67,7 @@
 4. **验证依据与覆盖范围**：把最终交付版本的编译证据写清目标文件版本、工具链、命令或记录链接和结论；中间稿证据只用于解释问题，不替代最终稿结果。若做过功能比较，写明输入、观察维度、匹配/差异和未覆盖项；未做则写 `未验证`，不引用有限旧例证明本次功能。静态审阅、自评、编译、运行与行为比较分开说。
 5. **未决问题与下一步**：只列会影响使用或下一轮决策的未确认项，按影响排序；给出下一项具体可执行动作。已解决的诊断、完整日志与冗长风险清单留在证据文件，避免重复正文。
 
-结论速览建议采用固定表头：`问题 | 结论 | 依据与边界`。例如：`语法/编译 | 通过 | 最终 target.cpp 在 Windows x64、指定 C++17 工具链下编译通过；见 job 链接`，`功能一致性 | 未验证 | 本阶段没有功能 oracle`。若只取得五个固定请求的 `stdout JSON` 匹配，应写“约定范围内匹配：五个请求的输出”，并明确其他行为未验证。报告可随任务复杂度增减每节长度，不能更换上述五个栏目或将证据等级混写。
+结论速览建议采用固定表头：`问题 | 结论 | 依据与边界`。例如：`语法/编译 | 通过 | 最终 target.cpp 在指定 Windows x64、C++17 工具链下编译通过；见 job 链接`，`功能一致性 | 未验证 | 本阶段没有功能 oracle`。有限输入的输出匹配只报告被实际观察的输入与维度；其他行为未验证。报告可随任务复杂度增减每节长度，不能更换上述五个栏目或将证据等级混写。
 
 ## 3. `evaluator_manifest.json` 字段来源纪律（三分）
 
@@ -75,11 +75,11 @@
 
 - **(A) 转换结果类——据实填**：`files[].relativePath`、`sourcePath`、`translatedCodePath`、`artifacts.hasTranslatedCode`、`files[].success`。其中 `success` 表示“该文件转换产物已就绪可交评测”，**不表示验证通过**；目标代码未产出前为 `false`。
 - **(B) 任务输入类——从冻结输入/任务契约抄**：`languagePair`、`taskMetadata`（`sourceLang`/`targetLang`/`sourceOs`/`targetOs`/`sourceArch`/`targetArch`/`sceneTags`/`attackTactic`/`riskLevel`）、`targetDir`、隔离启动参数。不凭函数名或战术标签推断；契约未给的标为待确认。
-- **(C) 审批·执行·验证类——据实记录，不凭自评宣称**：`executionApproved` 反映**本项目既定的双侧执行授权**——远端 Controller/隔离 VM **恒就绪且已授权**，到评估步骤直接提交执行、不逐次确认其可达性；字段默认 `false`，**实际向隔离 VM 提交 comparison capsule 后**置 `true`，同时记录 job ID 和证据路径，实际提交前保持 `false`。语法与行为结果必须按第三方真实报告回填，不能凭 Agent 或模型自评宣称；`plannedResultPath`/`plannedReportPath`/`plannedEvaluatorOutputPath` 只是“计划落点”而非已有结果；`evidenceMode`/`supportLevel` 按契约填，缺省 `experimental`。
+- **(C) 审批·执行·验证类——据实记录，不凭自评宣称**：已有授权与本次实际提交分开记录。`executionApproved` 默认 `false`；只有本次 comparison capsule 被获批隔离 Controller 接收并取得回执后置 `true`，记录 job ID。返回证据到达后再填写证据路径及语法/行为结论；提交未返回证据不回退授权状态，也不填 PASS。`plannedResultPath`/`plannedReportPath`/`plannedEvaluatorOutputPath` 只是计划落点；`evidenceMode`/`supportLevel` 按契约填，缺省 `experimental`。
 
 ## 4. manifest 形状（临时，对齐外部控制器）
 
-核心字段对齐外部控制器既有的 `third-party-evaluator-manifest` 形状（已核对旧仓库真实样例，如 `reverse_http_evaluator_manifest.json`），便于其直接消费。**完整占位模板见同目录 [`evaluator_manifest.example.json`](evaluator_manifest.example.json)，填写时照抄结构、只改值。**
+核心字段沿用项目移交清单的 `third-party-evaluator-manifest` 形状；它不是当前 Controller `/api/jobs` 可直接提交的 capsule。**占位模板见同目录 [`evaluator_manifest.example.json`](evaluator_manifest.example.json)，填写前核对消费方契约。**
 
 - 顶层：`schemaVersion`、`kind: "third-party-evaluator-manifest"`、`generatedBy`、`languagePair{sourceLang,targetLang}`、`taskMetadata`、`targetDir`、`summaryPath`、`batchReportPath`、`replayArtifactDir`、`plannedResultPath`、`plannedReportPath`、`files[]`。
 - `taskMetadata`：`sourceLanguage`、`targetLanguage`（**注意**：控制器 schema 在此用长名，与 `languagePair` 的 `sourceLang`/`targetLang` 短名并存且冗余——照它保留，不要“修正”成一致）、`attackTactic`、`sceneTags[]`、`sourceOs`、`targetOs`、`sourceArch`、`targetArch`、`riskLevel`、`evidenceMode`、`supportLevel`。

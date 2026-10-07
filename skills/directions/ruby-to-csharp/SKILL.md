@@ -7,7 +7,6 @@ description: Use when converting Ruby source to C#; apply this direction's langu
 
 > **适用基线**：CRuby 3.4 → C# 12 / .NET 8。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Ruby](../../references/languages/ruby.md)与[目标语言 C#](../../references/languages/csharp.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/ruby-to-csharp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -135,6 +134,38 @@ description: Use when converting Ruby source to C#; apply this direction's langu
    ```
 6. **信息不足或实现相关时的处理**：Ruby 的 `fail_with(Failure::...)` 在源框架里既有失败类别也有消息，转换前必须确认 C# 侧的失败表示方式（返回值、专门异常还是结果类型）——缺该信息时停下询问，不得默认翻译成抛 `Exception`；Ruby 异常类若来自框架或第三方（`Zip::Error`、`OpenSSL::OpenSSLError`、`Rex`/`Msf` 命名空间下的类型），必须把"对应 .NET 类型是否已知"标为缺口并询问。
 7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)；[MS-CS-WHEN](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/when)。
+
+### 规则 RB-CS-07：框架元数据字段的赋值目标与字面量空白必须逐字保真
+
+1. **源码触发条件**：Ruby 源码把**框架/宿主元数据**作为字段赋值——`Info = ...`、`Description = %q{...}`、`Name = ...`，尤其该字段在**基类**中声明、而派生类又引入了**同名成员**时；或元数据文本使用 `%q{}`/heredoc 等**保留空白**的字面量。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-LITERALS](https://docs.ruby-lang.org/en/3.4/syntax/literals_rdoc.html)）；目标语言 C# 12 / .NET 8（[MS-CS-HIDING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/how-to-know-when-to-use-override-and-new-keyword)、[CS0108](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/cs0108)）。
+3. **原可观察行为**：
+   - 元数据字段（如继承来的 `Info`）由框架在**实例构造时**读取；Ruby 侧没有“名称隐藏”概念，方法名与实例变量处于不同命名空间，因此同名方法**不会**遮挡字段赋值。
+   - Ruby `%q{ ... }` **逐字符保留**：包含起始换行、每行的前导空格、结尾换行与 `}` 之前的缩进。
+4. **目标可选写法和不适用条件**：
+   - *名称隐藏*：C# 中派生类引入的**方法**会**隐藏**基类同名**非方法**成员（警告 **CS0108**），使该简单名绑定到**方法组**而非字段，导致赋值目标不是变量（赋值给方法组即编译错误）。必须改名辅助方法（如 `FinishInfo`），或显式写 `base.Info = ...`。
+   - *字面量空白*：C# **原始字符串字面量**（`"""`）会**剥除公共缩进**，且不含起始换行与结尾缩进——与 `%q{}` **不等价**。需要字节级保真时必须显式构造（`"\n" + 前导空格 + ... + "\n"`）；若有意规范化，必须写注释**明确登记为有意差异**。
+   - *不适用条件*：若元数据字段与辅助方法**不同名**，不涉及名称隐藏；若框架对元数据只做语义比较（不比较空白），规范化不改变可观察行为——但**是否如此必须核实，不得假定**。
+5. **错误机械替换反例**：
+   ```csharp
+   // 错误一：派生类静态方法 Info 隐藏了继承字段 Info（CS0108）
+   class MetasploitModule : Msf.Exploit.Local {
+       private static ModuleInfo Info(ModuleInfo i) => i;      // 与继承字段同名
+       public MetasploitModule() {
+           Info = UpdateInfo(info, CreateInfo());               // 目标不是变量：绑到方法组
+       }
+   }
+   // 错误二：用原始字符串字面量冒充 %q{} 的逐字符保留
+   Description = """
+       first line
+       second line
+       """;                                                     // 公共缩进被剥除，无起始换行/结尾缩进
+   // 正确
+   private static ModuleInfo FinishInfo(ModuleInfo i) => i;     // 改名，避免隐藏
+   // 或：base.Info = UpdateInfo(info, CreateInfo());
+   ```
+6. **信息不足或实现相关时的处理**：无法确定元数据字段是**框架强制要求**还是**纯信息字段**时，仍须先保证**赋值成功且字段可读**（改名或 `base.` 二选一），再核对空白保真度；**不得**因为“该字段不影响 check/exploit”就默许空白差异而不登记。若某项确实无法恢复（框架常量被替换、辅助方法已成无用的身份函数），登记为差异而非静默删除。
+7. **直接官方 HTTPS 依据链接**：[C# 名称隐藏与 `new`/`override`](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/how-to-know-when-to-use-override-and-new-keyword)、[CS0108](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/cs0108)；[C# 原始字符串字面量](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/reference-types)；[Ruby 字面量（`%q`）](https://docs.ruby-lang.org/en/3.4/syntax/literals_rdoc.html)。
 
 ## 转换与验证边界
 

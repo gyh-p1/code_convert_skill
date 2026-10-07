@@ -7,7 +7,6 @@ description: Use when converting C++ source to C#; apply this direction's langua
 
 > **适用基线**：ISO C++17 → C# 12 / .NET 8。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C++](../../references/languages/cpp.md)与[目标语言 C#](../../references/languages/csharp.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/cpp-to-csharp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -155,7 +154,6 @@ description: Use when converting C++ source to C#; apply this direction's langua
    ```
 6. **信息不足或实现相关时的处理**：无法确认 CRT 模式、目标 `TextWriter.NewLine`、编码或刷新是否属于 oracle 时，分别标记这些字节/时序差异为未验证，不凭注释或 build PASS 断言 stdout 等价。
 7. **直接官方 HTTPS 依据链接**：[Microsoft CRT `_setmode`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/setmode?view=msvc-170)；[.NET `TextWriter.NewLine`](https://learn.microsoft.com/en-us/dotnet/api/system.io.textwriter.newline?view=net-8.0)。
-8. **来源与证据边界**：batch-01 B08（`handoff-2026-10-02-d08-dir-sample-discovery-cpp`）自审 `self-review-1/2` 指出行尾问题，`target.self-repair-2.cs` 经第 3 次自审后取得目标侧 build PASS（job `eval-20261005-073823-80e93daa`）。本条是静态规则提炼；该 job 的 comparison 有环境目录差异，功能仍 `UNVERIFIED`。
 
 ## 转换与验证边界
 

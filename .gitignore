@@ -13,6 +13,10 @@ Thumbs.db
 
 # 转换测试数据、源码快照与批次产物仅保留在本地工作区
 /docs/test/dataset/
+/docs/test/dataset.zip
+
+# 本次一次性测试审查材料，不作为产品或常驻数据集索引提交
+/docs/stages/stage2/
 
 # 本地一次性静态盘点辅助脚本，不随 Skill 分发
 /audit_clean.ps1

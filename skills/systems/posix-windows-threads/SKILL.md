@@ -27,9 +27,9 @@ MSVC CRT 文档说明 `_beginthreadex` 的入口/返回类型、失败值与返�
 - 不把 `TerminateThread` 当作 POSIX 可取消线程的等价实现；强制终止可能跳过线程内清理。若源码中仅定义而未调用，不要把它虚构成活跃路径。
 - 共享普通变量的读写同步属于并发语义，不能仅靠 API 名称映射解决；需要同步改造时，标为有意差异并单独说明。
 
-## uhttpd 适用提示
+## 已有目标平台分支
 
-归档源码本身已有 `_beginthreadex`、`WaitForSingleObject` 和 `CloseHandle` 的 Windows 分支。C01 的探索转换选择该现有 Windows 分支；这不是对 POSIX 线程 API 独立移植能力的验证。线程状态字段的同步缺口另见并发场景 Skill。
+源码若已有 `_beginthreadex`、`WaitForSingleObject`、`CloseHandle` 的 Windows 分支，先确认转换选择的是已有分支还是从 POSIX 线程 API 独立移植。仅复用已有分支不能作为后者的验证；普通状态字段的跨线程同步另按[并发场景](../../scenes/concurrency/SKILL.md)核对。
 
 ## 依据
 

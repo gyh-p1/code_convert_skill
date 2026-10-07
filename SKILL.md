@@ -27,9 +27,9 @@ metadata:
 | **PowerShell** | [PowerShell → C](skills/directions/powershell-to-c/SKILL.md) ｜ [PowerShell → C++](skills/directions/powershell-to-cpp/SKILL.md) ｜ [PowerShell → C#](skills/directions/powershell-to-csharp/SKILL.md) ｜ [PowerShell → Python](skills/directions/powershell-to-python/SKILL.md) ｜ [PowerShell → Go](skills/directions/powershell-to-go/SKILL.md) ｜ [PowerShell → Ruby](skills/directions/powershell-to-ruby/SKILL.md) |
 | **Ruby** | [Ruby → C](skills/directions/ruby-to-c/SKILL.md) ｜ [Ruby → C++](skills/directions/ruby-to-cpp/SKILL.md) ｜ [Ruby → C#](skills/directions/ruby-to-csharp/SKILL.md) ｜ [Ruby → Python](skills/directions/ruby-to-python/SKILL.md) ｜ [Ruby → Go](skills/directions/ruby-to-go/SKILL.md) ｜ [Ruby → PowerShell](skills/directions/ruby-to-powershell/SKILL.md) |
 
-> **能力与证据边界**：42 份方向 Skill 只代表静态语言决策规则已按方向归档，**不代表 42 个方向已转换成功**。既有 C → C++ 的 fe、stest、realpath、pwd、chain-reactor 五例有逐例目标编译 PASS；本地 `batch-01` 另有 40 个不同方向的冻结任务，其中 11 项最终目标 build PASS、2 项源基线失败、27 项未提交评估。两组证据均不证明功能等价，`batch-01` 的行为整列 `UNVERIFIED`；本地数据集被 Git 忽略，不随 Skill 分发。候选 case、模型自评和静态链接检查不得替代转换验证。
+> **能力与证据边界**：42 份方向 Skill 代表静态规则已归档，不代表 42 个方向已转换成功。本入口只索引项目知识，不索引测试数据集、历史批次或回归案例。使用规则不要求保留过去的测试数据；每次转换的编译与行为结论必须由该任务精确版本的独立证据支持。模型自评、规则文件数量或静态引用检查不得替代转换验证。
 
-**场景与系统方向知识**：当前有 [网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[进程执行](skills/scenes/process-execution/SKILL.md)、[并发场景](skills/scenes/concurrency/SKILL.md)、[POSIX ↔ Winsock 套接字](skills/systems/posix-winsock/SKILL.md)、[POSIX ↔ Windows 文件路径](skills/systems/posix-windows-filesystem/SKILL.md)、[POSIX ↔ Windows 进程创建与身份/权限](skills/systems/posix-windows-process-identity/SKILL.md)、[POSIX ↔ Windows 线程](skills/systems/posix-windows-threads/SKILL.md) 与 [Windows 注册表与服务子系统](skills/systems/windows-registry-service-subsystem/SKILL.md) 知识。文件系统 POSIX→Windows 已有 stest、realpath、pwd 的逐例编译证据，du 目标未构建；这些证据不证明功能。其他系统方向和长文件流程仍是未验证初稿。PE 解析、Linux 内核接口（`ptrace`/`seccomp`）与 macOS 专有子系统（Keychain/launchd/CoreFoundation）仍无对应 Skill；macOS 目前只有文件路径位置约定，遇到其余 macOS 行为须按缺口处理，不据 Linux 规则推断等价。
+**场景与系统方向知识**：当前有 [网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[进程执行](skills/scenes/process-execution/SKILL.md)、[并发场景](skills/scenes/concurrency/SKILL.md)、[POSIX ↔ Winsock 套接字](skills/systems/posix-winsock/SKILL.md)、[POSIX ↔ Windows 文件路径](skills/systems/posix-windows-filesystem/SKILL.md)、[POSIX ↔ Windows 进程创建与身份/权限](skills/systems/posix-windows-process-identity/SKILL.md)、[POSIX ↔ Windows 线程](skills/systems/posix-windows-threads/SKILL.md) 与 [Windows 注册表与服务子系统](skills/systems/windows-registry-service-subsystem/SKILL.md) 知识；具体适用方向以前提为准，标题中的双向符号不代表两侧规则或行为已经全面验证。PE 解析、Linux 内核接口（`ptrace`/`seccomp`）与 macOS 专有子系统（Keychain/launchd/CoreFoundation）仍无对应 Skill；macOS 当前仅有文件路径位置约定，不据 Linux 规则推断其余行为等价。
 
 按以下顺序执行：
 
@@ -37,8 +37,8 @@ metadata:
 2. **静态解读源码**：盘点入口、条件编译、API、状态、资源所有权、输入输出和副作用；关键判断引用符号或行范围，未知项标未知。
 3. **形成标签**：按证据标语言方向、实际场景（可多选）、source→target 系统方向与任务工作流；另行审视 ATT&CK Enterprise tactic/technique。无证据匹配时明确记录 `none`，不把 HTTP、socket 或文件 API 本身当成战术。
 4. **按事实选 Skill**：必选匹配语言方向；按源码实际 I/O/并发行为选场景；跨 OS 且规则存在时加载对应系统方向；长单文件加载长文件工作流；**一次提交包含多项任务时加载[批量转换工作流](skills/workflows/batch-conversion/SKILL.md)**，由它负责批次冻结、排队限流、状态持久化与恢复、失败分层和批次汇总，单项仍走本入口与评估闭环。列出缺失映射，不用相似 Skill 冒充覆盖。ATT&CK 索引仅用于核对分类和定位知识，不生成 tactic 专属规则。
-5. **建立转换前地图并调度配置模型**：长文件先完成结构/行为地图与语义分段，把完整源码和所选 Skill 交给 `.env` 指定模型生成；**Agent 读取[转换—自审—第三方评估闭环](references/workflow/conversion-evaluation-loop.md)并严格按其阶段门槛完成调度**。所有 run 统一走**双侧执行**：源无可运行入口（如库翻译单元无 `main`）时默认补写最小入口/驱动使其可运行并在冻结记录标注，不再逐次询问形态。Agent 调度配置模型生成后按闭环进行一次结构化自审；具体缺陷交模型做有限自修并复审，仅在预检无未解决的可定位转换问题后交隔离第三方。第三方诊断须先分流工具链/环境/代码原因，再将可定位代码问题交配置模型 repair，并在冻结工具链上有限重试；任何自审都不是编译结论。未冻结的探索稿不得标成正式试验基线。
-6. **按交付契约收尾**：目标文件之外，产出中文 `result.md` 和适用的 `evaluator_manifest.json`；报告按交付契约固定骨架先说明最终交付、语法/编译、功能三项结论，再解释关键修订、证据范围与未决项。长单文件同时保留来源画像/Skill 选择依据。模型自检/repair 预判只作内部预检；语法结论由第三方评估机构编译回填，未收到结果时编译与行为均写 UNVERIFIED；`executionApproved` 反映本项目既定的双侧执行授权——远端 Controller/隔离 VM **恒就绪且已授权**，到评估步骤**直接提交双侧 capsule 执行，不再询问其可达性或是否评估**，**实际提交后**置 `true` 并记录 job/证据路径，实际提交前仍为 `false`；隔离与外联安全边界不变——越出已确认网络/数据边界的入口（如硬编码公网地址）仍按运行安全门槛记 `RUN_SAFETY_NOT_READY` 并暂不提交。
+5. **建立转换前地图并调度配置模型**：长文件先完成结构/行为地图与语义分段，把源码和适用 Skill 交给配置模型；按[转换—自审—第三方评估闭环](references/workflow/conversion-evaluation-loop.md)完成结构化自审、有限自修和失败分流。本工作区已授权且需评估的单文件任务默认双侧构建/运行，无入口时按冻结契约补最小中性驱动；不补造真实依赖。片段任务按声明上下文检查，不强迫变成可运行程序。已有授权与隔离范围内不重复询问是否评估，但仍核对入口、工具链和实际隔离；READY/快照不证明隔离。未冻结的探索稿不能事后冒充正式基线。
+6. **按交付契约收尾**：产出目标文件、中文 `result.md` 与适用的 `evaluator_manifest.json`，长文件另有源码画像。交付完整性、最终版本编译、功能 oracle 三项分别报告；无对应证据为 UNVERIFIED。`executionApproved` 的精确填写规则只维护在[交付与移交契约](references/framework/delivery-handoff-contract.md)；该字段不证明已运行或已通过。安全边界未满足的入口记 RUN_SAFETY_NOT_READY，暂不提交。
 
 没有对应语言、场景或系统知识时，可以按用户明确要求做标为探索性的文本转换，但必须逐项写出假设、差异和未验证状态；跨 OS 文件/线程差异不能仅凭 API 名称相似宣称等价。
 
@@ -49,13 +49,13 @@ metadata:
 - 具体代码转换必须请求根 `.env` 的 `CODE_TRANSLATOR_BASE_URL`、`CODE_TRANSLATOR_MODEL` 和 `CODE_TRANSLATOR_TEMPERATURE` 所指定的模型；`OPENAI_API_KEY` 仅用作该兼容 API 的 bearer 凭证。不要在 Skill、请求正文、日志、manifest 或交付文件中打印/保存密钥，也不要把 `.env` 当成要发送的源码文件。
 - 调度 Agent 只做输入画像、标签与 Skill 选择、构造模型请求、保存完整模型响应、整理自评反馈与交付。目标代码及后续代码修订都必须来自配置模型；Agent 可机械应用该模型给出的确定性小补丁并记录来源，不在模型失败时自行代写并冒称模型输出。
 - 首次请求应包含只读源快照、选中的适用 Skill、安全边界和任务契约；不把其他 run 的目标代码作为输入。若同一 run 需要模型修订，可提供该 run 的上一版目标与具体静态反馈，并记录轮次和模型元数据。
-- 记录实际模型名、响应状态、输入/输出 token、参数与非敏感请求摘要。模型完成响应不等于语法或行为通过；`executionApproved` 反映本项目既定的双侧执行授权，远端 Controller/隔离 VM 恒就绪，评估步骤直接提交执行，**实际提交后**置 `true` 并保留 job/证据路径，实际提交前保持 `false`。配置缺失、请求失败或响应不完整时报告阻塞，不以本机编译/运行或自主生成绕过。
+- 记录实际模型名、响应状态、输入/输出 token、参数与非敏感请求摘要。模型完成不等于编译或行为通过；评估按已有授权、实际隔离和冻结契约执行。配置缺失、请求失败或响应不完整时报告阻塞，不以本机编译/运行或自主生成绕过。
 - 这是智能体使用现有配置进行调度的工作约定，**不是**建设独立服务、运行时或转换测试框架。
 ## 转换与交付
 
 遵守用户目标与安全边界，不为代码“现代化”而静默改变输入输出、错误路径、所有权或副作用。片段说明语法检查上下文；单文件分别说明语法结果、行为依据和未确认之处。没有实际编译/行为证据时不得宣称通过或等价。RAG 只有在项目批准的对照试验阶段启用，检索片段必须核对来源和适用条件。
 
-**收尾产物与移交**：任务完成后除目标文件外，须在同一 run 输出目录产出交付说明（`result.md`）与移交清单（`evaluator_manifest.json`）。manifest 按「转换结果据实填 / 任务输入抄契约 / 审批·执行·验证类据实记录」三分来源；`executionApproved` 反映本项目既定的双侧执行授权，实际提交隔离环境后置 `true`；语法与行为判定仍必须由批准的隔离编译/运行环境回填，不凭 Agent 或模型自评宣称。固定产物集合、目录布局、字段来源与 manifest 形状（临时，对齐外部控制器）见 [转换交付与移交契约](references/framework/delivery-handoff-contract.md)。
+**收尾产物与移交**：固定产物、模式例外、字段来源与临时 manifest 形状见[转换交付与移交契约](references/framework/delivery-handoff-contract.md)。片段未要求评估时只需目标与 result；单文件移交按当前消费方契约组装，不把项目清单直接当作 Controller capsule。记录保留期限由任务交付约定决定，不要求永久保存测试数据集；没有可取得证据时不能继续对外宣称该例可复核通过。
 
 ## 安全边界
 

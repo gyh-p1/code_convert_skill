@@ -11,7 +11,7 @@ description: Use as the source-OS -> target-OS layer when converting socket code
 
 - **触发**：源码确有套接字调用（`socket`/`bind`/`listen`/`accept`/`connect`/`send`/`recv`/`select` 等），且源 OS 与目标 OS 跨越 POSIX/Linux 与 Windows 边界。同平台转换不使用本 Skill。
 - **前提**：先确认源/目标 OS、目标工具链与 SDK 版本、目标 Winsock 版本（通常 Winsock 2）、是否 IPv6、是否非阻塞/多路复用、是否多线程。这些不明且影响决策时先询问或标记为待确认，不用"看起来相近"的 API 直接替换。
-- 方向必须区分：Linux C → Windows C++（C01）与 Windows C → Linux C++（C02）的补全项不同，见下方不对称陷阱。
+- 方向必须区分：POSIX → Windows 与 Windows → POSIX 的补全项不同，见下方不对称陷阱。
 
 ## 应始终保留的可观察行为
 
@@ -43,12 +43,50 @@ description: Use as the source-OS -> target-OS layer when converting socket code
 | 头文件/链接 | `<sys/socket.h>`,`<netinet/in.h>`,`<arpa/inet.h>`,`<unistd.h>`,`<netdb.h>` | `<winsock2.h>`,`<ws2tcpip.h>`；链接 `ws2_32.lib`；须在 `<windows.h>` 前包含 | 包含顺序错误会与旧 `winsock.h` 冲突 |
 | 字节序/地址转换 | `htons`/`htonl`/`inet_pton`/`inet_ntop` | 同名可用（`winsock2.h`/`ws2tcpip.h`） | 通常可保留；仍按目标 SDK 确认可用性 |
 
-## 方向不对称的陷阱
+### L2-SOCK-01 句柄类型与位宽常量必须按目标架构取值
 
+**触发条件**：源码在 POSIX 与 Windows 之间搬运套接字句柄或其无效值常量，或在目标侧硬编码句柄/描述符宽度。
+
+
+**义务**：
+
+1. **无效值比较必须用平台宏**：POSIX 的 fd 无效值是 `-1`（有符号），Windows 的 `SOCKET` **无符号**且无效值是 `INVALID_SOCKET`。因此 `sock < 0` 在 Windows 上**恒为假**，该判错分支会被静默跳过。必须改用 `sock == INVALID_SOCKET` 或 `sock == SOCKET_ERROR`（按函数分别适用）。
+2. **不得硬编码句柄宽度**：`INVALID_HANDLE_VALUE`、`INVALID_SOCKET` 等的实际位模式随**目标架构**变化（32 位 vs 64 位）。硬编码单一宽度在另一架构上失效。必须使用平台宏或按 `_WIN64`/`_WIN32` 分支。
+3. **签名中的长度类型可能变窄**：Winsock `recv`/`send` 的缓冲区参数是 `char*`、长度是**有符号 `int`**（有上限），而 POSIX 用 `size_t`。把超过 `INT_MAX` 的 `size_t` 直接传入会在目标侧截断或失败，须显式检查。
+4. **错误来源不可混用**：Winsock 失败**不设置 `errno`**；转换后继续读 `errno` 会读到过期或无关值。错误必须在产生点用 `WSAGetLastError()` 捕获（参见[并发场景 §L2-CONC-01](../../scenes/concurrency/SKILL.md) 的 last-error 线程局部性义务）。
+
+**错误机械替换反例**：
+
+```cpp
+// 错误一：把 POSIX 的有符号判错直接搬进 Windows（恒为假）
+SOCKET s = socket(AF_INET, SOCK_STREAM, 0);
+if (s < 0) { /* 永远不会进入 */ }
+
+// 错误二：硬编码句柄哨兵值的单一宽度
+#define MY_INVALID_HANDLE 0xFFFFFFFFFFFFFFFFULL   // 32 位目标上应为 0xFFFFFFFF
+
+// 错误三：把 size_t 直接传给 int 长度参数
+size_t n = huge;
+recv(s, buf, n, 0);              // 隐式收窄，可能变成负数或截断
+
+// 正确
+if (s == INVALID_SOCKET) { /* 检查 WSAGetLastError() */ }
+if (h == INVALID_HANDLE_VALUE) { /* 使用平台宏，不硬编码宽度 */ }
+if (n > INT_MAX) { /* 分段或报错，不静默收窄 */ }
+```
+
+**不适用条件**：源码始终通过平台宏获取无效值、且长度参数在源侧已知不超过 `INT_MAX` 时，不存在硬编码与收窄问题；同平台转换不适用本 Skill。
+
+**信息不足时的处理**：无法确认目标架构（32/64 位）或目标 Winsock 版本时，标为“目标架构与句柄语义待确认”，并把无效值比较列为 oracle 观察点；不得假定与源侧同宽。
+
+**官方依据**：[Microsoft `SOCKET`/`INVALID_SOCKET`/`SOCKET_ERROR`](https://learn.microsoft.com/en-us/windows/win32/winsock/socket-data-type-2)、[`recv`](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recv)、[`WSAGetLastError`](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsagetlasterror)、[Porting Socket Applications to Winsock](https://learn.microsoft.com/en-us/windows/win32/winsock/porting-socket-applications-to-winsock)；[The Open Group `recv`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/recv.html)。
+
+
+## 方向不对称的陷阱
 这些不是对称替换，按转换方向单独处理：
 
-- **POSIX → Windows（如 C01）**：新增 `WSAStartup`/`WSACleanup`；`int` 套接字改为 `SOCKET` 并改判错方式；`close`→`closesocket`；`errno`→`WSAGetLastError`。POSIX 的 `SIGPIPE`/`MSG_NOSIGNAL` 处理在 Windows 无对应——Windows 上对已断开连接 `send` 不产生信号而是返回 `WSAECONNRESET`/`WSAECONNABORTED`，须把原信号路径改写成返回值检查，而非直接删除。
-- **Windows → POSIX（如 C02）**：删去 `WSAStartup`/`WSACleanup`；`SOCKET`→`int`。**必须评估 `SIGPIPE`**：POSIX 上向已关闭连接 `send` 默认可能以 `SIGPIPE` 终止进程，源 Windows 代码没有该路径，转换后须补 `MSG_NOSIGNAL`、`SO_NOSIGPIPE` 或忽略信号，否则引入源程序没有的崩溃行为。`WSAGetLastError`→`errno`，错误名按类别映射。
+- **POSIX → Windows**：新增 `WSAStartup`/`WSACleanup`；`int` 套接字改为 `SOCKET` 并改判错方式；`close`→`closesocket`；`errno`→`WSAGetLastError`。POSIX 的 `SIGPIPE`/`MSG_NOSIGNAL` 处理在 Windows 无对应；对已断开连接 `send` 的目标错误路径须按实际 API 结果映射，不得直接删除。
+- **Windows → POSIX**：删去 `WSAStartup`/`WSACleanup`；`SOCKET`→`int`。**必须评估 `SIGPIPE`**：POSIX 上向已关闭连接 `send` 默认可能以 `SIGPIPE` 终止进程，源 Windows 代码没有该路径，转换后须按目标 OS 支持情况选择 `MSG_NOSIGNAL`、`SO_NOSIGPIPE` 或信号处理，否则可能引入源程序没有的终止路径。`WSAGetLastError`→`errno`，错误名按类别映射。
 - **`select` 的 `fd_set`**：POSIX 中 `fd_set` 是按 fd 数值索引的位集，受 `FD_SETSIZE`（最大 fd 值）限制；Windows 中 `fd_set` 是 `SOCKET` 句柄数组，`FD_SETSIZE` 限制的是句柄个数。两侧对大量连接的行为不同，不能假设同样的 `select` 循环规模安全。
 - **`WSAPoll` 与 `poll`**：接口相近但 `WSAPoll` 历史上对非阻塞 connect 失败的上报存在已知差异；不要假定逐字段等价。
 
@@ -56,7 +94,7 @@ description: Use as the source-OS -> target-OS layer when converting socket code
 
 以下与套接字相邻但属其它维度，须另有知识或显式标注缺口，不在此默认映射：
 
-- 线程/进程 API（`pthread` ↔ Windows 线程、进程创建）——uhttpd 等多线程服务会用到，但属进程/并发系统知识，本 Skill 不覆盖。
+- 线程/进程 API（`pthread` ↔ Windows 线程、进程创建）属进程/并发系统知识，本 Skill 不覆盖。
 - `epoll`/`kqueue` ↔ IOCP 的可扩展 I/O 范式差异：不是 API 换名，是模型重设计，须单独评估并向用户说明。
 - TLS/加密库、地址解析策略（`getaddrinfo` 行为细节）、平台特定 socket 选项的完整清单。
 

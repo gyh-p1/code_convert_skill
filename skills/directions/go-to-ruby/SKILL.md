@@ -7,7 +7,6 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 
 > **适用基线**：Go 1.27 → CRuby 3.4。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 Ruby](../../references/languages/ruby.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/go-to-ruby/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -180,7 +179,6 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    ```
 6. **信息不足或实现相关时的处理**：若不清楚 Go 是否检查 `Scanner.Err()`、`defer f.Close()` 的返回值、或后续报告写入是否成功，不能断言退出码和产物；把打开失败路径单列为待验证 oracle。
 7. **直接官方 HTTPS 依据链接**：[Go `os.File` nil 接收者的 `ErrInvalid`](https://pkg.go.dev/os#ErrInvalid)；[Go `bufio.Scanner.Scan`](https://pkg.go.dev/bufio#Scanner.Scan)；[Ruby 3.4 `Errno`](https://docs.ruby-lang.org/en/3.4/Errno.html)。
-8. **来源与证据边界**：batch-01 B24（`handoff-2026-10-02-d29-inbox-batch-validate-go`）`self-review-1` 定位裸 `File.open` 的差异，`target.self-repair-1.rb` 加入 `rescue nil` 与扫描守卫，最终目标侧 build PASS（job `eval-20261005-074431-03b18ad5`）。`self-review-2` 又基于“nil *os.File 会 panic”的相反前提建议撤销修订；官方 Go API 不支持该前提，第二轮自修也未形成最终稿。这里只沉淀可核对的条件式规则，不宣称该错误路径或整例行为已通过，功能仍 `UNVERIFIED`。
 
 ## 转换与验证边界
 

@@ -2,7 +2,7 @@
 
 本文件在 C 源依赖“隐式可见”的名字、而目标 C++ 构建下这些名字需要显式包含或限定时读取（典型触发：`min` / `max`，以及其他经平台头文件间接引入的宏或声明）。它是**规则与风险说明**，不保证目标代码可编译或行为等价；名字的真实来源头文件因 C 库/平台而异，须逐例核对源构建的实际包含链，不靠猜测补 `#include`。
 
-> **依据分层（重要）**：`std::min` / `std::max` 位于 `<algorithm>` 是语言标准事实；本条目的**触发证据**来自 C01 单例——模型自评给出 `NO-REPAIR-IDENTIFIED`，第三方 MinGW/UCRT64 `g++ -std=c++17` 后来仍定位到 `min` 未声明（见[闭环工作流 §4](../../../../references/workflow/conversion-evaluation-loop.md)）。这是“单例 + 语言标准”，不外推为普遍编译通过率。
+`std::min` / `std::max` 位于 `<algorithm>` 是语言标准事实；具体任务还须核对源的实际包含链、目标版本和第三方诊断。模型自审结论不能代替编译证据。
 
 ## 1. 识别触发：C 隐式可见、C++ 需显式
 
@@ -30,14 +30,14 @@
   - `NOMINMAX` 是**项目级取舍**：定义后，凡依赖 Windows `min` / `max` 宏的其它代码都会受影响。跨 OS 目标要统一策略并在交付中记录；纯 POSIX 目标不涉及本条。
 - **前提**：目标或分支为 Windows 且（直接或间接）包含 `<windows.h>`。
 
-## 4. 整头缺失：平台专有系统头在目标构建不存在（真实坐实）
+## 4. 整头缺失：平台专有系统头在目标构建不存在
 
 前几节讲“名字隐式可见”，本节讲更硬的一类——**整个系统头在目标平台根本不存在**，`#include` 处直接 fatal error，命令行特性测试宏无法补齐：
 
 - **触发条件**：源依赖某平台专有系统头（典型 FreeBSD-base：`<libutil.h>`、`<fts.h>`、`<sys/queue.h>`、`<sysexits.h>` 等），目标 glibc/MinGW 缺该头或其符号。
-- **真实证据**：step-04 du 例源侧在 plain-glibc Linux `cc -std=c11 …` 即失败于 `du.c:55:10: fatal error: libutil.h: No such file or directory`（首个硬阻断）。这是**源对目标平台的可移植性事实**，非“隐式可见”类，`-D_POSIX_C_SOURCE`/`-D_DEFAULT_SOURCE`/`-D__unused=` 均无法补齐。
-- **处理**：命中即**先记源侧基线可能 FAILED_COMPILE**，并规划目标侧在 C++ 内自备等价（`humanize_number`→自写单位换算、`fts`→`std::filesystem`、`sys/queue`→STL）。跨 OS 系统层重写细节见系统方向 [`posix-windows-filesystem` §2](../../../systems/posix-windows-filesystem/SKILL.md)。
-- **定序后果**：跨 OS 双侧评估中，源基线失败则目标侧被跳过、无目标 build 证据，syntaxVerdict 记 INCONCLUSIVE（非 PASS、非转换引入 FAIL），不改源、不伪造目标通过。
+- **诊断依据**：只有实际目标工具链在对应 `#include` 处报告缺头，才判该环境缺失；`-D_POSIX_C_SOURCE` 等特性宏不能凭空提供未安装的头文件。
+- **处理**：记录源侧和目标侧各自的真实 build 状态，核对可用依赖与源契约；目标侧若确需替换，应先查 API 语义与任务 oracle，不将 `humanize_number`、`fts` 或 `sys/queue` 机械改成表面相近的 C++ API。跨 OS 细节见系统方向 [`posix-windows-filesystem` §2](../../../systems/posix-windows-filesystem/SKILL.md)。
+- **定序后果**：源基线失败若使 Controller 跳过目标 build，目标语法结论为 `UNVERIFIED`；若目标 build 独立返回证据，仍按该目标版本与命令据实判读。不得把源失败归因于目标转换。
 
 ## 5. 交付时的最小说明
 
@@ -47,6 +47,5 @@
 
 - [S1：WG21 N4950，C++23 最终工作草案](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf)：`[algorithm.syn]`、`[alg.min.max]`（`std::min` / `std::max` 在 `<algorithm>`）。目标是其他 C++ 版本时须核对相应标准。
 - **S2：Windows SDK 头 `minwindef.h`（`<windows.h>` 经 `windef.h` 间接包含）** 定义 `min` / `max` 宏与 `NOMINMAX` 开关——以本机 SDK 头实际内容为准逐例核对，不同 SDK 版本可能不同；社区问答仅作发现线索，不作权威依据。
-- **触发证据**：C01 单例，见[闭环工作流 §4](../../../../references/workflow/conversion-evaluation-loop.md)。单例不证明普遍模式。
 
 `<sys/param.h>` 的 `min` / `max` 属平台/实现扩展，非 ISO C；来源与是否为宏须按源实际 C 库与平台文档逐例核对。以上是语言与平台规则依据，不是特定编译结果的验证记录。

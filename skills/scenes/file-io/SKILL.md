@@ -18,6 +18,34 @@ description: Use alongside a matching conversion direction when source code crea
 | 并发/锁 | 共享/独占访问、建议锁(`flock`/`fcntl`) vs Windows 强制共享模式 | 假设两平台锁语义相同；忽略打开态文件的删除/重命名差异 |
 | 错误与清理 | 错误码分类、失败路径、句柄/描述符关闭顺序 | `errno` 与 `GetLastError` 混用；丢失部分成功状态 |
 
+### L2-FILE-01 句柄/fd 的所有权与关闭条件必须逐条对应
+
+**触发条件**：源码创建、传递或关闭文件句柄/描述符，尤其是关闭条件带判定的形态（`if (fd >= 0) close(fd)`、`CloseHandle(h) if h != INVALID_HANDLE_VALUE`），或把 fd 移交给子进程。
+
+
+**义务**：
+
+1. **关闭条件逐条对应**：源中“满足条件才关闭”的判定在目标必须保留同一条件集合。把 `h != 0 && h != INVALID_HANDLE_VALUE` 简化成 `h != 0` 会在哨兵值上误关；反向收紧会在合法句柄上泄漏。
+2. **所有权移交要显式**：把 fd 交给子进程（`ForkExec` 的 `Files`、`posix_spawn` 的 file actions、`CreateProcess` 的句柄继承）后，**父进程是否仍负责关闭**必须按源语义确定；不得默认“创建者关闭”。
+3. **关闭后立即失效**：目标语言若把关闭做成幂等，不得因此丢弃源里“重复关闭报错”或“关闭后再用即失败”的可观察行为；反之亦然。
+4. **清理失败不得静默忽略**：关闭/删除/刷盘的失败在源里若会传播（返回非零、抛异常、写诊断），目标必须保留该传播路径；这与[并发场景](../concurrency/SKILL.md)的终止协议一致。
+
+**错误机械替换反例**：
+
+```text
+源：if (h != 0 && h != INVALID_HANDLE_VALUE) CloseHandle(h);
+目标（错误）：h.close() if h != 0          # 哨兵值上误关，或合法句柄上漏关
+目标（错误之二）：把父进程的“关闭责任”一起移交给子进程，
+                 导致父进程关闭已被子进程持有的 fd 编号（可能命中新打开的文件）。
+```
+
+**不适用条件**：源使用语言级确定性释放且所有权本就唯一（Python `with open(...)`、C# `using`、Ruby 块式 `File.open`）时，不需要手工所有权登记；但仍须核对 fd 移交场景。
+
+**信息不足时的处理**：关闭条件或所有权链不清晰时，标为“关闭条件与所有权移交点待确认”，不得默认“谁创建谁关闭”。
+
+**官方依据**：[POSIX `close`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/close.html)、[`posix_spawn` file actions](https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawn_file_actions_adddup2.html)；[Microsoft `CloseHandle`](https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle)、[`CreateProcessW`（句柄继承）](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw)；[Go `syscall.ForkExec`](https://pkg.go.dev/syscall#ForkExec)。
+
+
 ## 跨 OS 关键差异（高频陷阱）
 
 - **文本/二进制模式**：Windows C 运行时以文本模式(`"r"`/`"w"`)打开会做 CRLF↔LF 翻译并把 Ctrl-Z 视作 EOF；POSIX 无此翻译。内容为二进制或需字节精确时，转 Windows 必须用二进制模式(`"rb"`/`"wb"`、`_O_BINARY`)，否则静默损坏。

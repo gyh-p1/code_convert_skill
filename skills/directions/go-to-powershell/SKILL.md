@@ -7,7 +7,6 @@ description: Use when converting Go source to PowerShell; apply this direction's
 
 > **适用基线**：Go 1.27 → PowerShell 7.6。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 PowerShell](../../references/languages/powershell.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/go-to-powershell/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -155,7 +154,6 @@ description: Use when converting Go source to PowerShell; apply this direction's
    ```
 6. **信息不足或实现相关时的处理**：若源数据是否会有空键/空值、`$null` 或目标 PS 版本不明，先记待确认；不要把 B22 的错误概括成“`Join-Path` 只能接收两段”，也不靠 build PASS 推断所有输入已匹配。
 7. **直接官方 HTTPS 依据链接**：[PowerShell 7.6 `Join-Path`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/join-path?view=powershell-7.6)；[高级函数参数的 `AllowEmptyString`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters?view=powershell-7.6)。
-8. **来源与证据边界**：batch-01 B22（`handoff-2026-10-02-d30-inbox-kv-parse-go`）`self-review-1` 定位多余外层 `Join-Path` 与空字符串绑定，`target.self-repair-1.ps1` 修订后第 2 次自审无定位缺陷；目标侧解析/build PASS（job `eval-20261005-073327-f2280eff`）。仅作静态规则提炼；功能 oracle 未设，行为仍 `UNVERIFIED`。
 
 ## 转换与验证边界
 

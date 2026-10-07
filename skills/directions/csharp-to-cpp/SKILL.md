@@ -7,7 +7,6 @@ description: Use when converting C# source to C++; apply this direction's langua
 
 > **适用基线**：C# 12 / .NET 8 → ISO C++17。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C#](../../references/languages/csharp.md)与[目标语言 C++](../../references/languages/cpp.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/csharp-to-cpp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -80,6 +79,28 @@ description: Use when converting C# source to C++; apply this direction's langua
    ```
 6. **信息不足或实现相关时的处理**：若取消涉及网络连接中断，需显式关闭底层套接字。
 7. **直接官方 HTTPS 依据链接**：[MS-CS-CANCEL](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads)；[WG21-N4659 Clause 32](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+
+### 规则 CS-CPP-04：COM 接口指针的取址与类型双关必须用 SDK 官方访问器
+
+1. **源码触发条件**：C# 源码通过 COM 互操作（`[ComImport]`、`Marshal.GetIUnknownForObject`、`Marshal.QueryInterface`、`IntPtr` 转换）获取或传递接口指针，或在 P/Invoke 里把 `ref IntPtr`/`out IntPtr` 交给需要 `void**` 的原生 API。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8；目标语言 ISO C++17 + WRL/ATL（[Microsoft `ComPtr`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class)）。
+3. **原可观察行为**：C# 侧由封送器完成接口指针的获取与引用计数管理；C++ 侧的 `void**` 形参约定是“由被调方**回填**一个已加引用的接口指针”。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：必须使用 WRL 提供的官方访问器——**取址回填**用 `GetAddressOf()`（不释放已有指针，可能泄漏），**替换现有值**用 `ReleaseAndGetAddressOf()`（先释放再取址）。二者不可互替。
+   - *不适用条件*：不得用 `reinterpret_cast<void**>(&ptr)` 直接对 `ComPtr<T>` 取地址——这**绕过**了 WRL 内部的状态跟踪，既可能与断言冲突，也会在替换路径上泄漏旧引用。
+5. **错误机械替换反例**：
+   ```cpp
+   // 错误：直接对 ComPtr 取址做 void** 双关，且未释放现有引用
+   ComPtr<IUnknown> sp;
+   hr = pUnk->QueryInterface(__uuidof(IFoo), reinterpret_cast<void**>(&sp));
+   // → 绕过 WRL 跟踪；若 sp 原本非空，旧引用泄漏
+
+   // 正确：按语义选择访问器
+   hr = pUnk->QueryInterface(__uuidof(IFoo), sp.GetAddressOf());          // 仅在 sp 确定为空时
+   hr = pUnk->QueryInterface(__uuidof(IFoo), sp.ReleaseAndGetAddressOf()); // 替换已有值时
+   ```
+6. **信息不足或实现相关时的处理**：无法确定目标侧 `sp` 在调用点是否已持有引用时，**默认使用 `ReleaseAndGetAddressOf()`**（用错它只多一次释放，用错 `GetAddressOf()` 会泄漏）；并在交付中标注该决策。
+7. **直接官方 HTTPS 依据链接**：[`Microsoft::WRL::ComPtr`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class)、[`ComPtr::GetAddressOf`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class#getaddressof)、[`ComPtr::ReleaseAndGetAddressOf`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class#releaseandgetaddressof)；[Microsoft `QueryInterface`](https://learn.microsoft.com/en-us/windows/win32/api/unknwn/nf-unknwn-iunknown-queryinterface(refiid_void))。
 
 ## 转换与验证边界
 

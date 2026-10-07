@@ -7,7 +7,6 @@ description: Use when converting Go source to C++; apply this direction's langua
 
 > **适用基线**：Go 1.27 → ISO C++17。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 C++](../../references/languages/cpp.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/go-to-cpp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -163,7 +162,6 @@ description: Use when converting Go source to C++; apply this direction's langua
    ```
 6. **信息不足或实现相关时的处理**：若无法确认线程对 fd 的并发访问、`shutdown`/`poll` 的目标平台语义、关闭后是否仍有回调或析构，保留为未解决的生命周期问题；只看到 build PASS 不能证明没有挂起或误关。
 7. **直接官方 HTTPS 依据链接**：[Go `net.Listener`](https://pkg.go.dev/net#Listener)；[Linux `close(2)` 的多线程说明](https://man7.org/linux/man-pages/man2/close.2.html)；[Linux `poll(2)`](https://man7.org/linux/man-pages/man2/poll.2.html)。
-8. **来源与证据边界**：batch-01 B20（`handoff-2026-10-02-d26-chunk-upload-rehash-go`）`self-review-2` 定位阻塞 `accept` 与重复关闭，`target.self-repair-2.cpp` 加入停止标志/`poll`、`shutdown` 和 fd 失效处理；最终目标侧 build PASS（job `eval-20261005-075714-01c8bdb5`）。源码运行/功能 oracle 未冻结，comparison 的 output matched 仅供信息，行为仍 `UNVERIFIED`。
 
 ## 转换与验证边界
 

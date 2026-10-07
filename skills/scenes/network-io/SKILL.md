@@ -32,6 +32,84 @@ TCP 提供字节流，不保证应用消息与一次 `send`/`recv` 一一对应�
 
 上述规则适用于 Go `net/http`、C# `HttpClient`/`HttpResponseMessage`、Python `requests`/`http.client` 等高层客户端；具体目标库的关闭与复用条件仍须按其版本文档冻结。
 
+## L2-NET-01 协议层默认附加内容属于义务
+
+**触发条件**：源码生成或解析 HTTP（或等价文本协议）报文，且响应/请求头由**库默认行为**产生——状态行、`Server`/`Date`/`Content-Length`/`Content-Type`/`Connection` 等头，或依赖**头顺序**的可观察字节。
+
+
+**义务**：
+
+1. **库自动附加的头是义务**：不得把目标库无条件添加的头当成“实现细节”。典型：Python `BaseHTTPRequestHandler.send_response()` **无条件**附加 `Server: BaseHTTP/<ver> Python/<x.y>`，而 Go `net/http` 只写 `Date`（无 body 时另有 `Content-Length: 0`）。二者字节不同。
+2. **`Connection:` 语义不得臆造**：HTTP/1.1 默认持久连接，是否发送 `Connection: close` 取决于源框架的决策；目标手写该头属**新增可观察行为**。反过来源若显式关闭连接，目标也必须关闭。
+3. **头顺序可能是字节级差异**：某些库按**键排序**写头（如 Go `net/http` 会排序），某些按插入顺序。若下游对报文做字节比较或哈希，顺序差异即行为差异。
+4. **解析侧的默认行为同样属义务**：是否跟随重定向、可接受的 3xx 集合、超时默认值、错误响应是否算失败，都属于可观察行为，不得按目标库默认值替代。见[容器/集合语义的方向侧规则](../../directions/)。
+
+**错误机械替换反例**：
+
+```python
+# 源（Go）：net/http 只写 Date（无 body 时另有 Content-Length: 0），不写 Server 头
+# 目标（错误）：直接继承 Python 标准库的默认行为
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)      # 无条件附加 Server: BaseHTTP/... Python/3.12
+        self.end_headers()
+        # 响应字节与源不同，且下游若做报文比较即失败
+```
+```cpp
+// 目标（错误之二）：手写源里并不存在的 Connection 头
+resp += "Connection: close\r\n";     // Go 源保持 HTTP/1.1 连接且不发该头
+// 目标（错误之三）：按插入顺序写头，而源库按键排序
+resp += "Date: ...\r\nContent-Type: ...\r\nContent-Length: ...\r\n";  // 顺序与源不同
+```
+
+**不适用条件**：源码使用裸字节构造报文且不依赖任何库默认行为时，头部集合完全由源码决定，此时只需保持源码写出的字节，不涉及“默认头”问题。源码显式设置的头也不属默认行为。
+
+**信息不足时的处理**：无法确认源框架写出的完整头集合与顺序时，标为“协议默认头与头顺序待确认”，并把原始报文列入 oracle 观察点；不得用目标库默认输出充当依据。
+
+**官方依据**：[RFC 9110（HTTP 语义）](https://www.rfc-editor.org/rfc/rfc9110.html)、[RFC 9112（HTTP/1.1 报文与连接管理）](https://www.rfc-editor.org/rfc/rfc9112.html)；[Go `net/http`（头排序与默认头）](https://pkg.go.dev/net/http)；[Python `BaseHTTPRequestHandler.send_response`](https://docs.python.org/3.12/library/http.server.html#http.server.BaseHTTPRequestHandler.send_response)。
+
+
+## L2-NET-02 匹配集合与成员集合的扩大/收窄必须逐项对照
+
+**触发条件**：源码用**库提供的集合语义**做判定，而不是显式枚举——如“响应是否属于重定向类”“该地址是否属内部/私有网段”“该协议/状态码是否可接受”。典型形态：对目标库的一个谓词或类判定直接替换源库的谓词。
+
+
+**义务**：
+
+1. **谓词不是等价物，集合才是**：目标库的同类谓词**很少**与源库的集合完全相同。必须把源库的集合**逐项列出**，再核对目标谓词覆盖的集合，而不是把两个谓词当作同一件事。
+2. **扩大与收窄都要报告**：目标集合比源**大**（多接受）与比源**小**（少接受）都是行为差异，方向相反但同样必须登记。
+3. **典型已知差异（必须逐项核对，不得默认一致）**：
+
+   | 判定 | 源集合 | 目标谓词 | 差异 |
+   |---|---|---|---|
+   | HTTP 重定向 | Python `requests` 只跟随 **301/302/303/307/308** | Ruby `Net::HTTPRedirection` 匹配**全部 3xx** | 目标**扩大**：带 `Location` 的 300/304/305 会被目标跟随，源返回原响应 |
+   | 私有/内部地址 | 按冻结的 CPython **补丁版本**读取 `is_private` 集合与例外；`100.64.0.0/10` 的 `is_private` 为 false | Ruby `IPAddr#private?` 主要是 RFC1918 与 IPv6 ULA；还须核对源码组合的 loopback/link-local | 部分特殊用途地址可能被收窄，但不能把全部 IANA 段都列为 private；`192.0.0.0/24` 还存在版本变化与地址例外 |
+
+4. **两个方向都必须给出显式集合或登记差异**：能改成显式枚举的（`[301, 302, 303, 307, 308].include?(code)`）就改；不能改的必须写入已知差异清单并评估下游影响。
+
+**错误机械替换反例**：
+
+```ruby
+# 错误：用目标库的类判定直接替换源库的显式集合
+if response.is_a?(Net::HTTPRedirection)      # 覆盖全部 3xx，比源 requests 宽
+  # 300/304/305 若带 Location，源不会走到这里
+end
+# 错误之二：用目标库的谓词替换源的谓词，未核对集合
+internal = ip.private? || ip.loopback? || ip.link_local?
+# 不得从“IANA 特殊用途”直接推断 private；100.64.0.1 不是差异正例
+
+# 正确：显式枚举源的集合
+if [301, 302, 303, 307, 308].include?(response.code.to_i)
+```
+
+**不适用条件**：源码本就以**显式枚举**表达判定（自己写出状态码列表、网段列表）时，集合由源码固定，只需逐项搬运，不存在“库谓词覆盖范围”问题。
+
+**信息不足时的处理**：无法确定源库谓词覆盖的确切集合时，标为“匹配集合待逐项核对”，并把该判定列为 oracle 观察点；**不得**把“名字相近的谓词”当作同一集合。
+
+**官方依据**：[Python `requests`（重定向与 `TooManyRedirects`）](https://requests.readthedocs.io/en/latest/user/quickstart/#redirection-and-history)、[Python `ipaddress`（`is_private` 与特殊用途段）](https://docs.python.org/3.12/library/ipaddress.html)、[IANA IPv4 特殊用途地址登记表](https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml)；[Ruby `Net::HTTPRedirection`](https://docs.ruby-lang.org/en/3.4/Net/HTTPRedirection.html)、[Ruby `IPAddr#private?`](https://docs.ruby-lang.org/en/3.4/IPAddr.html#method-i-private-3F)。
+
+
+
 ## 具体语言转换的高频陷阱
 
 ### C → Python 网络 I/O

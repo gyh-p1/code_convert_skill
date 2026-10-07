@@ -29,7 +29,7 @@
   "plannedReportPath": "<targetDir>\\<name>_evaluator_report.md",
   "files": [
     {
-      "relativePath": "<源文件名，如 uhttpd.c>",
+      "relativePath": "<源文件名，如 input.c>",
       "sourcePath": "<源快照绝对路径>",
       "translatedCodePath": "<目标文件绝对路径，如 target.cpp>",
       "evaluationNotesPath": null,
@@ -45,13 +45,13 @@
     }
   ],
   "x_adapter": {
-    "note": "本文件是占位模板/示例，字段来源规则见 delivery-handoff-contract.md；不是可直接提交的 manifest。核心字段对齐外部控制器 third-party-evaluator-manifest（已核对旧仓库真实样例），x_adapter 为本仓库临时附加段，控制器不消费。",
+    "note": "本文件是占位模板/示例，字段来源规则见 delivery-handoff-contract.md；不是可直接提交的 comparison capsule。核心字段沿用项目移交清单形状，x_adapter 为本仓库临时附加段；实际提交前核对当前 Controller 契约。",
     "status": "pending-conversion-and-vm-acceptance",
     "executionApproved": false,
     "prerequisites": [
       "translatedCodePath 由转换器写入后，files[].success 与 artifacts.hasTranslatedCode 才置真",
-      "来源/许可、工具链、隔离环境逐项批准",
-      "行为 oracle 冻结"
+      "实际源码、目标工具链、运行入口和隔离边界逐项核对",
+      "功能比较时冻结行为 oracle；仅编译结论仍需真实双侧 build 证据"
     ],
     "isolationLaunchArgs": [
       "<按任务契约填隔离启动参数>"

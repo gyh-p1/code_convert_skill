@@ -19,8 +19,55 @@ description: Use alongside a matching conversion direction when source code star
 | 退出与错误 | 正常退出码、信号/异常终止、启动失败、超时、I/O 错误的可观察分类 | 把所有非零结果压成一个错误；丢失退出码或部分输出 |
 | 资源清理 | 管道、句柄、临时文件、线程和进程对象的关闭顺序与失败传播 | 依赖 GC/析构时机；清理失败静默忽略 |
 
-## 语言与平台映射边界
+## L2-PROC-01 宿主输出通道属于可观察行为，不得只图可用
 
+**触发条件**：源码把信息写到**非 stdout/stderr 的宿主渠道**——Shell 的 warning 流 / verbose 流 / information 流 / host 流（如 PowerShell `Write-Warning`、`Write-Verbose`、`ShouldProcess` 提示）、日志框架的独立通道，或源码对 stdout/stderr 的**分离与交错顺序**有依赖。
+
+
+**义务**：
+
+1. **通道归属是义务**：源写进 warning/host 流的内容，**不得**被静默合并到 stdout 或 stderr。目标语言若没有同构通道，须显式登记“该通道在目标中映射到何处”这一决策，而不是挑一个可用流就写。
+2. **不得合成源中不存在的文本**：给非交互调用补 `What if: ...` 之类的交互式提示文本，属**新增可观察输出**，会改变下游解析。若源只在交互模式下输出该提示，目标必须复现同样的触发条件。
+3. **stdout/stderr 的分离与顺序**：两条流是否合并、合并后顺序如何、是否行缓冲，都属可观察契约；把分离改成合并（或反之）会改变下游读取顺序。
+4. **退出状态与流内容分开核对**：写到哪条流、退出码是多少是两件事，不得用“退出码正确”替代通道核对。
+5. **行终止符的“抑制”规则属义务**：某些语言的打印函数在**参数已以换行结尾时会抑制**追加换行（Ruby `puts`），而另一些**总是追加**行终止符（.NET `Console.WriteLine` 追加 `Environment.NewLine`）。把二者互相映射会改变字节数——尤其是一行一行写 JSON 或将输出做哈希比较时。映射前必须确认源函数的实际换行规则，而不是按“都是打印一行”推断。
+
+**错误机械替换反例**：
+
+```ruby
+# 源（C#）：Console.WriteLine(s) 总是追加 Environment.NewLine
+# 目标（错误）：把全部 Console.WriteLine 映射为 puts
+puts payload          # payload 已以 "\n" 结尾时，Ruby 不再追加换行 → 字节不同
+```
+
+```text
+正确做法：把 .NET 的“总是追加行终止符”显式重建为 write + 行终止符，
+          或改用 print/STDOUT.write 并显式写出源所使用的终止符。
+```
+
+**错误机械替换反例**：
+
+```powershell
+# 源：提示走 PowerShell 的 warning/host 流，不污染 stdout 的数据载荷
+Write-Warning "volume shadow copy not available"
+Write-Output $json                  # stdout 恰好一行 JSON
+```
+```go
+// 目标（错误）：把警告写进 os.Stderr 并自行合成了源中没有的提示文本
+fmt.Fprintln(os.Stderr, "What if: Performing operation ...")   // 新增了可观察输出
+// 目标（错误之二）：把警告与 JSON 一起写进 stdout，破坏“恰好一行”契约
+fmt.Println("warning:", msg)
+fmt.Println(json)
+```
+
+**不适用条件**：源本身把全部输出写在同一条流上（无独立 warning/host 通道）时，不存在通道归属问题，只要保持该单通道的字节与顺序即可。
+
+**信息不足时的处理**：无法确认源写的是哪条流、或目标语言无同构通道时，标为“输出通道归属待确认”并显式登记该决策；不得用“都能看见”推断等价。
+
+**官方依据**：[PowerShell `Write-Warning`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/write-warning)、[`Write-Verbose`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/write-verbose)、[`ShouldProcess`](https://learn.microsoft.com/en-us/powershell/scripting/learn/deep-dives/everything-about-shouldprocess)、[about_Redirection](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_redirection)；[POSIX `stderr`（`<stdio.h>`）](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/stdio.h.html)；[Ruby `Kernel#puts`（已有换行时抑制追加）](https://docs.ruby-lang.org/en/3.4/Kernel.html#method-i-puts)；[.NET `Console.WriteLine`](https://learn.microsoft.com/en-us/dotnet/api/system.console.writeline)。
+
+
+## 语言与平台映射边界
 - **Go `os/exec` → C++**：`exec.CommandContext` 只保证向直接进程发送 Kill；`WaitDelay` 限制的是等待 I/O 管道关闭的额外时间，不承诺回收整个进程树。C++ 目标须用具体平台 API 分别实现启动、管道读取、等待和超时，不能把 Go 的 `Cmd` 行为逐字段臆造到 `std::system` 或 `popen`。
 - **shell 语义**：Windows `cmd /C`、PowerShell、POSIX `/bin/sh -c` 的引用、展开、内建命令和退出码不同。只有源码明确调用 shell 时才保留解释语义；目标解释器不明时标为缺口。
 - **输出捕获**：stdout/stderr 分离需要两个独立管道和并发排空，否则子进程可能因管道写满而阻塞。捕获上限、解码方式和截断行为属于可观察契约。

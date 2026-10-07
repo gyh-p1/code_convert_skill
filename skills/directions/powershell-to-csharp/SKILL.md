@@ -7,7 +7,6 @@ description: Use when converting PowerShell source to C#; apply this direction's
 
 > **适用基线**：PowerShell 7.6 → C# 12 / .NET 8。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 PowerShell](../../references/languages/powershell.md)与[目标语言 C#](../../references/languages/csharp.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/powershell-to-csharp/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -149,7 +148,6 @@ description: Use when converting PowerShell source to C#; apply this direction's
    ```
 6. **信息不足或实现相关时的处理**：需确认 PowerShell 原错误是否真为非终止、`$null` 是否会参与管道/数组展开、以及 `Get-ItemProperty` 与 `RegistryKey.GetValue` 的注册表视图和错误类型；不确定时只报告结构风险。`Console.Error.WriteLine` 也不自动等价于完整 PowerShell ErrorRecord 文本。
 7. **直接官方 HTTPS 依据链接**：[PowerShell 错误处理与非终止错误](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_error_handling?view=powershell-7.6)；[.NET `RegistryKey.GetValue`](https://learn.microsoft.com/en-us/dotnet/api/microsoft.win32.registrykey.getvalue?view=net-8.0)。
-8. **来源与证据边界**：batch-01 B27（`handoff-2026-10-02-d39-get-information-text`）`self-review-1/2` 指出未捕获读取异常及失败时提前 `return`，`target.self-repair-2.cs` 保留诊断与空槽；最终目标侧 build PASS（job `eval-20261005-093103-2955456e`）。未冻结行为 oracle，Controller output mismatch 仅作信息记录；功能仍 `UNVERIFIED`。
 
 ## 转换与验证边界
 

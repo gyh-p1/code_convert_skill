@@ -7,7 +7,6 @@ description: Use when converting PowerShell source to Ruby; apply this direction
 
 > **适用基线**：PowerShell 7.6 → CRuby 3.4。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 PowerShell](../../references/languages/powershell.md)与[目标语言 Ruby](../../references/languages/ruby.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/powershell-to-ruby/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提

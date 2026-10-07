@@ -7,7 +7,6 @@ description: Use when converting C++ source to PowerShell; apply this direction'
 
 > **适用基线**：ISO C++17 → PowerShell 7.6。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C++](../../references/languages/cpp.md)与[目标语言 PowerShell](../../references/languages/powershell.md)。
-> **方向案例与证据**：如本地工作区存在 `docs/test/dataset/cpp-to-powershell/README.md`，按其中 case 分层查看；该本地数据目录不随 Git/Skill 分发。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提
@@ -80,6 +79,29 @@ description: Use when converting C++ source to PowerShell; apply this direction'
    ```
 6. **信息不足或实现相关时的处理**：若涉及跨进程同步，加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)。
 7. **直接官方 HTTPS 依据链接**：[MS-PS-THREADJOB](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)。
+
+### 规则 CPP-PS-04：原始 argv 文本解析不得被强类型参数绑定提前终止
+
+> **归属说明**：实参绑定的**共享事实**（位置/命名/默认值/缩写）归语言层，见 [C++ 语言页 §五](../../references/languages/cpp.md)、[PowerShell 语言页 §一](../../references/languages/powershell.md)。本规则**只写 C++→PowerShell 方向特有**的绑定差异。
+
+1. **源码触发条件**：C++ 源码从 argv 接收文本并在函数体内解析、允许数字前缀或捕获解析失败后兜底；目标拟用 `param([int]...)`。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（[about_Functions_Advanced_Parameters](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters)）。
+3. **原可观察行为**：
+   - `std::stoi` 可消费数字前缀，是否拒绝尾部字符取决于源码是否检查 pos；invalid/out-of-range 抛异常，源码可能捕获并继续。
+   - `[int]` 参数转换发生在脚本体之前；绑定失败时函数体里的 catch/兜底没有执行机会。忽略输入差异会改变文件输出、stdout 和退出码。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：先承接原始文本，再显式重建源的空白/符号/数字前缀、范围、异常兜底与负值钳制。普通 `TryParse` 全串检查不能直接替代允许 `3abc` 的 stoi。
+   - *不适用条件*：源明确严格全串校验并在无效输入时终止，且绑定错误的输出/退出码符合契约时，才可采用强类型绑定；不能仅因正常数字输入相同就认等价。
+5. **错误机械替换反例**：
+   ```powershell
+   # 错误：源 try { stoi(argv[1]); } catch (...) { depth = 2; }
+   # 在 "abc" 时继续；这里则在脚本体之前绑定失败
+   param([Parameter(Position=0)][int]$Depth = 2)
+   # 选择文本参数，具体解析必须另按源 stoi 行为重建
+   param([Parameter(Position=0)][string]$DepthArg)
+   ```
+6. **信息不足或实现相关时的处理**：核对源码是否检查 pos、实际整数范围/locale 和异常分支；未知时标为待确认。源码不区分显式默认值时不引入新的业务分支。
+7. **直接官方 HTTPS 依据链接**：[C++17 N4659 §21.3.5 stoi](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[about_Parameter_Binding](https://learn.microsoft.com/en-us/powershell/scripting/learn/experts/parameter-binding)。
 
 ## 转换与验证边界
 

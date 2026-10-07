@@ -1,31 +1,25 @@
 # Code Convert Skill
 
-一个面向网络攻防相关代码、以转换知识为中心的轻量 Markdown Skill 项目。智能体按**语言方向 × 实际语义场景 × 源/目标系统方向**选读知识，并使用 ATT&CK Enterprise 分类作索引。当前有七语言 **42 个方向的静态规则文本**（42 个按源→目标独立归档的方向 Skill），以及网络/文件/并发/进程执行场景、POSIX ↔ Winsock、POSIX ↔ Windows 文件路径、进程创建与身份/权限、线程、Windows 注册表与服务子系统知识与长文件、批量转换工作流；PE 解析、Linux 内核接口和 macOS 专有子系统等方向仍缺。既有 C → C++ 的 fe、stest、realpath、pwd、Chain Reactor 有逐例目标编译证据；本地 `batch-01` 的 40 个不同方向中另有 11 项最终目标 build PASS。两者均不能证明功能正确、42 方向已验证、完整攻击链等价或 700 行上限已验收。C → Go 的 RC4 仍是被环境故障阻断的探索稿。
+面向网络攻防相关代码的轻量 Markdown 转换知识项目。Agent 按源码事实选读语言方向、共享语言语义、实际场景、源/目标系统和工作流；具体代码转换由本工作区 `.env` 配置的外部模型生成，不建设本地转换或评测运行时。
 
-## batch-01 收尾（2026-10-05）
+## 项目入口
 
-批次已 `CLOSED`：40/40 项有终态，11 项目标 build PASS、2 项源基线失败、27 项未提交第三方；功能整列 `UNVERIFIED`。仅把六项已有修订稿与目标 build PASS 的缺陷提炼为方向规则 `CPP-CS-07`、`GO-CPP-07`、`GO-CS-07`、`GO-PS-07`、`GO-RB-07`、`PS-CS-07`，每条写明单例来源和证据边界。另有 21 项模型自审列出的转换引入疑点未完成修订或独立验证，不纳入方向知识。本轮为静态知识收尾，未编译或运行任何转换样本。
+- [根 SKILL.md](SKILL.md)：任务模式、知识路由、模型调度和能力边界。
+- [42 个语言方向](skills/directions/)与[共享语义导航](skills/references/seven-language-common-semantics.md)：静态规则，不是逐方向转换成功承诺。
+- [场景](skills/scenes/)与[系统方向](skills/systems/)：只按源码实际行为和条目前提加载，不预生成维度组合。
+- [长文件工作流](skills/workflows/long-file-conversion/SKILL.md)、[批次工作流](skills/workflows/batch-conversion/SKILL.md)与[评估闭环](references/workflow/conversion-evaluation-loop.md)：过程约束，不证明规模、队列或行为已验收。
+- [交付契约](references/framework/delivery-handoff-contract.md)与[安全边界](references/framework/safety-boundary.md)：字段来源、报告分层和执行红线。
 
-完整逐项证据与历史用量留在本地被 Git 忽略的 `docs/test/dataset/batch-01/`；远端提交只包含规则与这份分层汇总，不把本地测试数据冒充可随仓库复现的公开基线。
+Codex 发现入口 `.agents/skills/code-convert/SKILL.md` 只链接根入口；其他 Agent 按自身机制接入。项目知识内联索引可以保留，**不把一次性测试数据集、case/batch、历史 job 或回归位写进 Skill 索引**。
 
-## 第三方评估平台升级规划
+## 规范与当前边界
 
-用户明确要求建立的 Stage 1 规划包位于 [docs/stages/stage1](docs/stages/stage1/README.md)，包含 plans/specs/tasks。当前仅为 PLANNING_ONLY 的移交方案，不代表 Controller/VM Agent 已具备隔离证明、Execution Profile、Attestation、Permit 或 fixture runtime；状态与阶段门仍以 [项目开发规范](docs/项目开发规范.md) 为准。
+[业务文档](docs/项目业务文档和能力边界.md)维护需求/能力，[开发规范](docs/项目开发规范.md)维护产品阶段和证据口径，[Skill 编写规范](docs/Skill编写规范.md)维护内容职责。静态文档存在不等于编译、功能、42 方向、战术/OS 覆盖、长文件或批量评测已达标。
 
-## 使用方式
+本机只读写/审阅文本，不编译、不运行源码、转换产物或构建脚本。已获准的动态评估只在逐例核对隔离的外部环境发生，READY/快照不证明无外联；编译与行为 oracle 分列，无对应证据为 UNVERIFIED。
 
-- 平台无关知识入口：[根 SKILL.md](SKILL.md)；按源码画像按需读取语言方向、实际场景、系统方向和长文件工作流；一次提交包含多项任务时另读[批量转换工作流](skills/workflows/batch-conversion/SKILL.md)。
-- 语言知识按“[42 个源→目标方向 Skill](skills/directions/) + [七语言共性索引](skills/references/seven-language-common-semantics.md) + [7 份单语言参考页](skills/references/languages/)”组织；方向 Skill 只链接适用的源、目标语言事实，不重复维护共性内容。
-- 在 Codex 中，`.agents/skills/code-convert/SKILL.md` 只提供发现路由，不复制转换知识。其他智能体平台按自身发现机制接入根入口。
-- 源 OS、目标 OS、编译器、标准、架构/ABI、依赖和任务模式必须在转换前冻结；不把未覆盖的 API、场景或系统方向假定为等价。
-- 默认只阅读、编辑和静态审阅说明；不得把本地文本检查说成转换效果验证。
+测试是独立的任务活动；输入/输出/原证据在执行和验收期间可追溯，收尾后的保留期限由交付约定决定，**无需永久保留测试数据集**。一次性测试源码、压缩包、凭据、模型原文和案例索引不随产品提交，不因文件被忽略就删除本地资料。
 
-## 本工作区的模型调度
+## 工程规划
 
-具体代码转换由 Agent 读取根目录 `.env` 的模型配置，向配置模型提交只读源码和按画像选中的 Skill；Agent 负责画像、调度、静态审阅、交付和必要的同模型修订，不以自身生成替代模型产物。不得把密钥写入文档、manifest 或请求正文。本项目不建设独立转换运行时或测试框架。
-
-## 当前边界
-
-业务真源：[项目业务文档和能力边界](docs/项目业务文档和能力边界.md)。协作与阶段真源：[项目开发规范](docs/项目开发规范.md)，其第 3 节定义当前阶段、纳入/排除范围和退出条件。内容规则：[Skill 编写规范](docs/Skill编写规范.md)；安全边界：[安全边界](docs/安全边界.md)。历史转换 run、冻结案例与第三方证据保留在本地 `docs/test/dataset/`，该目录整体被 Git 忽略；七语言知识按共性参考页与方向 Skill 分层维护。数据集不构成正式准确率基线，不恢复已取消的固定四例无 RAG/RAG 计划。
-
-当前阶段聚焦最终交付版本的编译证据和 Skill 拓展：标准执行形态由获批隔离环境双侧构建源、目标两侧，当前只读取 build 证据；编译成功不证明可运行、功能或安全正确。源无可运行入口时默认补写最小入口并在冻结记录中说明；任何未取得权威回传的结论保持 `UNVERIFIED`。阶段结束与下一阶段进入条件以项目开发规范为准。
+[Stage 1 评估平台升级包](docs/stages/stage1/README.md)是开发期 PLANNING_ONLY 方案，不表示外部 Controller/VM 已实现 Profile、Attestation、Permit 或 fixture runtime。工程工作包编号与产品阶段不同，产品状态只认开发规范。
