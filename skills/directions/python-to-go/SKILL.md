@@ -1,4 +1,4 @@
----
+﻿---
 name: python-to-go
 description: Use when converting Python source code (CPython 3.12) to Go (Go 1.27) while preserving observable behavior; covers negative indices/slice bounds, exceptions to (T, error), dynamic types to interfaces, generators, and mutable aliasing/concurrency boundaries. Not for Go to Python or other language pairs.
 ---
@@ -122,6 +122,8 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 7. **官方依据**：[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)；[GO-SPEC #Map_types](https://go.dev/ref/spec)。
 
 ---
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 ## 四、跨场景与系统规则按需加载
 

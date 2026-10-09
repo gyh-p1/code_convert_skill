@@ -1,4 +1,4 @@
----
+﻿---
 name: cpp-to-c
 description: Use when converting C++ source code (ISO C++17) to C (ISO C11) while preserving observable behavior; covers semantic downgrades including RAII to manual cleanup, exceptions to error codes, classes/virtual dispatch to structs, and template monomorphization. Not for C to C++ or other language pairs.
 ---
@@ -189,6 +189,8 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 7. **官方依据**：[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)（输入/输出库与字符串转换函数一节）；[WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)（`<stdio.h>` 一节）。
 
 ---
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 ## 四、跨场景与系统规则按需加载
 

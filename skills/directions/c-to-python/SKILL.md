@@ -1,4 +1,4 @@
----
+﻿---
 name: c-to-python
 description: Use when converting C source code (ISO C11) to Python (CPython 3.12) while preserving observable behavior; covers pointer/ownership to object model, fixed-width to arbitrary-precision integers, char*/bytes/str boundaries, and error codes to exceptions. Not for Python to C or other language pairs.
 ---
@@ -164,6 +164,8 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 7. **官方依据**：[PY-THREADING](https://docs.python.org/3.12/library/threading.html)；[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)；[WG14-N1570 §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
 
 ---
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 ## 四、跨场景与系统规则按需加载
 

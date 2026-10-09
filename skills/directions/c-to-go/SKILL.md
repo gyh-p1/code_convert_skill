@@ -1,4 +1,4 @@
----
+﻿---
 name: c-to-go
 description: Use when converting C source code (ISO C11) to Go (Go 1.27) while preserving observable behavior; covers pointer arithmetic/aliasing, integer width/overflow, errno/returns to error, slices/arrays, defer, and missing preprocessor. Not for Go to C or other language pairs.
 ---
@@ -175,6 +175,8 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 7. **官方依据**：[GO-SPEC #Passing_arguments_to_..._parameters](https://go.dev/ref/spec)；[WG14-N1570 §7.16](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
 
 ---
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 ## 四、跨场景与系统规则按需加载
 

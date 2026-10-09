@@ -1,0 +1,76 @@
+{
+  "mode": "agent-workflow-temporary",
+  "classifierVersion": "2.3",
+  "classifierSha256": "441b4d50125071544f6d1bbe836b7258d692c37c638acdb678a9e88795366524",
+  "inputManifestSha256": "c3fe4773292f861e7240f9b6a3e8b995913c2c69f6d4cf2e7a4c299b3b9ae2cf",
+  "classificationsSha256": "20289b3b1781a474cf9e60ce7fba58d8eac018fe8de4d26592c517e6b0bcbd7d",
+  "remoteUnitTests": {
+    "count": 47,
+    "exitCode": 0,
+    "result": "OK",
+    "sampleFixturesExecuted": false
+  },
+  "remoteWorkspace": "D:\\CodeConvertRemote\\Precheck\\agent-gate-20261009-2100",
+  "deploymentFilesUnchanged": true,
+  "controllerReady": true,
+  "readyRunnerCount": 3,
+  "platformAdmissionImplemented": false,
+  "submittedJobs": 0,
+  "cases": [
+    {
+      "taskId": "allow",
+      "admissionStatus": "ALLOWED",
+      "blockingReason": null,
+      "credentialFindingCount": 0,
+      "identityBindingVerified": true,
+      "agentGateDecision": "DO_NOT_SUBMIT",
+      "reason": "authorization_and_isolation_evidence_missing",
+      "submitted": false
+    },
+    {
+      "taskId": "public",
+      "admissionStatus": "BLOCKED",
+      "blockingReason": "public_network_unverified",
+      "credentialFindingCount": 0,
+      "identityBindingVerified": true,
+      "agentGateDecision": "DO_NOT_SUBMIT",
+      "reason": "public_network_unverified",
+      "submitted": false
+    },
+    {
+      "taskId": "credential",
+      "admissionStatus": "BLOCKED",
+      "blockingReason": "real_credential_suspected",
+      "credentialFindingCount": 1,
+      "identityBindingVerified": true,
+      "agentGateDecision": "DO_NOT_SUBMIT",
+      "reason": "real_credential_suspected",
+      "submitted": false
+    },
+    {
+      "taskId": "both",
+      "admissionStatus": "BLOCKED",
+      "blockingReason": "public_network_unverified",
+      "credentialFindingCount": 1,
+      "identityBindingVerified": true,
+      "agentGateDecision": "DO_NOT_SUBMIT",
+      "reason": "public_network_unverified",
+      "submitted": false
+    },
+    {
+      "taskId": "missing",
+      "admissionStatus": "BLOCKED",
+      "blockingReason": "input_error",
+      "credentialFindingCount": 0,
+      "identityBindingVerified": true,
+      "agentGateDecision": "DO_NOT_SUBMIT",
+      "reason": "input_error",
+      "submitted": false
+    }
+  ],
+  "skillStructureValidation": {
+    "executionEnvironment": "remote-temporary",
+    "root": "valid",
+    "batch": "valid"
+  }
+}

@@ -1,4 +1,4 @@
----
+﻿---
 name: c-to-cpp
 description: Use when converting C source code (ISO C11) to C++ (ISO C++17) while preserving observable behavior; covers semantic boundaries, RAII/exception boundaries, and container/concurrency mapping. Not for C++ to C or other language pairs.
 ---
@@ -215,6 +215,8 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 7. **官方依据**：[POSIX `fnmatch`（模式与字符类语义）](https://pubs.opengroup.org/onlinepubs/9799919799/functions/fnmatch.html)；[Microsoft `PathMatchSpec`](https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspeca)。
 
 ---
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 ## 四、按需加载的专题与场景规则
 

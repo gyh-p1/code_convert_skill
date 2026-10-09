@@ -1,8 +1,10 @@
+> 2026-10-09 19:59（北京时间）部署更新：四角色统一 1.0.26，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约一致。最终快照已生效，macOS 冷启动自动登录通过，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.26部署与快照更新记录-2026-10-09.md)。样本执行与网络隔离未在本次验收，提交仍须逐例核对。
+
 # 远端 Controller 适配与连接
 
 > 文档类型：外部评估基础设施的连接与提交适配（reference）
 > 状态：ACTIVE（本项目对接已授权隔离第三方 VM Controller 的唯一连接说明）
-> 更新：2026-10-05（**runner 能力口径已迁出**：改用[Runner 能力矩阵](runner-capability-matrix.md)作为唯一事实来源；本页只保留连接、capsule 组装、提交流程与回填规则）
+> 更新：2026-10-09（对接 `1.0.26` 统一部署；部署/runner 事实见[能力矩阵](runner-capability-matrix.md)，消噪与容忍规则见[比较策略适配](comparison-policy-adapter.md)）
 > 本页列出已登记的连接坐标和提交契约；实际可用性须在每次评估前核对。
 
 本项目**不建设**运行时或评测平台；编译/运行证据一律由已授权的隔离第三方 VM Controller 返回。本文只记录**如何连接该 Controller、如何组装并提交 comparison capsule、如何回传证据**，供转换 Agent 在评估步骤直接复用。凭据不入库（见“安全边界”）。
@@ -11,19 +13,19 @@
 
 | 角色 | 地址 | 说明 |
 |---|---|---|
-| Controller（FastAPI HTTP API） | `http://192.168.101.250:8443` | 接收 job、编排 VM Agent、回传证据；2026-10-05 复核 `/api/health` 返回 200、`ready=true` |
+| Controller（FastAPI HTTP API） | `http://192.168.101.250:8443` | 接收 job、编排 VM Agent、回传证据；2026-10-09 复核 `/api/health` 返回 200、`ready=true`、comparison.preset=noise-tolerant-v1 |
 | 本机（开发/提交端） | `192.168.101.101` | 与 Controller 同 `192.168.101.0/24` 段，**可直达 8443**，无需 SSH 隧道 |
 | VM Agent（三个现役 runner） | 由 Controller 按 `runnerId` 编排 | 提交方**不直连** Agent |
 
-**现役 runner 速查（2026-10-05 由 `GET /api/runners` 实测；完整说明见 [Runner 能力矩阵](runner-capability-matrix.md)）**：
+**现役 runner 速查（2026-10-09 由 `GET /api/runners` 复核；完整说明见 [Runner 能力矩阵](runner-capability-matrix.md)）**：
 
 | runnerId | os/x64 | supportedLanguages | 基线快照 | 快照回滚 | 状态 |
 |---|---|---|---|---|---|
-| `linux-vm-agent-x64` | linux | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Linux-8Lang-R12` | true | READY/clean |
-| `windows-vm-agent-x64` | windows | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Windows-8Lang-R11` | true | READY/clean |
-| `macos-vm-agent-x64` | macos | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Mac-7Lang-R2` | true | READY/clean |
+| `linux-vm-agent-x64` | linux | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Linux-8Lang-1.0.26` | true | READY/clean |
+| `windows-vm-agent-x64` | windows | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Windows-8Lang-1.0.26` | true | READY/clean |
+| `macos-vm-agent-x64` | macos | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Mac-7Lang-1.0.26-AutoLogin` | true | READY/clean |
 
-**Ruby runner 实测**：Windows、Linux、macOS 三台均已登记 `ruby`。Windows/Linux Agent 与 Controller 配置已对齐至各自 R11 快照；无副作用双侧 Ruby job `eval-20261005-055954-f055ab5b` 的两侧语法检查、运行与清理均通过。逐例依赖和具体转换结果仍须单独取证，详见 [Runner 能力矩阵](runner-capability-matrix.md) §1.1。
+**Ruby runner 实测**：Windows、Linux、macOS 三台均已登记 `ruby`。Ruby 适配当时 Windows/Linux 使用 R11，Linux 后来曾升为 R12；现役基线见上表。无副作用双侧 Ruby job `eval-20261005-055954-f055ab5b` 的两侧语法检查、运行与清理均通过。逐例依赖和具体转换结果仍须单独取证，详见 [Runner 能力矩阵](runner-capability-matrix.md) §1.1–1.2。
 
 > 提交前用 `GET /api/runners` 复核 `supportedLanguages`、`lifecycleState`、`baselineSnapshot`、`contaminated`；不要引用其它文档里的历史 runner 清单。
 
@@ -33,11 +35,15 @@
 
 ## API 契约
 
+**提交前消费者的引用核对**：Agent 调用 `POST /api/jobs` 前，先按[分类结果准入](../../workflow/classifier-agent-gate.md)确认准入判定为 `ALLOWED`、提交内容与被分类输入的身份/哈希一致、独立授权/隔离记录齐备，并持久化逐项记录和提交尝试。当前 1.0.26 不接收或校验分类 JSON、批次授权引用；不要自造 multipart 字段或把分类器的 executionApproved 当作服务器许可。这是 Agent 暂行接入，现有 API 和部署保持不变。
+
 | 方法 | 路径 | 作用 |
 |---|---|---|
+| `GET` | `/api/health` | 服务/组件版本、contractSetHash、ready 与服务器 comparison 配置；字段形状见[比较策略适配 §1](comparison-policy-adapter.md#1-区分服务器配置与任务输入) |
+| `GET` | `/api/runners` | 当前 runner、工具链登记、快照与生命周期；不构成网络隔离证明 |
 | `POST` | `/api/jobs` | multipart 提交 job：`file=<capsule.zip>`、`caseId`、`targetOs`、`targetLang`。返回 `202 {jobId, jobStatus:"QUEUED"}` |
 | `GET` | `/api/jobs/{jobId}` | 轮询状态，直到终态：`COMPLETED` / `FAILED_COMPILE` / `FAILED_RUNTIME` / `TIMEOUT` / `INFRA_ERROR` |
-| `GET` | `/api/jobs/{jobId}/report` | 结构化评估报告（schema 3.0 JSON） |
+| `GET` | `/api/jobs/{jobId}/report` | 结构化评估报告（InputProfile 1.0 对应 schema 3.0；不能假设所有任务均同一报告版本） |
 | `GET` | `/api/jobs/{jobId}/report.md` | 人读报告 |
 | `GET` | `/api/jobs/{jobId}/evidence/source` | 源侧 evidence bundle（build/execution） |
 | `GET` | `/api/jobs/{jobId}/evidence/target` | 目标侧 evidence bundle（build/execution） |
@@ -78,6 +84,7 @@ capsule.zip
 - **Windows Winsock 构建命令预检**：源侧和目标侧分别检查是否调用 Winsock API；使用 MinGW-w64/UCRT64 的 `gcc`/`g++` 时，若依赖 `WSAStartup`、`socket`、`sendto` 等符号，须在对应构建命令的目标文件之后显式链接 `-lws2_32`。源码中的 MSVC `#pragma comment(lib, "ws2_32.lib")` 不能替代该链接参数。其他编译器按其工具链语法冻结对应库名。
 - **评估移交预检**：参考[功能保持与第三方评估指导](../../workflow/behavior-preservation-contract.md)，按已确认任务与当前 Controller 契约移交行为目标、可接受差异和精确/结构/语义比较需求；本仓库不新增比较器或验收标准。核对平台实际支持的用例/维度/策略；若不能表达允许差异或只能观察 output 而任务需其他维度，记录缺口并请求平台调整/用户确认，不静默降级或声称功能 PASS。双侧初始状态与恢复/清理由平台在执行环境中保证，Agent 核对可取得证据。策略与任务不符时保留平台原判定并请求重评，不自行将 FAIL 改 PASS；驱动/输入/比较配置变更另冻条件并重新取证。
 - **`input_profile.json`** 通过 `validate_evaluation_contract` 校验：`argv`、`stdin`、`observationPolicy.dimensions`（如 `["output"]`）、`comparisonPolicy`（如 `output.stdoutMode="json-structural"`）、`timeoutSeconds`、`workingDirectory`。
+- **本版比较策略接入**：按[比较策略适配](comparison-policy-adapter.md)分别冻结 stdout/stderr 模式、文件采集与比较范围以及服务器实际 comparison 配置。`normalized-text` 会采用服务器启用的消噪规则，关键值需选择适当的严格模式/文件保护；服务器 preset、token 或容忍开关不是任务输入字段。
 - **`run_case.py`**（若该次契约采用 Python 驱动，两侧各一份）：定位实际构建出的程序，按冻结输入调用并记录输出、退出状态和所需副作用。驱动不得空跑或只输出固定值；`stdoutLen`/`stderrLen` 摘要不能替代行为 oracle。网络、进程和文件权限按安全边界核对。
 - 源无可运行入口（库翻译单元无 `main`）时，按冻结记录补写最小中性入口/驱动，并在 `frozen-inputs.md` 标注补写内容和哈希。
 - 组装临时目录里**不要**留 `__pycache__`/`*.pyc`；打包前清理，避免污染 zip 与 git。
@@ -89,6 +96,11 @@ capsule.zip
 PowerShell 5.1 无 `Invoke-RestMethod -Form`；用 `curl.exe -F` 做 multipart。以下为已跑通的形态（占位处按实际替换）：
 
 ```powershell
+# 0) 只读取证，保存服务器比较配置与 runner；同时按安全边界逐例核对授权/隔离
+curl.exe --fail -sS "http://192.168.101.250:8443/api/health" -o controller-health-before.json
+curl.exe --fail -sS "http://192.168.101.250:8443/api/runners" -o runners-before.json
+# 核对 ready、comparison、契约与本次任务策略；配置不适用时先处理受影响项
+
 # 1) 打包（先清 __pycache__）
 Compress-Archive -Path source,target,comparison_manifest.json,input_profile.json,metadata.json -DestinationPath capsule.zip -Force
 
@@ -109,16 +121,18 @@ curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/evidence/source" # ev
 curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/evidence/target" # evidence-target.json
 curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/comparison"      # comparison.json
 curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/logs"            # controller.log
+curl.exe --fail -sS "http://192.168.101.250:8443/api/health" -o controller-health-after.json
 ```
 
 ## 回传证据布局与结论回填规则
 
-- 全部真实回传落于该 run 的 `04-evaluation/<job-dir>/returned-evidence/`（`job-id.txt`、`state.json`、`evaluation_report.json`、`evaluation_report.md`、`evidence-source.json`、`evidence-target.json`、`comparison.json`、`controller.log`）。
+- 全部真实回传落于该 run 的 `04-evaluation/<job-dir>/returned-evidence/`（`job-id.txt`、`state.json`、`evaluation_report.json`、`evaluation_report.md`、`evidence-source.json`、`evidence-target.json`、`comparison.json`、`controller.log`，以及本次 health/runner 适配留证）。
 - **结论只从真实回传证据回填**，不得伪造：
   - `syntaxVerdict`：仅据**目标侧** evidence bundle 的 `build.status=completed` 且 `exitCode=0` 判 `PASS`；只有已实际构建且有代码相关非零退出/编译诊断才判 `FAIL`；未构建、跳过、环境/权限/缓存初始化失败、身份不符或证据不足均为 `UNVERIFIED`，不能仅凭 `failed` 状态归因代码。源侧 build 作对照基线，用于区分“源本身编不过”与“转换引入”。
   - `thirdPartyCompileStatus`：`THIRD-PARTY-COMPILE-PASSED` / `FAILED_COMPILE` / 未提交时 `AWAITING-THIRD-PARTY-COMPILE`。
-  - `executionApproved`：本次 capsule 被 Controller 接收并取得回执后置 `true`；证据未返回时编译/行为仍为 `UNVERIFIED`。
+  - `executionApproved`：复用已有授权并逐例通过隔离核对，本次 capsule 被获批 Controller 接收且取得回执后置 `true`；接收回执本身不创建运行授权，证据未返回时编译/行为仍为 `UNVERIFIED`。
   - `behaviorVerdict`：Controller `comparison` 的结果仅按已冻结的行为 oracle 与实际观察范围解释；本编译质量阶段不计入功能率、不外推等价。
+- **消噪证据**：按[比较策略适配 §4–5](comparison-policy-adapter.md#4-次要差异容忍与结果解释)保存平台原 `semantic_pass`、minor diff、原始观察及实际配置；job COMPLETED 不等于代码通过，semantic_pass 不等于 build PASS，配置不适用不自动进入模型修复。
 - **功能反馈移交**：行为 FAIL/不一致可按[闭环 §3.1](../../workflow/conversion-evaluation-loop.md#31-语法与功能修复反馈分支)进入模型功能修复，但先核对 `report`、双侧 `evidence` 与 `comparison` 的版本身份、输入/状态、预期/实际观察及已接受差异。仅有总 verdict 或缺可定位反例时记待补证据，不假设平台已有字段，也不据此盲修；接口不足向平台反馈。修订后提交新目标版本并取新 job 证据，旧报告不回改，本机不执行比较。
 - 自审放行统一按[闭环 §2、§4.1](../../workflow/conversion-evaluation-loop.md)核对原始审阅、追加裁决和剩余阻断项，不以 `NO-REPAIR-IDENTIFIED` 标签单独决定提交；内部预检**不是语法结论**，授权、隔离与评估就绪仍须分别满足。
 

@@ -12,7 +12,9 @@ Thumbs.db
 .vscode/
 
 # 转换测试数据、源码快照与批次产物仅保留在本地工作区
-/docs/test/dataset/
+# 整个 docs/test/ 都是本地测试集与审阅辅助脚本，不是产品 Skill 的依赖，不随 Git 分发
+# （含 dataset、dataset-2、还原/校验脚本与附件 ZIP）
+/docs/test/
 /docs/test/dataset.zip
 
 # 本次一次性测试审查材料，不作为产品或常驻数据集索引提交
