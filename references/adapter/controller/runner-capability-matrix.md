@@ -34,17 +34,19 @@
 - 同一案例补 `GOCACHE=/tmp/gocache` 后，重提 job `eval-20261005-075714-01c8bdb5` 的源、目标 build 均 `completed` 且退出码 0。绕行只证明这个 job 在该缓存位置可用，**不证明 runner 默认 HOME/缓存权限已修好**。
 - **2026-10-05 单机热修已取证**：旧仓库 `codex/linux-go-cache-home` 提交 `8d4da68` 将 Linux Agent 的 `HOME`、`XDG_CACHE_HOME`、`GOCACHE` 指向 `/var/lib/codeconvert-agent` 下的可写目录。当前 VM 的 unit SHA-256 为 `8d87a7d016bf979a8d829ef62dd0c6e9cbb8f72a4de8c4dc75deca4c0f5ade84`；新快照 `CC-Eval-Linux-8Lang-R12` 已设置为 Controller 的 Linux 基线，R11 保留。无害 Go 作业 `eval-20261005-115047-f2cdbaec` 使用直接的 `go build -o program hello.go`（没有 `GOCACHE` 前缀），源/目标 build 与运行均 `completed/0`，comparison `matched`、环境 `clean`、两侧清理 `PASSED`。作业结束后核对 Linux unit 仍为新哈希，三台 runner 均 `READY/clean`；Controller 契约哈希保持 `sha256:e088a356b48fd1c3f50e480ac24c2fd03319dc60a49b41de4d076219819c4c45`。该证据只证明无害 fixture 与当前环境，不回填 B20 原始作业或其它转换样本。
 
-## 1.3 Controller 消噪试用部署（2026-10-09）
+## 1.3 Controller 消噪部署（2026-10-09，**历史**）
+
+> **当前状态提示**：本节记录当日 `1.0.25-noise.1` 消噪试用部署。该版本已被 **1.0.26 统一部署取代**，当前 releaseVersion 与 manifestHash 见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.26部署与快照更新记录-2026-10-09.md)。**消噪能力本身沿用**（`preset=noise-tolerant-v1` 等在 1.0.26 健康验收中一致），但本节的身份与回退材料均为历史值，不得作为现役基线引用。
 
 2026-10-09 用户授权保留文本消噪、文件消噪与次要差异容忍并部署试用成品。平台使用新不可变发布包，只升级 Controller 比较实现与配置；Agent、三 VM 基线、执行路线及 Schema 集合没有随本次变更改动。
 
-| 身份/能力 | 已核对事实 |
+| 身份/能力 | 已核对事实（**历史值，现役见 1.0.26 记录**） |
 |---|---|
-| Controller releaseVersion | `1.0.25-noise.1`（读取服务器安装回执；不从 health.version 推断） |
-| 发布 manifestHash | `sha256:026a8da844cc43ade9b925d9b34d1167e877b02033a1e784f522bb4aac25fbe9` |
-| 原始 ZIP SHA-256 | `d32227b6e0e9a8575de407c39c9c74363ce87f0e98678948e4648d142dbfe502` |
-| API/契约 | 组件 `1.0.0`，InputProfile 1.0 / ComparisonResult 1.0 / EvaluationReport 3.0 的既有入口保持可用；contractSetHash 与本页顶部一致 |
-| 当前比较配置 | health.comparison.preset=`noise-tolerant-v1`；text_tokens=`temporary-paths,timestamps,ephemeral-ports`；tolerate_minor=`true`；五种文件噪声模式见[比较策略适配](comparison-policy-adapter.md#1-区分服务器配置与任务输入) |
+| Controller releaseVersion | `1.0.25-noise.1`（读取服务器安装回执；不从 health.version 推断）。**已由 1.0.26 取代** |
+| 发布 manifestHash | `sha256:026a8da844cc43ade9b925d9b34d1167e877b02033a1e784f522bb4aac25fbe9`（1.0.25-noise.1 值） |
+| 原始 ZIP SHA-256 | `d32227b6e0e9a8575de407c39c9c74363ce87f0e98678948e4648d142dbfe502`（同上） |
+| API/契约 | 组件 `1.0.0`，InputProfile 1.0 / ComparisonResult 1.0 / EvaluationReport 3.0 的既有入口保持可用；contractSetHash 与该次部署一致，现役值见本页顶部 |
+| 比较配置（能力沿用至 1.0.26） | health.comparison.preset=`noise-tolerant-v1`；text_tokens=`temporary-paths,timestamps,ephemeral-ports`；tolerate_minor=`true`；五种文件噪声模式见[比较策略适配](comparison-policy-adapter.md#1-区分服务器配置与任务输入)。该配置在 1.0.26 健康验收中复核一致 |
 | 历史试用复核 | 该次 HTTP 200、ready=true；三 Runner READY/clean，基线为 R12/R11/R2；当前统一部署的基线见 §1 |
 | 观察范围 | 沿用现有 output/filesystem/processes；本次不新增 network/registry Collector，也不提供网络隔离 Attestation/Permit |
 

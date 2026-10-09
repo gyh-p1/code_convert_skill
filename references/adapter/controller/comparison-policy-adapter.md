@@ -1,9 +1,9 @@
 # Controller 比较策略适配：noise-tolerant-v1
 
 > 文档类型：第三方比较策略的提交与证据适配（reference）
-> 状态：ACTIVE（适用已部署的 `1.0.25-noise.1` 试用版本）
+> 状态：ACTIVE（适用现役 `1.0.26` 统一部署；`noise-tolerant-v1` 比较配置自 `1.0.25-noise.1` 沿用并已在 1.0.26 健康验收中复核一致）
 > 更新：2026-10-09
-> 部署身份、取证范围与实时能力入口：[Runner 能力矩阵](runner-capability-matrix.md#13-controller-消噪试用部署2026-10-09)
+> 部署身份、取证范围与实时能力入口：[Runner 能力矩阵](runner-capability-matrix.md)；当前部署身份见[1.0.26 部署记录](../../../docs/stages/stage1/reports/1.0.26部署与快照更新记录-2026-10-09.md)，消噪试用的历史值见[能力矩阵 §1.3](runner-capability-matrix.md#13-controller-消噪部署2026-10-09历史)
 
 本页供 Agent 冻结比较需求、组装现役 capsule、核对回传。比较由第三方 Controller 执行；本项目不新增比较器、运行时、Schema 或独立评分。连接、提交与未知回执恢复沿用[Controller 适配](remote-controller-adapter.md)，执行授权与隔离沿用[安全边界](../../framework/safety-boundary.md)。
 

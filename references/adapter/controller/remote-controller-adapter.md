@@ -4,7 +4,7 @@
 
 > 文档类型：外部评估基础设施的连接与提交适配（reference）
 > 状态：ACTIVE（本项目对接已授权隔离第三方 VM Controller 的唯一连接说明）
-> 更新：2026-10-09（对接 `1.0.26` 统一部署；部署/runner 事实见[能力矩阵](runner-capability-matrix.md)，消噪与容忍规则见[比较策略适配](comparison-policy-adapter.md)）
+> 更新：2026-10-09（对接 `1.0.26` 统一部署；部署/runner 事实见[能力矩阵](runner-capability-matrix.md)，消噪与容忍规则见[比较策略适配](comparison-policy-adapter.md)；新增"批量提交"一节记录批量工作流所需而平台未提供的参数）
 > 本页列出已登记的连接坐标和提交契约；实际可用性须在每次评估前核对。
 
 本项目**不建设**运行时或评测平台；编译/运行证据一律由已授权的隔离第三方 VM Controller 返回。本文只记录**如何连接该 Controller、如何组装并提交 comparison capsule、如何回传证据**，供转换 Agent 在评估步骤直接复用。凭据不入库（见“安全边界”）。
@@ -65,7 +65,27 @@
 
 以上是恢复规则，不表示查询、去重或自动恢复能力已部署/验收；本仓库不为此建设服务端实现。
 
-## comparison capsule 组装
+## 批量提交（单批 ≥40 项，允许排队）
+
+批量编排规则见[批量转换工作流](../../../skills/workflows/batch-conversion/SKILL.md)；本节只记录**适配层**已知事实，不重复编排语义。批量任务与单项走同一个 `POST /api/jobs`，**没有**批量提交端点。
+
+| 事项 | 已核实事实 | 未核实/须现场核对 |
+|---|---|---|
+| 提交粒度 | 每项一个 capsule、一次 `POST /api/jobs`，逐项取 jobId | 平台是否提供批量端点（当前无，不自造） |
+| 并发 | 项目默认串行 1 路；`GET /api/runners` 现役 3 个 READY runner 是**容量事实，不是并发许可** | 平台级并发上限、队列深度、单批是否被限流 |
+| 排队状态 | 提交返回 `202 {jobId, jobStatus:"QUEUED"}`，说明存在排队阶段 | 队列位置/预估等待字段 |
+| 轮询间隔 | 无平台声明值 | **须按契约记录实际轮询间隔**；批量流程 §2 要求"轮询间隔按契约记录"，而平台未提供该值，故由本任务冻结时自定并留证 |
+| 忙碌/未就绪 | 批量流程 §4.4 引用 `409/controller_busy`、`503/controller_not_ready`；其**已审阅实现位于 job 创建前** | 本页未独立核实这两个状态码的现役行为；**不得外推到任意 4xx/5xx、代理错误或超时** |
+| 幂等 | 无已核实的服务端幂等或按 caseId/capsule 哈希查找能力（见下节） | 重投前须确认前一次未入队 |
+| 隔离 | 三 Runner 均 READY/clean；**READY 与快照回滚都不是网络隔离证明** | 批次级网络隔离证据（`batch-authorization.json`）仍待现场 |
+
+**批量提交的引用核对**：逐项按[分类结果准入](../../workflow/classifier-agent-gate.md)确认该项 `ALLOWED`、提交内容与被分类输入一致、授权/隔离记录齐备，再提交。批次级授权按 [Spec05 §2](../../../docs/stages/stage1/specs/submission-and-batch-authorization.md#2-批次授权记录-batch-authorizationjson) 组织；**分类结果逐项消费，不能只留一个允许总数**。批内某项不满足时跳过该项并继续其他项，不因此停整批，也不把跳过记成转换失败。
+
+**批量取证**：逐项按"回传证据布局与结论回填规则"落盘到该 run 的 `04-evaluation/<job-dir>/returned-evidence/`；批次汇总按批量流程 §6 分列各维度，**不合成单一"转换成功率"**。
+
+> 1.0.26 健康验收只覆盖四角色 health-only：**未提交任何样本、未验证批次链路、未取得批次隔离证据**。上述"未核实"列是真实缺口，不得因三 Runner READY 就当已具备批量能力。
+
+## 比较 capsule 组装
 
 capsule 是提交给 Controller 的 zip，根部必须含以下文件（Controller 会校验必需文件齐全、source/target 树非空、无符号链接/不安全路径）：
 
