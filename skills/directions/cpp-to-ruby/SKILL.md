@@ -18,9 +18,9 @@ description: Use when converting C++ source to Ruby; apply this direction's lang
 ### 规则 CPP-RB-01：C++ 拷贝构造与对象封装向 Ruby 对象引用与深拷贝映射
 1. **源码触发条件**：C++ 源码中依赖对象按值传递或显式自定义拷贝构造函数完成深拷贝。
 2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）。
-3. **原可观察行为**：赋值产生完全独立的内存副本，修改新对象完全不影响原对象。
+3. **原可观察行为**：按源实际复制构造/赋值运算符决定成员复制、别名与资源所有权；C++ 复制并不普遍保证深拷贝，指针成员或共享资源可继续别名。仅源明确深拷贝的成员才要求独立，不能擅自把共享身份改成复制。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：若需深拷贝，显式实现 `initialize_copy` 或使用 `Marshal.load(Marshal.dump(obj))`；传参注意在 Ruby 中皆为对象引用传递。
+   - *可选映射*：按源复制契约选择 `dup` 与 `initialize_copy`，显式复制需独立的成员并保留需共享的成员。Ruby `dup` 默认是浅复制，`initialize_copy` 也不会自动递归深复制；通用 Marshal 往返不能代替任意对象的复制契约，资源/身份/自定义钩子须另核，不反序列化不可信材料。
    - *不适用条件*：严禁认为 `b = a` 会产生独立拷贝，Ruby 仅复制对象引用别名。
 5. **错误机械替换反例**：
    ```ruby
@@ -32,7 +32,7 @@ description: Use when converting C++ source to Ruby; apply this direction's lang
    c1 = Config.new([1, 2])
    c2 = c1 # 仅仅是别名！
    c2.data << 3 # c1.data 也被污染变成 [1, 2, 3]！
-   # 正确：实现 initialize_copy 配合 dup
+   # 有条件的映射：源确实复制该整数数组时，initialize_copy 配合 dup
    class Config
      def initialize_copy(orig)
        super
@@ -42,7 +42,7 @@ description: Use when converting C++ source to Ruby; apply this direction's lang
    c2 = c1.dup
    ```
 6. **信息不足或实现相关时的处理**：若对象包含复杂原生资源指针，在转换报告中标明不可序列化限制。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **直接官方 HTTPS 依据链接**：[C++17 复制构造 §15.8.1](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[Ruby Object#dup/initialize_copy](https://docs.ruby-lang.org/en/3.4/Object.html#method-i-dup)。
 
 ### 规则 CPP-RB-02：C++ RAII 锁管理向 Ruby Mutex#synchronize 作用域映射
 1. **源码触发条件**：C++ 源码中使用 `std::lock_guard<std::mutex> lock(mtx)`。

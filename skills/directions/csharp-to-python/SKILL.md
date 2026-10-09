@@ -101,9 +101,9 @@ description: Use when converting C# source to Python; apply this direction's lan
 ### 规则 CS-PY-05：C# Encoding.UTF8/Unicode 字节序列向 Python str/bytes 与 codec 显式映射
 1. **源码触发条件**：C# 源码出现 `Encoding.UTF8.GetBytes`/`GetString`、`Encoding.Unicode.GetBytes`（即 `Encoding.Unicode`）、`ASCIIEncoding`、`Convert.FromBase64String`/`ToBase64String`，并在其后用 `.Length`、`Substring`、`BitConverter.ToString` 处理结果。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-STRING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/strings/)）；目标语言 Python 3.12（[PY-LIB-CODECS](https://docs.python.org/3.12/library/codecs.html)）。
-3. **原可观察行为**：`Encoding.UTF8` 产出的字节等于 UTF-8 字节序列；`Encoding.Unicode` 是 UTF-16 小端、**不写 BOM**（ASCII 字符占 2 字节）；`Convert.FromBase64String` 对含空白或非法字符的输入抛 `FormatException`；`string.Length` 计 UTF-16 代码单元（代理对占 2）。
+3. **原可观察行为**：`Encoding.UTF8` 产出的字节等于 UTF-8 字节序列；`Encoding.Unicode` 是 UTF-16 小端、**不写 BOM**（ASCII 字符占 2 字节）；`Convert.FromBase64String` 忽略其支持的空白字符，对非法字符/长度/填充抛 `FormatException`，null 则是 `ArgumentNullException`；`string.Length` 计 UTF-16 代码单元（代理对占 2）。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：`str` 与 `bytes` 严格分离，`s.encode('utf-8')` / `b.decode('utf-8')` 成对出现；UTF-16 小端用 `s.encode('utf-16-le')`，UTF-16BE 用 `'utf-16-be'`，需要 BOM 时写 `'utf-8-sig'`/`'utf-16'` 并在注释中说明；Base64 用 `base64.b64decode(s, validate=True)` 与 `base64.b64encode(b)`；`Encoding.ASCII` 用 `'ascii'` 并显式处理不可编码字符。
+   - *可选映射*：`str` 与 `bytes` 严格分离，`s.encode('utf-8')` / `b.decode('utf-8')` 成对出现；UTF-16 小端用 `s.encode('utf-16-le')`，UTF-16BE 用 `'utf-16-be'`，需要 BOM 时写 `'utf-8-sig'`/`'utf-16'` 并在注释中说明；Base64 解码先按 .NET 8 的白空格、TAB、CR、LF（`U+0020/U+0009/U+000D/U+000A`）规则处理，再作严格字母表/长度/填充校验与解码并映射失败；直接 `validate=True` 会错误拒绝源允许的空白，而默认 `validate=False` 又可能吞掉源会拒绝的非法字符。`base64.b64encode(b)` 返回 bytes，若对应 `ToBase64String` 的 string 需显式 ASCII 解码；`Encoding.ASCII` 用 `'ascii'` 并显式处理不可编码字符。正常有效文本的映射不覆盖畸形代理项/非法字节：.NET 实际 Encoder/DecoderFallback 与 Python 默认 strict 并非自动一致，需冻结具体编码实例和替换/报错行为后逐类核对，不能只指定编码名就声称完整等价。
    - *不适用条件*：严禁把 `Encoding.Unicode.GetBytes` 机械替换为 `.encode('utf-8')`（每字符字节数改变，下游按偏移拼接/替换的算法全部错位）；严禁对 `bytes` 调用 `len()` 后再与 C# `string.Length` 互换使用；严禁混用 `str` 与 `bytes`（拼接、正则、切片都会直接抛 `TypeError`，而不是源语言的隐式行为）。
 5. **错误机械替换反例**：
    ```python
@@ -116,14 +116,14 @@ description: Use when converting C# source to Python; apply this direction's lan
    n_bytes = len(sig_string.encode('utf-16-le'))    # 正确：需要字节长度时先编码再计数
    ```
 6. **信息不足或实现相关时的处理**：源码若在非 ASCII 文本上做 `Length`/`Substring` 定位，必须先确认按"字符"还是"字节/代码单元"语义，并确认目标侧是否要求逐字节复现（例如十六进制替换的偏移量），无法确认时把编码契约写为待确认。
-7. **直接官方 HTTPS 依据链接**：[PY-LIB-CODECS](https://docs.python.org/3.12/library/codecs.html)；[PY-LIB-BASE64](https://docs.python.org/3.12/library/base64.html)。
+7. **直接官方 HTTPS 依据链接**：[PY-LIB-CODECS](https://docs.python.org/3.12/library/codecs.html)；[PY-LIB-BASE64](https://docs.python.org/3.12/library/base64.html)；[.NET FromBase64String](https://learn.microsoft.com/en-us/dotnet/api/system.convert.frombase64string?view=net-8.0)；[.NET 8 Convert 实现](https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Private.CoreLib/src/System/Convert.cs)。
 
 ### 规则 CS-PY-06：C# unchecked 定宽整数回绕与装箱向 Python 任意精度 int 的显式截断映射
 1. **源码触发条件**：C# 源码对 `int`/`uint`/`long` 做加减乘或移位并依赖默认 `unchecked` 回绕（哈希、异或混淆、长度/校验和计算），或把定宽值装箱进 `object`/`Dictionary<string, object>` 后在两处强转。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-CHECKED](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked)）；目标语言 Python 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）。
-3. **原可观察行为**：默认 `unchecked` 上下文中定宽整数按补码截断回绕（`int.MaxValue + 1` 得 `int.MinValue`），`checked` 作用域内则抛 `OverflowException`；装进 `object` 后拆箱回窄类型会按目标宽度重新截断。
+3. **原可观察行为**：已确定的运行时 `unchecked` 上下文中定宽整数按补码截断回绕（值为 `int.MaxValue` 的 int 变量加 1 得 `int.MinValue`；常量表达式另核 checked 规则），`checked` 作用域内则抛 `OverflowException`；拆箱必须匹配实际被装箱的值类型，直接拆为另一宽度类型抛 `InvalidCastException`，并不是截断；先正确拆箱再数值转换，才按 checked/unchecked 的转换规则处理。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：Python `int` 为任意精度，需要保留回绕语义时显式施加位掩码并回解读符号位：`v = (v + 1) & 0xFFFFFFFF`；`& 0x7FFFFFFF` 用于只保留 31 位等特定位宽场景；有符号回绕按位宽写 `mask = 0xFFFFFFFF; v = v & mask; v = v - (1 << 32) if v >= (1 << 31) else v`；把定宽意图写进类型标注并在 docstring 中声明位宽契约。
+   - *可选映射*：Python `int` 为任意精度，需要保留回绕语义时显式施加位掩码并回解读符号位：`v = (v + 1) & 0xFFFFFFFF`；`& 0x7FFFFFFF` 用于只保留 31 位等特定位宽场景；有符号回绕按位宽写 `mask = 0xFFFFFFFF; v = v & mask; v = v - (1 << 32) if v >= (1 << 31) else v`；装箱参与类型测试/拆箱时还需保留被装箱类型身份与类型不符的失败，不能统一消成 Python int 后只掩码。把定宽意图写进类型标注并在 docstring 中声明位宽契约。
    - *不适用条件*：严禁假定 Python 也会截断（数值会一直增长，写入二进制/长度字段时才在编码步骤报错或静默变形）；严禁对带符号值直接使用 `& 0xFFFFFFFF` 而不做符号回读（`-1 & 0xFFFFFFFF` 得 `4294967295`，符号被静默翻转）；严禁依赖位掩码模拟 `checked` 的 `OverflowException`（掩码是静默截断，不会抛出）。
 5. **错误机械替换反例**：
    ```python
@@ -140,7 +140,7 @@ description: Use when converting C# source to Python; apply this direction's lan
        return h
    ```
 6. **信息不足或实现相关时的处理**：源码未显式写 `checked`/`unchecked` 时，其实际语义还受项目编译选项与常量表达式规则影响，无法从单个方法体确认时，把"该表达式是否允许回绕"标为待确认；需要真任意精度继续运算的场景，则不要手工模拟回绕。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-CHECKED](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked)；[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **直接官方 HTTPS 依据链接**：[MS-CS-CHECKED](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked)；[C# 装箱与拆箱](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/types/boxing-and-unboxing)；[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)。
 
 ## 转换与验证边界
 

@@ -82,21 +82,21 @@ description: Use when converting C source to PowerShell; apply this direction's 
 ### 规则 C-PS-04：C 定宽/数据模型相关整型与隐式提升向 PowerShell .NET 整数类型与显式掩码映射
 1. **源码触发条件**：C 源码混用 `unsigned long`/`size_t`/`long`/`uint32_t`/`DWORD`/`unsigned`（如 `unsigned long d_ino; unsigned long d_off;`、`const unsigned pipe_size = fcntl(...)`、`hax(char *filename, long offset, uint8_t *data, size_t len)`），或用 `sizeof(buffer)` 与 `unsigned` 比较、用 `(size_t)nbytes < len` 做符号转换比较、用 `~0x10000`/`0xFFFFFFFF` 依赖位宽回绕、用 `strlen(p) / 4` 这类整除求长度。
 2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §6.2.5, §6.3.1.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)），且必须先冻结源数据模型（`long`/指针宽度随目标平台数据模型变化属实现相关事实）；目标语言 PowerShell 7.6（[MS-PS-ARITH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arithmetic_operators), [MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)）。
-3. **原可观察行为**：无符号类型按模 $2^n$ 回绕是合法确定性行为，有符号溢出是 UB；有符号/无符号混算把有符号操作数转换为无符号；整除与取模对被除数为负时的结果与向零截断不同；`(size_t)nbytes < len` 中的负值会被重新解释为极大无符号数。
+3. **原可观察行为**：无符号类型按模 $2^n$ 回绕是合法确定性行为，有符号溢出是 UB；有符号/无符号混算按整型提升与通常算术转换决定共同类型，不是一律无符号；C11 整数商向零截断（商可表示且除数非零时），余数满足 `a == (a/b)*b + a%b`，非零余数符号随被除数；`(size_t)nbytes < len` 中的负值会被重新解释为极大无符号数。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 PowerShell 中显式声明宽度类型（`[int]`/`[long]`/`[uint32]`/`[uint64]`），比较前把两侧转成同一显式类型，需要 C 的按模回绕时显式掩码（`[uint32](($x -band 0xFFFFFFFF))`），并以 `[uint32]::MaxValue` 等 .NET 静态成员表达边界；`long`/`size_t` 按冻结后的数据模型映射为 `[long]`/`[uint64]`，并在报告中记录该数据模型假设。
-   - *不适用条件*：严禁依赖 PowerShell 的自动类型提升——算术超出当前类型上限时引擎会提升为更宽整型（如 `[int64]`）或 `[double]`，这会破坏源码依赖的 32 位截断/回绕语义；严禁假定 `[uint32]`/`[int]` 强转与 C 的整型转换同义（C 的转换为按模转换，PowerShell 走 .NET 类型转换路径，对负值与越界值的行为不同，必须显式掩码或改用 `[BitConverter]`/`[System.Buffers.Binary.BinaryPrimitives]` 并在文档中写清假设）；严禁把 `~0x10000` 直译为 `-bnot 0x10000` 而不做位宽掩码（得到的是无限精度补码结果，不是 32 位取反）。
+   - *可选映射*：在 PowerShell 中显式声明宽度类型（`[int]`/`[long]`/`[uint32]`/`[uint64]`），比较前把两侧转成同一显式类型，需要 C 的按模回绕时按已冻结中间类型显式掩码（掩码取明确正值/宽度，不能依赖十六进制字面量的有符号解释），并以 `[uint32]::MaxValue` 等 .NET 静态成员表达边界；`long`/`size_t` 按冻结后的数据模型映射为 `[long]`/`[uint64]`，并在报告中记录该数据模型假设。
+   - *不适用条件*：严禁依赖 PowerShell 的自动类型提升——算术超出当前类型上限时引擎会提升为更宽整型（如 `[int64]`）或 `[double]`，这会破坏源码依赖的 32 位截断/回绕语义；严禁假定 `[uint32]`/`[int]` 强转与 C 的整型转换同义（C 的转换为按模转换，PowerShell 走 .NET 类型转换路径，对负值与越界值的行为不同，必须显式掩码或改用 `[BitConverter]`/`[System.Buffers.Binary.BinaryPrimitives]` 并在文档中写清假设）；严禁把 `~0x10000` 直译为 `-bnot 0x10000` 而不做位宽掩码（PowerShell 位运算按整数操作数类型/宽度处理，不是无限精度；要保持源的提升后宽度与符号解释）。
 5. **错误机械替换反例**：
    ```powershell
    # 错误：把 C 的 size_t/unsigned long 一律当 [int]（32 位），并依赖自动提升
-   [int]$offset = $fileLength          # 源为 size_t（LP64 下 64 位），大偏移被截断
+   [int]$offset = $fileLength          # 源为 size_t（LP64 下 64 位），超出 int 范围会转换失败，不能保持偏移
    $h = 0x9E3779B9
    $h = $h * 33                        # 源为 uint32_t 回绕；此处会被提升为更宽整型或 double
-   $mask = -bnot 0x10000               # 源为 uint32 取反；此处是无限精度补码
+   $mask = -bnot 0x10000               # 源需核对提升后位宽；此处是 PowerShell 整数类型的补码，非无限精度
    # 正确：冻结数据模型，显式宽度与掩码
    [uint64]$offset64 = [uint64]$fileLength
-   [uint32]$h32 = 0x9E3779B9
-   $h32 = [uint32](($h32 * 33) -band 0xFFFFFFFF)
+   [uint32]$h32 = 2654435769         # 用明确正值，避免十六进制有符号解释
+   $h32 = [uint32](($h32 * 33) -band ([uint64][uint32]::MaxValue))
    ```
 6. **信息不足或实现相关时的处理**：源平台数据模型（LP64/LLP64）、`long`/`size_t` 的实际宽度、以及是否依赖回绕都属于未决事实；缺一即在转换报告中停标为待确认，不得用 PowerShell 默认类型顶替。
 7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.2.5, §6.3.1.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[MS-PS-ARITH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arithmetic_operators)；[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)。

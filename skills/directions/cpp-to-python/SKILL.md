@@ -20,8 +20,8 @@ description: Use when converting C++ source to Python; apply this direction's la
 2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（[WG21-N4659 Clause 17](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 Python 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）。
 3. **原可观察行为**：编译期针对每个实例化类型生成独立机器码，不匹配类型触发编译报错。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为接收通用对象的单动态函数，结合 `typing.TypeVar` 标注；若有特定类型的分支逻辑，使用 `functools.singledispatch`。
-   - *不适用条件*：严禁尝试在 Python 运行期模拟 C++ 编译期 SFINAE 或模板元编程递归展开。
+   - *可选映射*：先盘点本任务实际模板实例、特化、重载选择及其可观察结果，按实例映射为函数或显式分派。`typing.TypeVar` 不执行 C++ 编译期约束；仅当源选择逻辑确实等于首参数运行时类型分派时才用 `functools.singledispatch`，并核对继承、隐式转换与多参数选择差异。
+   - *不适用条件*：SFINAE、模板特化或编译期常量若改变本次行为，不能因 Python 无同构机制而删掉；冻结实际已选结果或显式实现等效选择。无法确定实例/选择范围时报告知识缺口，不用泛型标注冒充语义保持。
 5. **错误机械替换反例**：
    ```python
    # 错误：试图通过字符串反射检查类型模拟模板重载
@@ -38,50 +38,27 @@ description: Use when converting C++ source to Python; apply this direction's la
 6. **信息不足或实现相关时的处理**：若存在重度模板数值计算，在报告中标明 Python 运行期解释性能损失。
 7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)。
 
-### 规则 CPP-PY-02：C++ 运算符重载向 Python 双下划线特殊方法映射
-1. **源码触发条件**：C++ 源码中重载 `operator==`、`operator<`、`operator[]` 等运算符。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Python 3.12（[PY-REF-DATA §3.3](https://docs.python.org/3.12/reference/datamodel.html)）。
-3. **原可观察行为**：通过中缀表达式调用自定义函数；`const` 引用传参。
+### 规则 CPP-PY-02：C++ 运算符重载向 Python 特殊方法与可哈希性映射
+1. **源码触发条件**：源定义 `operator==`、`operator<`、`operator[]`，或实际将该类型用作关联容器的键。
+2. **冻结版本/运行时/API 前提**：ISO C++17 → CPython 3.12；按实际容器的比较器/哈希器与 [Python 数据模型](https://docs.python.org/3.12/reference/datamodel.html#object.__hash__)核对。
+3. **原可观察行为**：重载定义比较、索引或键身份规则；有相等比较不自动表示该类型需可哈希，`std::map` 的排序比较也不自动等于 `operator==`。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：重写为 `__eq__`、`__lt__`、`__getitem__`；需同时保持 `__hash__` 一致性（可哈希对象若实现 `__eq__` 必须实现 `__hash__`）。
-   - *不适用条件*：严禁只实现 `__eq__` 而遗漏 `__hash__` 导致自定义对象无法存入 `set` 或作为 `dict` 键。
-5. **错误机械替换反例**：
-   ```python
-   # 错误：实现 __eq__ 未实现 __hash__，导致对象变为不可哈希（unhashable）
-   class Item:
-       def __init__(self, id): self.id = id
-       def __eq__(self, other): return isinstance(other, Item) and self.id == other.id
-   # s = {Item(1)} # 抛出 TypeError: unhashable type: 'Item'
-   # 正确：显式实现 __hash__
-   class Item:
-       def __init__(self, id): self.id = id
-       def __eq__(self, other): return isinstance(other, Item) and self.id == other.id
-       def __hash__(self): return hash(self.id)
-   ```
-6. **信息不足或实现相关时的处理**：若重载了逗号表达式或地址运算符 `&`，Python 无等价魔术方法，必须重构成显式普通函数。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA §3.3](https://docs.python.org/3.12/reference/datamodel.html)。
+   - *可选映射*：按源实际语义定义 `__eq__`、`__lt__`、`__getitem__`；只有目标需要哈希键且等价字段在作为键期间稳定时才定义与相等一致的 `__hash__`。
+   - *不适用条件*：不能要求所有定义 `__eq__` 的类都补 `__hash__`。按可变内容比较的对象通常应保持不可哈希；源码需作为键时先核对源键副本/不可变性，可采用契约允许的不可变键表示，不能直接给可变对象加内容哈希。
+5. **错误机械替换反例**：为可变 `Item.id` 同时定义按 id 相等和 `hash(self.id)`，放入 set/dict 后又修改 id，会改变哈希并破坏查找；“补上 __hash__ 就正确”不是规则。仅在 id 保持稳定且源键规则一致时，该映射才有前提。
+6. **信息不足或实现相关时的处理**：未确定实际键用法、字段可变性、比较器或混合类型比较时，逐项登记未知。Python 无对应特殊方法的源操作需显式接口，不能静默省略。
+7. **直接官方 HTTPS 依据链接**：[Python object.__hash__](https://docs.python.org/3.12/reference/datamodel.html#object.__hash__)（相等/哈希一致性与可变键约束）。
 
-### 规则 CPP-PY-03：C++ std::thread 多核并行向 Python 进程池/异步与 GIL 约束映射
-1. **源码触发条件**：C++ 源码中启动多个 `std::thread` 并发执行密集数学计算。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Python 3.12 / CPython 3.12（[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)）。
-3. **原可观察行为**：多线程在多个物理核上并发推进，线性缩短总运行时间。
+### 规则 CPP-PY-03：C++ std::thread 向 Python 线程/任务的功能边界与 GIL 限制
+1. **源码触发条件**：源创建 `std::thread`，涉及 CPU 计算、I/O、共享状态、同步或取消。
+2. **冻结版本/运行时/API 前提**：ISO C++17 → CPython 3.12；[threading](https://docs.python.org/3.12/library/threading.html)与 [multiprocessing](https://docs.python.org/3.12/library/multiprocessing.html#programming-guidelines)。不外推到不同解释器/版本。
+3. **原可观察行为**：需保留线程拓扑、共享地址空间、错误、完成等待及可见顺序；线程并行不保证耗时线性缩短，性能要求另冻判据。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：CPU 密集型任务必须重写为 `multiprocessing.Pool` 或 `concurrent.futures.ProcessPoolExecutor`；若为 I/O 阻塞，可使用 `asyncio`。
-   - *不适用条件*：严禁直接替换为 `threading.Thread`，受 CPython GIL 限制，纯 Python 代码的多线程无法实现多核 CPU 并行计算加速。
-5. **错误机械替换反例**：
-   ```python
-   # 错误：使用 threading.Thread 进行 CPU 密集型运算，受 GIL 限制无加速
-   import threading
-   threads = [threading.Thread(target=heavy_calc) for _ in range(4)]
-   for t in threads: t.start()
-   for t in threads: t.join() # 实际由于 GIL 轮流锁，耗时比单线程还长！
-   # 正确：使用进程池突破 GIL
-   from concurrent.futures import ProcessPoolExecutor
-   with ProcessPoolExecutor() as executor:
-       futures = [executor.submit(heavy_calc) for _ in range(4)]
-   ```
-6. **信息不足或实现相关时的处理**：若代码涉及共享内存通信，加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)。
+   - *可选映射*：若需保留进程内共享状态与线程生命周期，核对 `threading` 的同步与 join 映射，并说明 CPython 3.12 中纯 Python CPU 代码受 GIL 限制。仅在源任务彼此独立、输入/输出可传递、进程模型差异已获允许且性能需求明确时，才考虑 `ProcessPoolExecutor`/进程池。
+   - *不适用条件*：不为加速强制改多进程；跨进程数据复制/序列化、对象身份、共享资源、启动方式、异常/取消都须核对。I/O 密集也不自动许可改 `asyncio`，异步模型改变属于显式转换决定。
+5. **错误机械替换反例**：源 worker 修改同一共享对象，父线程 join 后读取该对象；机械改进程池却未建立等效状态传递，worker 修改不会自动成为父进程对象的新状态。速度或能启动不是功能一致证据。
+6. **信息不足或实现相关时的处理**：涉及线程/任务都加载[并发场景](../../scenes/concurrency/SKILL.md)，不只在出现共享内存词时加载。无既定并行性能义务时先保持功能；共享状态/取消边界未明则报告缺口，不擅自重构。
+7. **直接官方 HTTPS 依据链接**：[Python 3.12 threading](https://docs.python.org/3.12/library/threading.html)；[multiprocessing 编程约束](https://docs.python.org/3.12/library/multiprocessing.html#programming-guidelines)。
 
 ## 转换与验证边界
 

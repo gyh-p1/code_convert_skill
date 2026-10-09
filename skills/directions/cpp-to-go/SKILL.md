@@ -42,8 +42,8 @@ description: Use when converting C++ source to Go; apply this direction's langua
 2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Go 1.27（[GO-SPEC #Errors, #Defer_statements](https://go.dev/ref/spec)）。
 3. **原可观察行为**：异常沿调用栈向上展开，自动析构局部对象，直至被匹配的 catch 捕获。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：改写函数签名增加 `error` 返回值（如 `func DoWork() (Result, error)`）；调用点显式检查 `if err != nil`；资源清理使用 `defer res.Close()`。
-   - *不适用条件*：严禁将业务异常机械翻译为 Go `panic`；Go 中 `panic` 仅限致命未恢复故障，不可用作正常业务流分支。
+   - *可选映射*：在允许调整接口时增加 `error` 返回值；同步改所有调用点，保留 catch 的类型选择、传播/恢复边界和错误上下文。清理按源析构时机对应；Go `defer` 在外层函数返回时执行，不是离开任意块即执行。源为块级 RAII、锁释放或循环每次清理时，用受限辅助函数/显式路径清理保持作用域与 LIFO 次序，不能直接把所有释放延迟到大函数结束。
+   - *不适用条件*：不能机械把异常映射为 `panic`，也不能把显式 error 丢弃。Go 支持受限的 `panic/recover`，但它不是 C++ 任意 catch 的自动对应；只有错误边界、同一 goroutine 内展开/恢复及清理均能核对时才考虑受限实现，不以惯用写法改变异常传播。
 5. **错误机械替换反例**：
    ```go
    // 错误：将常规的查找不到或输入校验错误机械替换为 panic
@@ -58,14 +58,14 @@ description: Use when converting C++ source to Go; apply this direction's langua
    }
    ```
 6. **信息不足或实现相关时的处理**：若源异常携带丰富错误上下文，定义自定义错误结构体实现 `Error() string`。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Errors](https://go.dev/ref/spec)；[GO-SPEC #Defer_statements](https://go.dev/ref/spec)。
+7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec#Defer_statements)；[Effective Go: Panic/Recover](https://go.dev/doc/effective_go#panic)。
 
 ### 规则 CPP-GO-03：C++ std::mutex/std::condition_variable 向 Go sync/Channel 映射
 1. **源码触发条件**：C++ 源码中使用 `std::unique_lock` 和条件变量进行生产者-消费者通知。
 2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Go 1.27（[GO-SPEC #Channel_types](https://go.dev/ref/spec), [GO-MEM](https://go.dev/ref/mem)）。
 3. **原可观察行为**：消费者在条件变量上阻塞等待唤醒，互斥锁保护队列临界区。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：重构为原生的 Go `chan T` 通信，通过无缓冲或有缓冲通道安全传递数据与完成通知；状态同步保留 `sync.Mutex`。
+   - *可选映射*：对基于共享谓词的条件变量，优先核对 `sync.Mutex` + `sync.Cond` 的等待循环、Signal/Broadcast 和退出条件；只有任务传递/通知语义确实对应时才使用 `chan T`，并冻结容量、背压、关闭与取消语义。通道不是条件变量的通用替代物。
    - *不适用条件*：必须注意 Go 数据竞争不是未定义行为，但含竞争会导致状态损毁或程序终止，严禁无保护并发读写变量。
 5. **错误机械替换反例**：
    ```go
@@ -79,7 +79,7 @@ description: Use when converting C++ source to Go; apply this direction's langua
    <-done
    ```
 6. **信息不足或实现相关时的处理**：若需级联取消与超时，结合 `context.WithTimeout` 处理。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Channel_types](https://go.dev/ref/spec)；[GO-MEM](https://go.dev/ref/mem)。
+7. **直接官方 HTTPS 依据链接**：[Go sync.Cond](https://pkg.go.dev/sync#Cond)；[GO-SPEC #Channel_types](https://go.dev/ref/spec#Channel_types)；[GO-MEM](https://go.dev/ref/mem)。
 
 ## 转换与验证边界
 

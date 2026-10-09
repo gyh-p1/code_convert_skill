@@ -31,13 +31,15 @@ description: Use as the source-OS -> target-OS layer when source code reads or w
 | 根键与访问权限 | `RegOpenKeyEx(HKEY_CURRENT_USER, "SOFTWARE\\...", 0, KEY_WRITE, &h)` | 根键决定用户范围；访问掩码（`KEY_READ`/`KEY_WRITE`/`KEY_ALL_ACCESS`）决定失败类别。只读改名写会让"权限不足"变成"运行期失败"，必须按源的实际意图保留 |
 | 键不存在 | `RegOpenKeyEx` 返回 `ERROR_FILE_NOT_FOUND` | 目标语言封装常把"键不存在"变成异常或 `None`/空集合；源若把该错误当正常分支，目标侧必须显式区分"不存在"与"读取失败" |
 | 创建键 | `RegCreateKeyEx` 的 `REG_OPTION_NON_VOLATILE` / 是否已存在 | 创建语义是"打开或创建"，本身不是幂等承诺；须保留"已存在时不覆盖已有值"这一差别 |
-| 值类型与长度 | `RegSetValueEx(h, name, 0, REG_SZ, (const BYTE*)s, strlen(s))` | **字符串长度约定不对称**：写入 `REG_SZ` 时长度通常不计结尾 NUL，而查询返回的尺寸常包含结尾 NUL。机械照搬长度会截断或多写字节；二进制类型按字节计长，两者不能混用 |
+| 值类型与长度 | `RegSetValueExA/W` 的 `lpData` 与 `cbData` | **长度按字节且包含字符串终止符**：`REG_SZ`、`REG_EXPAND_SZ` 的 `cbData` 须包含结尾 NUL，`REG_MULTI_SZ` 须包含双 NUL；同时核对 A/W 版本、实际编码和字符宽度，不能把字符数直接当字节数。二进制值按实际字节数，不额外补字符串终止符。依据：[RegSetValueExW 的 lpData/cbData 契约](https://learn.microsoft.com/en-us/windows/win32/api/winreg/nf-winreg-regsetvalueexw) |
 | 读取缓冲区与尺寸 | 先查询尺寸再分配，或固定缓冲区 | 尺寸是**字节数**不是字符数；`REG_EXPAND_SZ` 与 `REG_SZ` 的读取方是否做环境变量展开不同，不能互换类型 |
 | 位宽视图重定向 | 32 位进程访问 `SOFTWARE` 下的键 | 64 位系统上 32 位进程默认被重定向到 `Wow6432Node` 视图；源码依赖的视图必须显式决定（`KEY_WOW64_64KEY`/`KEY_WOW64_32KEY`），否则读到的键与 64 位程序不同 |
 | 注册表虚拟化 | 老式程序写 `HKLM\Software` | 在部分配置下会被虚拟化到每用户位置；转换不得假定写入的物理位置与逻辑路径一致，须按目标实际配置核对 |
 | 值删除与键删除 | `RegDeleteValue` / `RegDeleteKeyEx` | 键删除受子键存在与位宽视图影响；`RegDeleteKey` 与 `RegDeleteKeyEx` 的语义不同，不能互换 |
 | 刷新与持久化 | `RegFlushKey` | 何时真正落盘不是写入返回即完成；不要为了"看起来干净"删除 `RegFlushKey`，也不要以为它是崩溃安全的承诺 |
 | 错误来源 | 返回 `LONG`，成功为 `ERROR_SUCCESS` | 这些 API **不设置** `errno`、也不等价于 `GetLastError()` 语义；转换后统一按一种错误来源读，不能混读 |
+
+若源代码对 `REG_SZ` 仅传 `strlen(s)`、遗漏终止符字节，记录为源已有风险并定位实际 A/W 调用与输入，不能把它提炼成正确的通用长度规则。转换时不得未经确认就补终止符并宣称行为未变；目标封装若无法表达源的原始长度行为，列出差异，按已确认任务契约处理或保持待确认。
 
 ## 服务：差异与必须处理的点
 

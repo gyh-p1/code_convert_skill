@@ -61,7 +61,7 @@ description: Use when converting Go source to C++; apply this direction's langua
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Go_statements](https://go.dev/ref/spec)）；目标语言 ISO C++17（[WG21-N4659 Clause 33](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
 3. **原可观察行为**：轻量级 Goroutine 协作调度，Channel 阻塞传递数据。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：Goroutine 数量有限时映射为 `std::thread`，大量并发时必须使用固定大小线程池；Channel 映射为结合 `std::mutex` 和 `std::condition_variable` 的线程安全阻塞队列。
+   - *可选映射*：按资源边界核对 `std::thread` 或经允许的调度实现。固定线程池不是大量 goroutine 的自动等价：阻塞发送/接收可能占满 worker，令负责解锁的任务无法被调度而死锁。先核对依赖拓扑、背压、唤醒/取消和资源上限，不能只把每个 goroutine 塞入固定池。Channel 须保持无缓冲 rendezvous/有缓冲容量、close 后排空、关闭发送错误与 select 语义；普通阻塞队列不能冒充这些义务全部已映射。
    - *不适用条件*：严禁无限制创建 `std::thread`（C++ 线程为原生 OS 线程，创建数万个会导致系统资源枯竭甚至进程崩溃）。
 5. **错误机械替换反例**：
    ```cpp
@@ -69,13 +69,13 @@ description: Use when converting Go source to C++; apply this direction's langua
    for (int i = 0; i < 100000; ++i) {
        std::thread(worker).detach(); // 致命错误：OS 线程资源耗尽导致 std::system_error 崩溃！
    }
-   // 正确：使用线程池任务分发
+   // 有条件的示意：仅任务无相互阻塞依赖且线程池契约匹配时适用
    ThreadPool pool(4);
    for (int i = 0; i < 100000; ++i) {
        pool.enqueue(worker);
    }
    ```
-6. **信息不足或实现相关时的处理**：若涉及底层网络套接字并发，加载 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)。
+6. **信息不足或实现相关时的处理**：所有实际并发都加载[并发场景](../../scenes/concurrency/SKILL.md)，网络另读[网络场景](../../scenes/network-io/SKILL.md)。调度/Channel 义务未明确时标知识缺口，不通过改变原并发模型掩盖。
 7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[WG21-N4659 Clause 33](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
 
 ### 规则 GO-CPP-04：Go 切片与 string 向 C++17 std::vector/std::string 的所有权与共享语义选择

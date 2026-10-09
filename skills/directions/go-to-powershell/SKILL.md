@@ -36,44 +36,34 @@ description: Use when converting Go source to PowerShell; apply this direction's
 6. **信息不足或实现相关时的处理**：若字段涉及首字母大小写可见性，在 PowerShell 中统一规范为 PascalCase。
 7. **直接官方 HTTPS 依据链接**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)。
 
-### 规则 GO-PS-02：Go os.Exit 退出码向 PowerShell $LASTEXITCODE 与终止错误映射
-1. **源码触发条件**：Go 源码中调用 `os.Exit(code)` 立即退出进程。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC](https://go.dev/ref/spec)）；目标语言 PowerShell 7.6（[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)）。
-3. **原可观察行为**：Go 进程立即终止并回传状态码，**跳过所有 defer 语句**！
+### 规则 GO-PS-02：Go os.Exit 向 PowerShell 独立进程入口的退出边界
+1. **源码触发条件**：源调用 `os.Exit(code)`，与普通函数返回/`panic` 清理不同。
+2. **冻结版本/运行时/API 前提**：Go 1.27 → PowerShell 7.6；冻结独立 pwsh 进程还是模块/交互式调用，以及入口退出码与清理契约。
+3. **原可观察行为**：`os.Exit` 立即结束整个进程并跳过 defer。PowerShell `exit` 不是“跳过所有 finally”的通用机制；官方文档明确 catch 中 exit 仍会执行 finally。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在独立脚本中映射为 `exit $code`；在模块函数中改写为设置 `$global:LASTEXITCODE = $code` 并 `throw` 终止错误。
-   - *不适用条件*：严禁在函数内盲目调用 `exit` 终止用户当前会话。
-5. **错误机械替换反例**：
-   ```powershell
-   # 错误：模块函数内直接 exit 杀掉交互式窗口
-   function Run-Task { if ($failed) { exit 2 } } # 用户当前终端直接闪退！
-   # 正确：抛出终止错误
-   function Run-Task { if ($failed) { throw "Task failed with exit code 2" } }
-   ```
-6. **信息不足或实现相关时的处理**：若原 Go 代码中有未执行的 defer，在报告中警告其确定性丢失。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)。
+   - *可选映射*：在独立脚本入口核对 `exit $code`、错误输出及受控清理；若源故意跳过清理，目标 finally 不能无条件新增该清理，需按冻结退出路径设计清理条件，或报告未映射点。
+   - *不适用条件*：模块函数中的 `throw` 可以被调用方捕获，设置 `$LASTEXITCODE` 也不等于进程退出；它们不是 `os.Exit` 的自动等价。把独立程序改模块属于显式接口变更，未获允许不能如此降级，更不能退出用户交互会话。
+5. **错误机械替换反例**：把所有 Go defer 都写进 finally，再将 os.Exit 替为 exit，可能新增源退出时不执行的清理；反过来删掉全部 finally 又破坏正常 return 的清理。
+6. **信息不足或实现相关时的处理**：交付形态或退出路径不明时记录缺口；核对正常返回、panic/recover 和 os.Exit 三类路径，不通过新增强杀进程能力绕过。
+7. **直接官方 HTTPS 依据链接**：[Go os.Exit](https://pkg.go.dev/os#Exit)；[PowerShell about_Try_Catch_Finally](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally?view=powershell-7.6)。
 
-### 规则 GO-PS-03：Go 常驻守护任务向 PowerShell 短生命周期脚本模型转换边界
-1. **源码触发条件**：Go 源码中通过 `select {}` 实现常驻后台服务并监听信号。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 PowerShell 7.6（[MS-PS-THREADJOB](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)）。
-3. **原可观察行为**：编译为原生守护进程长期运行。
+### 规则 GO-PS-03：Go 常驻任务向 PowerShell 的生命周期边界
+1. **源码触发条件**：源通过循环/select 等维持进程，并具有请求处理、信号、取消或退出协议。
+2. **冻结版本/运行时/API 前提**：Go 1.27 → PowerShell 7.6；记录独立宿主、生命周期、并发模型及实际停止条件。
+3. **原可观察行为**：进程在明确停止条件前持续提供源码定义的行为；不能把“常驻”只当实现风格。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 PowerShell 中重构为单次触发任务或通过 `Start-Job` 注册后台作业，或依赖外部任务计划程序（Task Scheduler）。
-   - *不适用条件*：严禁在交互式 PowerShell 脚本中写永久死循环死等，会占用宿主线程。
-5. **错误机械替换反例**：
-   ```powershell
-   # 错误：直接在前台脚本写死循环阻塞控制台且无法优雅响应中断
-   while ($true) { Start-Sleep -Seconds 1 }
-   ```
-6. **信息不足或实现相关时的处理**：若必须常驻，向用户提示脚本宿主生命周期限制。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-THREADJOB](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)。
+   - *可选映射*：在受控独立宿主内保持原生命周期与停止协议；按适用并发/进程规则组织等待和清理，不新增持久化、权限或网络能力。
+   - *不适用条件*：不能自动改为单次触发、定时任务、Start-Job 或计划程序；它们改变可用期、状态、父进程依赖或部署副作用，只有另行明确允许才是可选变体。
+5. **错误机械替换反例**：源持续维护进程内状态，目标单次执行后退出；即使一次输出一致，也没有保留后续请求与状态行为。
+6. **信息不足或实现相关时的处理**：宿主/取消/停止条件不明时加载[并发场景](../../scenes/concurrency/SKILL.md)与[进程场景](../../scenes/process-execution/SKILL.md)，登记缺口；文本转换不因此启动常驻任务，本机不运行。
+7. **直接官方 HTTPS 依据链接**：[PowerShell about_Jobs](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)（后台作业模型，不是常驻生命周期自动等价保证）。
 
 ### 规则 GO-PS-04：Go []byte 字节切片向 PowerShell [byte[]] 与文本编码边界的映射
 1. **源码触发条件**：Go 源码在字节层读写与变换数据，例如 `_ = os.WriteFile(in, []byte("operator=translator\nmode=controlled\n"), 0o644)`、`raw, _ := os.ReadFile(in)`、`[]byte(strings.TrimSpace(string(raw)))`、以及底层的 `sha256.Sum256(data)`/`base64.StdEncoding.EncodeToString`。
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #String_types](https://go.dev/ref/spec)）；目标语言 PowerShell 7.6（[MS-PS-CONTENT](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content)、[MS-PS-ENCODING](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)）。
 3. **原可观察行为**：Go 字符串是只读字节序列、允许包含 `0x00`；`[]byte(s)` 与 `string(b)` 互转按原始字节解释且长度按字节计；`os.WriteFile` 写出的正是给的这些字节，不做换行或 BOM 增删。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：字节数组用 `[byte[]]`；需要精确字节级写入时用 `[System.IO.File]::WriteAllBytes($path, $bytes)`，需要精确字节级读取时用 `[System.IO.File]::ReadAllBytes($path)`；确需 cmdlet 路径时使用面向字节的参数（`Set-Content -AsByteStream` / `Get-Content -AsByteStream`），并显式指定 `-Encoding utf8NoBOM` 以固定编码而不依赖宿主默认。
+   - *可选映射*：字节数组用 `[byte[]]`；需要精确字节级写入时用 `[System.IO.File]::WriteAllBytes($path, $bytes)`，需要精确字节级读取时用 `[System.IO.File]::ReadAllBytes($path)`；确需 cmdlet 路径时使用面向字节的参数（`Set-Content -AsByteStream` / `Get-Content -AsByteStream`），按实际形态核对数组/流及是否需要 `-Raw`。字节流不经过文本编码，不能同时要求 `-Encoding`；只有明确文本交付才另冻结 `utf8NoBOM` 等编码。
    - *不适用条件*：严禁用 `Set-Content`/`Add-Content`/`Out-File` 默认的文本管道承接字节切片——数组元素会被按行连接、默认追加行尾换行、并按默认编码重新编码，字节内容与长度都会与原字节不一致；严禁把二进制数据当 `[string]` 走 `-Encoding` 往返后再当作原字节使用。
 5. **错误机械替换反例**：
    ```powershell
@@ -107,35 +97,26 @@ description: Use when converting Go source to PowerShell; apply this direction's
 6. **信息不足或实现相关时的处理**：若源码依赖 channel 的阻塞背压、`select` 多路复用或 `context` 级联取消，必须标注“PowerShell 无 channel/select 对等物，背压与取消需重新设计”，交由并发场景 Skill 决定，不得声称行为等价。
 7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[MS-PS-PARALLEL](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/foreach-object)、[MS-PS-JOBS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)。
 
-### 规则 GO-PS-06：Go error 返回与 defer 清理向 PowerShell 错误流、$? 与 finally 的映射
-1. **源码触发条件**：Go 源码以 `(T, error)` 返回并在调用点 `if err != nil` 分流，同时用 `defer` 登记清理（如 `overwrite_rollback_check.go`/`recoverable_overwrite.go` 的备份—覆写—回滚顺序、`inbox_kv_parse.go` 的 `strings.Split` 解析失败分支），`parallel_cmd_runner.go` 还有 `defer cancel()` 与 `context.WithTimeout` 的超时错误分支。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Errors, #Defer_statements](https://go.dev/ref/spec)）；目标语言 PowerShell 7.6（[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)、[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)）。
-3. **原可观察行为**：错误经返回值显式传递，调用方必须检查 `err != nil` 才会失败；未检查则继续执行；`defer` 在外层函数返回前按 LIFO 逆序执行，且对正常返回、`return` 提前退出与 `panic` 展开都生效。
+### 规则 GO-PS-06：Go error 返回与 defer 清理向 PowerShell 控制流与 finally 映射
+1. **源码触发条件**：源以 `(T, error)` 返回、在调用点检查/忽略错误，并通过 defer 登记清理。
+2. **冻结版本/运行时/API 前提**：Go 1.27 → PowerShell 7.6；保留源错误是否被观察、传播、输出，以及实际清理时机。
+3. **原可观察行为**：error 是返回值，未检查可以继续且不会自动打印；defer 在函数返回或该 goroutine 的 panic 展开时逆序执行，os.Exit 不执行（另见 GO-PS-02）。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：把“可继续的失败”写成非终止错误（`Write-Error`/`$PSCmdlet.WriteError()`）并保留后续处理，把“必须中断的失败”写成终止错误（`throw`/`-ErrorAction Stop`）；需要 `catch` 兜住 Cmdlet 的非终止错误时显式加 `-ErrorAction Stop`；清理动作放进 `finally`，按 Go 的逆序排列；判断外部进程结果时读 `$LASTEXITCODE`，判断 Cmdlet 结果时读 `$?`。
-   - *不适用条件*：严禁用 `$?` 或 `$LASTEXITCODE` 作为跨多条语句的统一错误判断——`$?` 会被任何后续语句覆盖，`$LASTEXITCODE` 只在外部原生进程执行后更新，对纯 Cmdlet 流程不反映成败；`try`/`catch` 默认不捕获非终止错误；`exit` 会终止宿主、可能不执行 `finally`，因此**不得用 `exit` 代替 Go 中会在函数返回时执行的 `defer` 清理**。
+   - *可选映射*：以明确结果/错误表示及调用者检查保持原控制流，避免管道把多返回值意外展平。只有源相应边界确实需终止传播时才用 throw/终止错误；源确实输出错误时才选择对应通道，不因为 error 非 nil 就额外 Write-Error。已注册清理按作用域与逆序放入 finally，清理也可能改变 `$?`，错误要在产生点保存。
+   - *不适用条件*：不把 `$?` 或 `$LASTEXITCODE` 当持久 error 对象：读取须紧随对应操作；后续命令可覆盖 `$?`，原生退出码也须及时保存。try/catch 默认不捕非终止错误。不能把普通函数返回换成脚本 exit；但也不能错误宣称 exit 一律绕过 finally。
 5. **错误机械替换反例**：
    ```powershell
-   # 错误：用 $? 承接 Go 的 err 检查，并用 exit 代替 defer 清理
-   function Invoke-Stage {
-       Write-FileAtomic $target $payload       # 内部以非终止错误报告失败
-       if ($?) { Write-Host "ok" }             # 上一条语句已覆盖 $?，判断不可靠
-       if (-not $?) { exit 1 }                 # exit 绕过 finally：备份/临时文件未清理
-   }
-   # 正确：终止错误 + finally 承接 defer 的清理职责
-   function Invoke-Stage {
-       try {
-           Write-FileAtomic $target $payload -ErrorAction Stop
-       } catch {
-           Write-Error "stage failed: $($_.Exception.Message)"   # 对照 Go 的 error 返回
-           throw                                                  # 对照 Go 的必须中断
-       } finally {
-           Remove-Item -LiteralPath $staging -ErrorAction SilentlyContinue  # 对照 defer
-       }
-   }
+   # 反例：在读取操作状态前，另一个命令已改变 $?
+   Invoke-Operation                    # 待测操作
+   Write-Output "finished"           # 新增输出，且更新成功状态
+   if (-not $?) { throw "failed" }    # 已不是 Invoke-Operation 的状态
+   # 仅对契约以 $? 表示成败的操作，必须立即保存：
+   Invoke-Operation
+   $operationSucceeded = $?
+   # 按冻结契约检查，不把此片段当通用 Go error 映射。
    ```
-6. **信息不足或实现相关时的处理**：若无法确认某个 Go 错误在原程序中是“必须中断”还是“可忽略继续”，必须标注“错误严重级别待确认”，不得默认按终止错误处理；若原 Go 代码用 `panic`+`recover` 表达非局部失败，标注“panic/recover 与 PowerShell 错误流的对应关系待确认”。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Errors, #Defer_statements](https://go.dev/ref/spec)；[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)、[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)。
+6. **信息不足或实现相关时的处理**：错误严重级别、输出/传播边界或 panic/recover 对应未知时登记，不默认升级为终止错误，不默认添加 stderr；清理失败与业务失败分别核对。
+7. **直接官方 HTTPS 依据链接**：[Go defer](https://go.dev/ref/spec#Defer_statements)；[PowerShell about_Automatic_Variables](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)；[about_Try_Catch_Finally](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally?view=powershell-7.6)。
 
 ### 规则 GO-PS-07：多段路径与空字符串参数的绑定边界
 1. **源码触发条件**：Go 用 `filepath.Join(base, part1, part2, ...)` 拼接多段路径，或 `strings.SplitN(line, "=", 2)` 后允许空键、空值并传给 PowerShell 函数。

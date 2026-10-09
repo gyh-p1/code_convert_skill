@@ -44,8 +44,8 @@
      - 涉及 Linux/POSIX 与 Windows 跨系统转换时：[`skills/systems/posix-windows-filesystem/SKILL.md`](../systems/posix-windows-filesystem/SKILL.md)
    - *语言层核心职责*：保证文件句柄在各分支及异常下确定性关闭；确保文本/二进制打开模式与平台换行符（CRLF vs LF）一致；具体路径规范化与目录遍历由 B 类规则裁定。
 
-3. **原生系统线程与并发同步行为**：
-   - *源码触发条件*：源码中直接调用底层操作系统原生线程创建、系统事件等待、信号量与进程级同步原语。
+3. **语言级或原生线程/任务与并发同步行为**：
+   - *源码触发条件*：源码中实际使用原生线程、语言级 goroutine/Task/thread、异步任务、共享状态或同步/取消/背压机制；不要求出现原生 OS API。
    - *必须加载的既有 B 类规则*：
      - 通用并发场景：[`skills/scenes/concurrency/SKILL.md`](../scenes/concurrency/SKILL.md)
      - 涉及 Linux 与 Windows 跨系统转换时：[`skills/systems/posix-windows-threads/SKILL.md`](../systems/posix-windows-threads/SKILL.md)

@@ -8,7 +8,8 @@
 
 | 文档 | 作用 |
 |---|---|
-| [workflow/conversion-evaluation-loop.md](workflow/conversion-evaluation-loop.md) | 转换—自审—第三方评估闭环：FROZEN→GENERATED→SELF_REVIEWED→SELF_REPAIRED(≤2)→EVALUATION_READY→EVALUATED→REPAIR_AFTER_EVAL(≤2)→CLOSED 各阶段门槛 |
+| [workflow/conversion-evaluation-loop.md](workflow/conversion-evaluation-loop.md) | 转换—自审—第三方评估闭环：FROZEN→GENERATED→SELF_REVIEWED→SELF_REPAIRED(≤2)→EVALUATION_READY→EVALUATED→REPAIR_AFTER_EVAL(≤2)→CLOSED 各阶段门槛，以及语法/构建与功能反馈分流、有限修复和第三方重评 |
+| [workflow/behavior-preservation-contract.md](workflow/behavior-preservation-contract.md) | 功能保持与第三方评估指导：行为目标、可接受差异、评估移交及第三方修复反馈；不自设功能裁决标准 |
 
 ## framework/ — 契约、模式与安全边界
 
