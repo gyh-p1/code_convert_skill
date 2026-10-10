@@ -173,3 +173,7 @@ if [301, 302, 303, 307, 308].include?(response.code.to_i)
 - [Python `socket` 模块](https://docs.python.org/3.12/library/socket.html)：`recv` 空字节、超时与异常类型。
 - [.NET `Socket.Receive`](https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.socket.receive)、[`NetworkStream.Read`](https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.networkstream.read)：返回 0 与异常的分工。
 - [PowerShell `about_Automatic_Variables`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables) 与 [.NET `TcpClient`](https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.tcpclient)：流包装、释放与原生调用边界。
+
+---
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。

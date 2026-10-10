@@ -56,6 +56,8 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 
 `observationPolicy.filesystemInclude/filesystemExclude` 决定 Agent 采集范围；`comparisonPolicy.filesystem.include/exclude` 决定比较范围。只在比较 include 中写业务文件，不能补回 Agent 没有采集的事件；在任一排除列表中排掉业务文件也不能证明其行为保持。
 
+**先决定申请哪些观察维度（我方冻结口径，2026-10-10 补入）**：`observationPolicy.dimensions` 必须覆盖该程序**实际产生的可观察行为**。程序有文件副作用（写文件、建目录、改内容）时**必须申请 `["output","filesystem"]`**，**不得**只申请 `["output"]` 再靠驱动把文件内容回显到 stdout 代偿——那样把文件行为挤进 output 维度，且两侧回显一旦不对称即假 FAIL（见[行为保持 §4.1.5](../../workflow/behavior-preservation-contract.md)）。`filesystem` 维度平台**已完整可用**（采集 + 打分 + 内容 digest 比对、能检出真实差异）；只申请 output 是反例（dataset-2 曾 105/106 份只申请 output，文件类用例只能靠驱动回显代偿）。涉及子进程行为按需加 `processes`（**采集可用、比较暂为平台软缺口**）；`network`/`registry` 维度平台暂不支持，不盲目申请。此口径是**我方申请问题，不是平台能力缺失**，不得据此报平台阻塞。
+
 当前默认噪声规则只包含 §1 列出的五种模式，不默认忽略 `.cache` 或锁文件。正常比较产生的文件缺失、额外或内容差异若仅涉及配置噪声路径，降为 `minor` 并保留 `noise-tolerant-v1:filesystem-noise` diff；原事件不从 EvidenceBundle 删除。重命名涉及任何非噪声路径时仍是 major。
 
 任务明确要求检查噪声名称文件时，在比较 include 中追加覆盖该路径的非全范围模式。例如业务需要生成 `.pyc`：
@@ -101,7 +103,7 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 
 1. 读取 `/api/health` 与 `/api/runners`，保存完整响应；核对 ready、契约哈希、comparison 配置及实际 runner。`health.version=1.0.0` 是组件版本，不是 releaseVersion；部署发布身份见能力矩阵，不能仅凭 version 或 contractSetHash 判断消噪是否启用。comparison 缺失、未知 preset 或读取失败时，不补写本页示例当作实际配置；确认平台身份与策略后再使用受影响的消噪评估。
 2. 在原冻结记录中写明 stdout/stderr 模式、文件采集/比较范围、接受差异依据、关键值保护及所依据的服务器 comparison 对象。授权与逐例隔离照原安全门槛核对；消噪配置不提供网络隔离证明。
-3. 按原 `/api/jobs` 契约提交；接收回执保存 jobId。当前编译质量阶段继续采用获批双侧执行形态，编译结果只取对应目标侧 build，不因为本版有行为结果而扩大产品质量指标。
+3. 按原 `/api/jobs` 契约提交；接收回执保存 jobId。继续采用获批双侧执行形态：编译结论取对应目标侧 build，行为一致性按冻结 oracle 与 comparison 分层给出；两类结论分开记录，不合成单一功能率、不把平台 `semantic_pass` 当作功能验收通过。
 4. 保存原 report、双侧 EvidenceBundle、comparison、logs 和终态；正常比较核对 `verdictReason` 的 `Comparator=...` 与冻结配置及各 diff.rule。早期基线/执行失败可能不带该配置后缀，此时保留前置 health 和原诊断，不能猜补实际比较规则。
 5. 对账 source/target、job/case、输入/目标版本、观察范围与清理。提交前后配置变化或回传配置与冻结不一致时，保留该结果并记配置疑点；已知新配置不能覆盖冻结的行为义务时暂停相关评估，交平台处理后另记变体重评，不自动归因目标代码。
 

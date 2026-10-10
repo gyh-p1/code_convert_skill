@@ -142,3 +142,7 @@ if (GetFinalPathNameByHandleA(h, resolved, sizeof resolved, 0) == 0) { /* 需要
 - Microsoft Learn：[`GetFullPathNameA`](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamea)、[`FindFirstFileA`](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findfirstfilea)、[`_access`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess)、[`GetCurrentDirectoryA`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectorya)
 - cppreference：[`std::filesystem::recursive_directory_iterator`](https://en.cppreference.com/w/cpp/filesystem/recursive_directory_iterator)、[`std::filesystem::directory_options`](https://en.cppreference.com/w/cpp/filesystem/directory_options)
 - FreeBSD：[`humanize_number(3)`](https://man.freebsd.org/cgi/man.cgi?humanize_number)、[`fts(3)`](https://man.freebsd.org/cgi/man.cgi?fts)、[`SIGINFO`（signal(3)）](https://man.freebsd.org/cgi/man.cgi?signal)
+
+以上为语言/平台规则依据，不是特定编译器、SDK 或转换结果的验证记录；目标为具体版本/文件系统时须核对对应文档。**路径与文件系统的行为结论须由获批隔离环境中匹配的驱动经第三方平台实际运行后回填**；`READY`/快照不证明隔离，也不证明行为等价。
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

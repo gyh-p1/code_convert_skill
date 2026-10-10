@@ -1,4 +1,4 @@
-﻿---
+---
 name: c-to-python
 description: Use when converting C source code (ISO C11) to Python (CPython 3.12) while preserving observable behavior; covers pointer/ownership to object model, fixed-width to arbitrary-precision integers, char*/bytes/str boundaries, and error codes to exceptions. Not for Python to C or other language pairs.
 ---
@@ -182,3 +182,13 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 1. **模型自审边界**：转换生成的 Python 代码应核对位掩码截断是否存在、异常捕获是否对齐、`bytes` 与 `str` 是否混用。该项自审为模型自评，不得标记为语法通过。
 2. **证据状态声明**：本项目当前无 Python 目标构建与功能验收证据，状态严格保持为 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`，不宣称转换等价。
+
+---
+
+## 六、转换与验证边界
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
+
+先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。

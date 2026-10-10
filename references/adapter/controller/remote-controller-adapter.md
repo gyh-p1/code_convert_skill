@@ -13,8 +13,8 @@
 
 | 角色 | 地址 | 说明 |
 |---|---|---|
-| Controller（FastAPI HTTP API） | `http://192.168.101.250:8443` | 接收 job、编排 VM Agent、回传证据；2026-10-09 复核 `/api/health` 返回 200、`ready=true`、comparison.preset=noise-tolerant-v1 |
-| 本机（开发/提交端） | `192.168.101.101` | 与 Controller 同 `192.168.101.0/24` 段，**可直达 8443**，无需 SSH 隧道 |
+| Controller（FastAPI HTTP API） | `http://127.0.0.1:8443`（Controller 本机回环） | 接收 job、编排 VM Agent、回传证据；2026-10-09 复核 `/api/health` 返回 200、`ready=true`、comparison.preset=noise-tolerant-v1。跨机位仍可经 `http://192.168.101.250:8443` |
+| 提交端（转换 Agent 工作区） | 与 Controller **同机** | 经回环直达 8443，不设隧道；**同机不代表隔离**（宿主可连公网），样本执行与网络隔离仍只在 VM Agent，见下《同机共处的边界》 |
 | VM Agent（三个现役 runner） | 由 Controller 按 `runnerId` 编排 | 提交方**不直连** Agent |
 
 **现役 runner 速查（2026-10-09 由 `GET /api/runners` 复核；完整说明见 [Runner 能力矩阵](runner-capability-matrix.md)）**：
@@ -29,19 +29,19 @@
 
 > 提交前用 `GET /api/runners` 复核 `supportedLanguages`、`lifecycleState`、`baselineSnapshot`、`contaminated`；不要引用其它文档里的历史 runner 清单。
 
-- **首选：直连 HTTP 8443**。本机与 Controller 同网段时，所有 `POST /api/jobs`、轮询、取证据均直接走 HTTP。
-- **回退：SSH 端口转发**。若本机不在同段（无法直达 8443），用 `ssh -L 8443:127.0.0.1:8443 Administrator@192.168.101.250` 建隧道后按同样契约连本地 `http://127.0.0.1:8443`。SSH 私钥只在操作者本机 `~/.ssh`，永不入库/入 zip/入 VM 配置/入日志。
+- **现役：回环直连**。提交端与 Controller 同机，一律走 `http://127.0.0.1:8443`；`POST /api/jobs`、轮询、取证据均经回环完成。
+- **其他机位的回退**：提交端不在 Controller 本机时，跨网段经 `http://192.168.101.250:8443` 直连；同机上的 `ssh -L 8443:127.0.0.1:8443 <self>` 是自转发、**不成立**，不得使用。SSH 私钥只在操作者本机 `~/.ssh`，永不入库/入 zip/入 VM 配置/入日志。
 - **提交门槛**：已确认的任务/批次授权可复用，到评估步骤逐项核对实际 runner、入口、工具链和隔离后直接提交；历史 READY/健康记录不等于当前可达或已隔离。实际环境故障凭返回诊断归因并在恢复后重提，不改用本机编译或在边界外运行样本。
 
 ## API 契约
 
-**提交前消费者的引用核对**：Agent 调用 `POST /api/jobs` 前，先按[分类结果准入](../../workflow/classifier-agent-gate.md)确认准入判定为 `ALLOWED`、提交内容与被分类输入的身份/哈希一致、独立授权/隔离记录齐备，并持久化逐项记录和提交尝试。当前 1.0.26 不接收或校验分类 JSON、批次授权引用；不要自造 multipart 字段或把分类器的 executionApproved 当作服务器许可。这是 Agent 暂行接入，现有 API 和部署保持不变。
+**提交前消费者的引用核对**：Agent 调用 `POST /api/jobs` 前，先按[分类结果准入](../../workflow/classifier-agent-gate.md)确认准入判定为 `ALLOWED`、提交内容与被分类输入的身份/哈希一致、独立授权/隔离记录齐备，并持久化逐项记录和提交尝试。**`classification` 与 `batchAuthorization` 两个表单字段是提交契约的固定组成，每次提交一律随附**（单文件任务按"批次为一"附最小 `batch-authorization.json`，见[分类结果准入 §3](../../workflow/classifier-agent-gate.md)）。**2026-10-10 起平台已实现服务端硬门禁**（[Spec05](../../../docs/stages/stage1/specs/submission-and-batch-authorization.md) / [接入记录](../../../docs/stages/stage1/reports/平台提交端准入闭环接入-2026-10-10.md)）：最新版 Controller 重新部署后服务端强制校验，未准入直接 **403**（body 含 `blockingReason`）；重新部署前的现役 1.0.26 会**忽略**这两个多出的字段、不报错，因此一律随附既安全、又免去判断"门禁是否已生效"。不要把分类器的 `executionApproved` 当作服务器许可；身份/哈希核对与逐项留证仍由 Agent 执行。
 
 | 方法 | 路径 | 作用 |
 |---|---|---|
 | `GET` | `/api/health` | 服务/组件版本、contractSetHash、ready 与服务器 comparison 配置；字段形状见[比较策略适配 §1](comparison-policy-adapter.md#1-区分服务器配置与任务输入) |
 | `GET` | `/api/runners` | 当前 runner、工具链登记、快照与生命周期；不构成网络隔离证明 |
-| `POST` | `/api/jobs` | multipart 提交 job：`file=<capsule.zip>`、`caseId`、`targetOs`、`targetLang`。返回 `202 {jobId, jobStatus:"QUEUED"}` |
+| `POST` | `/api/jobs` | multipart 提交 job：`file=<capsule.zip>`、`caseId`、`targetOs`、`targetLang`；**必附** `classification`、`batchAuthorization`（JSON 串，每次提交都附；重新部署后服务端强制校验，之前被忽略），未准入返回 `403 {detail:{blockingReason,…}}`。返回 `202 {jobId, jobStatus:"QUEUED"}` |
 | `GET` | `/api/jobs/{jobId}` | 轮询状态，直到终态：`COMPLETED` / `FAILED_COMPILE` / `FAILED_RUNTIME` / `TIMEOUT` / `INFRA_ERROR` |
 | `GET` | `/api/jobs/{jobId}/report` | 结构化评估报告（InputProfile 1.0 对应 schema 3.0；不能假设所有任务均同一报告版本） |
 | `GET` | `/api/jobs/{jobId}/report.md` | 人读报告 |
@@ -100,6 +100,7 @@ capsule.zip
     └── ...
 ```
 
+- **`source/`、`target/` 必须携带冻结构建命令消耗的每个文件**（声明的翻译单元 + 同目录伴随头/源），不是只带主文件；缺伴随文件导致的构建错误是**打包缺口**，按[构建前提 §0.1](../../workflow/build-prerequisites.md)补齐组装后重测，不作源侧判定（2026-10-09 D2-025 实证）。
 - **`comparison_manifest.json`** 关键字段（Controller `validate_comparison_identity` 逐项校验）：`caseId`（与 POST 表单 `caseId` 一致）、`source`/`target` 各自的 `os`、`arch`、`artifactLanguage`、`runCommand`、`buildCommand`。双侧 os/arch/language 必须能被 `resolve_runner_assignments` 匹配到 READY 的 runner。
 - **Windows Winsock 构建命令预检**：源侧和目标侧分别检查是否调用 Winsock API；使用 MinGW-w64/UCRT64 的 `gcc`/`g++` 时，若依赖 `WSAStartup`、`socket`、`sendto` 等符号，须在对应构建命令的目标文件之后显式链接 `-lws2_32`。源码中的 MSVC `#pragma comment(lib, "ws2_32.lib")` 不能替代该链接参数。其他编译器按其工具链语法冻结对应库名。
 - **评估移交预检**：参考[功能保持与第三方评估指导](../../workflow/behavior-preservation-contract.md)，按已确认任务与当前 Controller 契约移交行为目标、可接受差异和精确/结构/语义比较需求；本仓库不新增比较器或验收标准。核对平台实际支持的用例/维度/策略；若不能表达允许差异或只能观察 output 而任务需其他维度，记录缺口并请求平台调整/用户确认，不静默降级或声称功能 PASS。双侧初始状态与恢复/清理由平台在执行环境中保证，Agent 核对可取得证据。策略与任务不符时保留平台原判定并请求重评，不自行将 FAIL 改 PASS；驱动/输入/比较配置变更另冻条件并重新取证。
@@ -117,41 +118,51 @@ PowerShell 5.1 无 `Invoke-RestMethod -Form`；用 `curl.exe -F` 做 multipart�
 
 ```powershell
 # 0) 只读取证，保存服务器比较配置与 runner；同时按安全边界逐例核对授权/隔离
-curl.exe --fail -sS "http://192.168.101.250:8443/api/health" -o controller-health-before.json
-curl.exe --fail -sS "http://192.168.101.250:8443/api/runners" -o runners-before.json
+curl.exe --fail -sS "http://127.0.0.1:8443/api/health" -o controller-health-before.json
+curl.exe --fail -sS "http://127.0.0.1:8443/api/runners" -o runners-before.json
 # 核对 ready、comparison、契约与本次任务策略；配置不适用时先处理受影响项
 
 # 1) 打包（先清 __pycache__）
 Compress-Archive -Path source,target,comparison_manifest.json,input_profile.json,metadata.json -DestinationPath capsule.zip -Force
 
 # 2) 提交 → 202 {jobId, jobStatus}
-curl.exe -sS -X POST "http://192.168.101.250:8443/api/jobs" `
+#    每次提交**必附**两份已准备好的 JSON（重新部署后服务端强制，之前被忽略）：
+#    - classification：本项（单个 taskId）的分类器输出行——从该项 01-frozen 的
+#      classification-1.json 中取出**对应这一 taskId 的那一个对象**（不是整个数组），
+#      其 id/dir/case、details.files[].sha256 必须与本 capsule 的源文件一致；
+#    - batchAuthorization：本批人工签署的 batch-authorization.json（Spec05 §2）；
+#      **单文件任务按"批次为一"附一份覆盖该单项的最小 batch-authorization.json**。
+#    curl 的 `=<文件名` 形态把文件内容作为该表单字段的文本值发送。
+#    未准入时返回 403 {detail:{blockingReason,...}}，据原因修复，不手改 JSON 绕过。
+curl.exe -sS -X POST "http://127.0.0.1:8443/api/jobs" `
   -F "file=@capsule.zip;type=application/zip" `
   -F "caseId=<frozen-task-id>" `
   -F "targetOs=windows" `
-  -F "targetLang=cpp"
+  -F "targetLang=cpp" `
+  -F "classification=<this-task-classification.json" `
+  -F "batchAuthorization=<batch-authorization.json"
 
 # 3) 轮询到终态
-curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>"
+curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>"
 
 # 4) 取证据（分别保存到 returned-evidence/）
-curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/report"          # evaluation_report.json
-curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/report.md"       # evaluation_report.md
-curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/evidence/source" # evidence-source.json
-curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/evidence/target" # evidence-target.json
-curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/comparison"      # comparison.json
-curl.exe -sS "http://192.168.101.250:8443/api/jobs/<jobId>/logs"            # controller.log
-curl.exe --fail -sS "http://192.168.101.250:8443/api/health" -o controller-health-after.json
+curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/report"          # evaluation_report.json
+curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/report.md"       # evaluation_report.md
+curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/evidence/source" # evidence-source.json
+curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/evidence/target" # evidence-target.json
+curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/comparison"      # comparison.json
+curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/logs"            # controller.log
+curl.exe --fail -sS "http://127.0.0.1:8443/api/health" -o controller-health-after.json
 ```
 
 ## 回传证据布局与结论回填规则
 
-- 全部真实回传落于该 run 的 `04-evaluation/<job-dir>/returned-evidence/`（`job-id.txt`、`state.json`、`evaluation_report.json`、`evaluation_report.md`、`evidence-source.json`、`evidence-target.json`、`comparison.json`、`controller.log`，以及本次 health/runner 适配留证）。
+- 全部真实回传落于该 run 的 `04-evaluation/<job-dir>/returned-evidence/`（`job-id.txt`、`evaluation_report.json`、`evaluation_report.md`、`evidence-source.json`、`evidence-target.json`、`comparison.json`、`controller.log`，以及本次 health/runner 适配留证）。
 - **结论只从真实回传证据回填**，不得伪造：
   - `syntaxVerdict`：仅据**目标侧** evidence bundle 的 `build.status=completed` 且 `exitCode=0` 判 `PASS`；只有已实际构建且有代码相关非零退出/编译诊断才判 `FAIL`；未构建、跳过、环境/权限/缓存初始化失败、身份不符或证据不足均为 `UNVERIFIED`，不能仅凭 `failed` 状态归因代码。源侧 build 作对照基线，用于区分“源本身编不过”与“转换引入”。
   - `thirdPartyCompileStatus`：`THIRD-PARTY-COMPILE-PASSED` / `FAILED_COMPILE` / 未提交时 `AWAITING-THIRD-PARTY-COMPILE`。
   - `executionApproved`：复用已有授权并逐例通过隔离核对，本次 capsule 被获批 Controller 接收且取得回执后置 `true`；接收回执本身不创建运行授权，证据未返回时编译/行为仍为 `UNVERIFIED`。
-  - `behaviorVerdict`：Controller `comparison` 的结果仅按已冻结的行为 oracle 与实际观察范围解释；本编译质量阶段不计入功能率、不外推等价。
+  - `behaviorVerdict`：**后续默认收集双侧执行与行为一致性证据**——每个 dual-build 都取回源/目标两侧的 `execution` 与 `comparison`，按已冻结的行为 oracle 与实际观察范围解释一致/差异，并给出该 oracle 覆盖内的行为结论；无冻结 oracle、平台未观察到对应维度或证据不足时写 `UNVERIFIED`。始终分层（build / execution / comparison 分开），不合成单一功能率、不外推普遍等价、不以编译或自审推断功能。
 - **消噪证据**：按[比较策略适配 §4–5](comparison-policy-adapter.md#4-次要差异容忍与结果解释)保存平台原 `semantic_pass`、minor diff、原始观察及实际配置；job COMPLETED 不等于代码通过，semantic_pass 不等于 build PASS，配置不适用不自动进入模型修复。
 - **功能反馈移交**：行为 FAIL/不一致可按[闭环 §3.1](../../workflow/conversion-evaluation-loop.md#31-语法与功能修复反馈分支)进入模型功能修复，但先核对 `report`、双侧 `evidence` 与 `comparison` 的版本身份、输入/状态、预期/实际观察及已接受差异。仅有总 verdict 或缺可定位反例时记待补证据，不假设平台已有字段，也不据此盲修；接口不足向平台反馈。修订后提交新目标版本并取新 job 证据，旧报告不回改，本机不执行比较。
 - 自审放行统一按[闭环 §2、§4.1](../../workflow/conversion-evaluation-loop.md)核对原始审阅、追加裁决和剩余阻断项，不以 `NO-REPAIR-IDENTIFIED` 标签单独决定提交；内部预检**不是语法结论**，授权、隔离与评估就绪仍须分别满足。
@@ -159,6 +170,14 @@ curl.exe --fail -sS "http://192.168.101.250:8443/api/health" -o controller-healt
 ## 身份哈希故障分流
 
 若 Controller 报 `baselineReference artifactHash does not match uploaded artifact`，先核对提交包和 runner 对相对路径的排序/大小写处理，以及原始 Controller 与 Agent 日志。无 source/target build evidence 时两侧均不能判为编译失败；源侧未落证据不证明故障发生在源→目标交接。任何本地修订或测试记录都不能代替目标 runner 的部署状态核验，也不能倒填到该次原始报告。
+
+## 同机共处的边界
+
+提交端（转换 Agent 工作区）与评判端（Controller）现同处一台远端宿主，**宿主本身可连公网**；样本的编译/运行仍只在 VM Agent 内进行，网络隔离由 VM 层施加，**不由这台宿主提供**。因此：
+
+- 该宿主上的 Agent **不得读取、写入、枚举或修改** Controller 安装目录及其 `jobs/`（`D:\CodeConvertRemote\Stack\`）——不借同机便利直接查看/改动 job 存储、证据或比较中间件。评判端与被评估端的物理共处**不改变**两者的授权边界。
+- 同机**不构成隔离证明**：宿主可连公网，`READY`/`clean`/快照回滚仍不等于网络已隔离；回环可达 Controller 也不等于样本已与公网断开。
+- 双角色共用宿主资源；该宿主**不承载**样本的编译/运行，样本执行与网络隔离仍只在 VM Agent 内，按本页《安全边界》与[安全边界](../../framework/safety-boundary.md)逐例核对。
 
 ## 安全边界
 

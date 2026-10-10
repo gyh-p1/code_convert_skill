@@ -22,3 +22,13 @@ Thumbs.db
 
 # 本地一次性静态盘点辅助脚本，不随 Skill 分发
 /audit_clean.ps1
+
+# 分类器/转换过程中的一次性暂存（用完即清，禁止入库）
+# 依据：references/workflow/classifier-agent-gate.md 与 AGENTS.md 执行约束 §1（唯一许可脚本在获准临时目录调用、用完即清）
+.tmp-classify-*/
+tmp-*/
+/tmp-*
+
+# Python 字节码缓存，禁止入库（AGENTS.md 执行约束：打包前清理 __pycache__/*.pyc）
+__pycache__/
+*.pyc

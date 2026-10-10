@@ -35,3 +35,7 @@ MSVC CRT 文档说明 `_beginthreadex` 的入口/返回类型、失败值与返�
 
 - Microsoft Learn, [`_beginthread`, `_beginthreadex`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/beginthread-beginthreadex?view=msvc-170)
 - The Open Group, [`pthread_create`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_create.html) 与 [`pthread_join`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_join.html)
+
+---
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

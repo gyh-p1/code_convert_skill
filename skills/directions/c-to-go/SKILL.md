@@ -1,4 +1,4 @@
-﻿---
+---
 name: c-to-go
 description: Use when converting C source code (ISO C11) to Go (Go 1.27) while preserving observable behavior; covers pointer arithmetic/aliasing, integer width/overflow, errno/returns to error, slices/arrays, defer, and missing preprocessor. Not for Go to C or other language pairs.
 ---
@@ -194,3 +194,13 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 1. **模型自检重点**：核对切片边界检查是否完善、循环内 `defer` 是否被正确剥离至子函数、常量溢出是否在编译前消除。该自检属于模型自评，严禁作为编译通过证据。
 2. **证据状态声明**：当前 C→Go 方向处于 `未验证/阻断` 状态（RC4 历史用例两端未构建），在补丁 `7d77158` 部署并取得第三方构建证据前，一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`。
+
+---
+
+## 六、转换与验证边界
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
+
+先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。

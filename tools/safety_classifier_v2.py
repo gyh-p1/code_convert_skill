@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-"""Static review triage, v2.3 with tiered admission policy (Spec 04).
+"""Static review triage, v2.4 with tiered admission policy (Spec 04).
 
 Reads text only; implements "block only highest-risk" instead of "executable=False for all".
 Classification determines ALLOWED vs BLOCKED based on VM isolation capabilities.
+
+v2.4 change over v2.3:
+  * Hostname heuristic no longer promotes a bare file-name literal (e.g.
+    `"demo.txt"`) to a network target just because a weak context word such as
+    the variable name `target` is on the same line. A QUOTED_HOST value that is
+    a known file extension and has no real network API in context is treated as
+    a path. Real hosts (with a network API like Dial/connect on the line) and
+    hard-coded IPs are unaffected. Fixes dataset-2 D2-055 false positive.
 
 v2.3 changes over v2.2, all required by docs/stages/stage1/specs/tiered-admission-policy.md:
   * Input paths are resolved against the manifest's own directory, not the repository
@@ -28,7 +36,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-VERSION = "2.3"
+VERSION = "2.4"
 MAX_BYTES = 2 * 1024 * 1024
 MAX_FILES = 128
 SOURCE_EXTENSIONS = {".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".cs",
@@ -107,6 +115,26 @@ URL_USERINFO = re.compile(r"://[^/\s@'\"]*@")
 def url_host(value: str) -> str:
     """Return the host part of a URL match, dropping any userinfo component."""
     return URL_USERINFO.sub("://", value, count=1)
+
+
+# Bare file-name literals (data/config/log/source files) share the
+# `label.label` shape of a DNS name, so QUOTED_HOST matches e.g. "demo.txt".
+# These extensions are file suffixes, never meaningful network hosts; a value
+# ending in one is treated as a path, not a target, UNLESS the surrounding line
+# shows a real network API (see analyze_behavior).
+FILENAME_EXTENSIONS = {
+    "txt", "text", "json", "yaml", "yml", "xml", "csv", "tsv", "log", "bak",
+    "tmp", "ini", "cfg", "conf", "dat", "lock", "md", "pdf", "html", "htm",
+    "py", "rb", "go", "cs", "cpp", "c", "h", "js", "ts", "ps1", "psm1",
+}
+
+
+def _looks_like_filename(value: str) -> bool:
+    """True when a QUOTED_HOST literal is really a file name, not a hostname."""
+    if "://" in value or "@" in value or ":" in value:
+        return False
+    _, dot, ext = value.rpartition(".")
+    return bool(dot) and ext.lower() in FILENAME_EXTENSIONS
 
 
 
@@ -276,7 +304,15 @@ class SafetyClassifierV2:
                     line_start = code.rfind("\n", 0, match.start()) + 1
                     line_end = code.find("\n", match.end())
                     context = code[line_start:line_end if line_end >= 0 else len(code)]
-                    if not (COMPILED["network"].search(context) or re.search(
+                    strong_network = bool(COMPILED["network"].search(context))
+                    # A bare filename literal is a path, not a DNS target. Only
+                    # promote it to a network target when the line also shows a
+                    # real network API — otherwise a nearby word such as the
+                    # variable name `target` in `target := filepath.Join(root,
+                    # "demo.txt")` must not make demo.txt a network target.
+                    if _looks_like_filename(value) and not strong_network:
+                        continue
+                    if not (strong_network or re.search(
                             r"\b(?:host|hostname|server|endpoint|url|uri|destination|target)\b", context, re.I)):
                         continue  # e.g. open("result.txt") is not a DNS target
                 line = code.count("\n", 0, match.start()) + 1

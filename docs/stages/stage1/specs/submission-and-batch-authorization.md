@@ -1,8 +1,8 @@
 # Spec 05｜提交端准入消费与批次授权
 
 > 版本：1.0；更新：2026-10-09
-> 状态：**待实现规格**（T01-d、T03-d 可领取）
-> 当前可用路径：用户要求今晚先用[分类结果准入](../../../../references/workflow/classifier-agent-gate.md)，现役部署不改。**分类 `ALLOWED` 即准入通过、允许运行**，Agent 不作主观复核。此页定义后续平台目标，§3.3 旧结果解除阻断的伪代码不可直接用作今晚放行规则；问题与验证见[接入审查](../reports/分类器一致性审查与Agent暂行接入-2026-10-09.md)。
+> 状态：**已实现（2026-10-10）**。平台 `evaluation_core/submission_admission.py` 落地 `prepare_submission()`/`validate_batch_authorization()`，并接成 `POST /api/jobs` 服务端硬门禁（未准入 403，不可绕过）；详见[平台提交端准入闭环接入记录](../reports/平台提交端准入闭环接入-2026-10-10.md)。本机只编辑并跑平台 pytest（新增 20+11 条，三套件 497 passed），真实样本提交与部署在隔离环境。
+> **§3.3 伪代码已按修正逻辑实现**（见该节注记）：平台**不 lift 任何 BLOCKED**、带凭证线索一律拒绝、未知态默认拒绝。
 > 依据：[Spec04 最高危阻断准入策略](tiered-admission-policy.md) §5.2、§5.3
 > 约束：[安全边界](../../../../references/framework/safety-boundary.md) §2 批次授权与逐例核对
 
@@ -95,6 +95,10 @@ Spec04 给出策略与伪代码，本文件给出字段、校验规则、错误�
 任一必填字段缺失、为假或过期 → **拒绝整批提交**，不逐项降级。
 这与 Spec04 §7.1"未配置则整批阻断该类任务"一致：授权是批次级前置条件，不是逐项开关。
 
+### 2.4 单文件任务 = 批次为一（every submission carries authorization）
+
+`classification` 与 `batchAuthorization` 是 `POST /api/jobs` 的**固定必附字段**，**单项提交同样必附**。单文件任务按**"批次为一"**产出一份覆盖该单项的最小 `batch-authorization.json`：同一 schema、同一 §2.2 校验，`batchId` 取该项所属批次 id、`scope` 覆盖该单项——**不再把单项授权只写进冻结记录**。服务端对单项与批量走**同一** `admit_single()` 校验，无单项豁免。
+
 ## 3. 提交端接口 `prepare_submission()`
 
 ### 3.1 签名与输入
@@ -133,6 +137,7 @@ class AllowedTask:
     classification: str    # 主分类
     reviewGroups: list[str]
 
+
 @dataclass
 class BlockedTask:
     taskId: str
@@ -141,7 +146,11 @@ class BlockedTask:
     blockingReason: str    # input_error | public_network_unverified | real_credential_suspected | missing_classification
 ```
 
+> **`admissionStatus="APPROVED"` 是提交计划层（SubmissionPlan）字段**，表示"本次提交准备已通过"，与分类器输出的 `admissionStatus="ALLOWED"` 是**不同对象、不同层**：ALLOWED 来自分类器读源码，APPROVED 来自提交端消费"分类 + 授权"的结果。两者都不表示已运行或已通过（见 [分类结果准入 §4](../../../../references/workflow/classifier-agent-gate.md)）。
+
 ### 3.3 判定顺序（按 Spec04 §5.1）
+
+> ⚠ **下面这段伪代码是 Spec04 的原始形态，有缺陷、已被平台实现取代，仅作存档对照**；实际落地逻辑以本节末「实现修正（2026-10-10，已落地）」为准，**不要照抄本伪代码**。
 
 ```python
 # 前置：批次授权必须整体有效
@@ -166,6 +175,14 @@ for task in batch.tasks:
 **顺序不可交换**：规则1→2→3 短路，与分类器一致。同时命中"公网未隔离"与"疑似凭证"时
 报 `public_network_unverified`，让审查者先修隔离。
 
+> **⚠ 实现修正（2026-10-10，已落地）**：上面这段伪代码有缺陷——`configured=true` 时它跳过规则2，若主 `blockingReason=public_network_unverified` 又非 credential，会落入 `else: allowed`，**漏掉同时命中的凭证线索**；`else` 也不拒绝未知状态。平台 `submission_admission.admit_task()` **不照此实现**，而是：
+> 1. **不 lift 任何 BLOCKED**：`admissionStatus!=ALLOWED` 或 `blockingReason!=null` 一律阻断（原因取分类器给的 `blockingReason`，缺失记 `unknown_status`）。公网阻断的解除**只能靠重新分类**产出新的 ALLOWED（§3.4），不在提交端翻案。
+> 2. **凭证纵深**：任一 `details.files[].credentialFindings` 非空即阻断 `real_credential_suspected`，即便状态被误置 ALLOWED。
+> 3. **身份/哈希绑定**：提交内容的源文件 sha256 必须与分类输入一致，否则 `identity_mismatch`；分类器 SHA 必须在许可集合，否则 `untrusted_classifier`。
+> 4. **隔离假设一致（仅公网目标）**：带**公网/hostname** 网络目标（`details.files[].network_targets[].scope ∈ {public,hostname}`）的 ALLOWED 项，批次授权必须 `networkIsolation.configured=true`，否则 `public_network_unverified`。**private/loopback 不设此门**——准则是"证明危险才阻断"，敏感/副作用/私网代码默认 ALLOWED，安全由 VM 隔离兜底（见 [tiered-admission-policy.md](tiered-admission-policy.md) 二元 3 规则）。
+>
+> 因此 §4 **用例4 重解释**为「**重新分类后得到 ALLOWED**（requiresNetworkIsolation 仍 true）+ 授权 configured 且证据齐全 → allowed」，并新增负向回归「**BLOCKED/public + configured 授权 → 仍 blocked**（不 lift）」。两条均有回归：`test_submission_admission.py::test_case4_...` 与 `test_bypass_blocked_public_with_configured_isolation_is_still_blocked`。
+
 ### 3.4 关键行为约束
 
 | 约束 | 理由 |
@@ -185,7 +202,7 @@ for task in batch.tasks:
 | 1 | 全批 ALLOWED + 有效授权 | 全部 allowed，`allowedRate=100%` |
 | 2 | 含 `input_error` 项 | 该项 blocked/`input_error`，其余不受影响 |
 | 3 | 含 `public_network_unverified`，授权 `configured=false` | 该项 blocked/`public_network_unverified` |
-| 4 | 同上，但授权 `configured=true` 且证据齐全 | 该项 allowed（规则2 解除） |
+| 4 | 重新分类后得到 ALLOWED（`requiresNetworkIsolation` 仍 true）+ 授权 `configured=true` 且证据齐全 | 该项 allowed（**不是在提交端 lift 旧 BLOCKED，而是凭新的 ALLOWED 分类**，见 §3.3 实现修正） |
 | 5 | 含 `real_credential_suspected` | 该项 blocked；**即使授权隔离也不放行** |
 | 6 | 同一项同时公网未隔离 + 疑似凭证 | blocked 原因为 `public_network_unverified`（顺序） |
 | 7 | 分类结果缺某个 taskId | 该项 blocked/`missing_classification`，不静默跳过 |
@@ -204,6 +221,7 @@ for task in batch.tasks:
 - 分类器的 `--network-isolation-configured` 只影响**分类输出**，不改写证据；
   提交端仍须独立校验 `batch-authorization.json`。两者不可互相替代。
 - 提交端在评估平台侧实现，位于剥离清单（Spec03 §5）中的评估栈内，不放进转换 Skill 仓库。
+  **已实现于** `packages/evaluation-core/evaluation_core/submission_admission.py`（`prepare_submission`/`admit_single`/`validate_batch_authorization` + 数据模型），门禁接线在 `apps/remote-controller/.../services/job_service.py::_enforce_admission_gate`，端点 `app/api/jobs.py` 增 `classification`/`batchAuthorization` 两个必需表单字段。§2.2 字段校验为**代码内校验**（即 `validate_batch_authorization` 本身），不另立无消费方的 JSON schema。
 
 ## 6. 已知限制
 

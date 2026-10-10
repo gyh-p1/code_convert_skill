@@ -1,7 +1,7 @@
 # Spec 04｜最高危阻断准入策略
 
 > 版本：2.1；更新：2026-10-09
-> 状态：**已实施**（分类器 v2.3；三条规则落地，隔离开关可由 CLI 配置）
+> 状态：**已实施**（分类器 v2.3 起实现、**现役钉 v2.4**；三条规则落地，隔离开关可由 CLI 配置）。提交端硬门禁许可的分类器 SHA 默认钉 v2.4（见 [Spec05 §5](submission-and-batch-authorization.md) 与 [C5](../../stage3/specs/C5-classifier-false-positive.md)）；下文 §6 的实测表是 **v2.3 时点**的历史测量，口径保留不改写。
 > 依据：[安全边界](../../../../references/framework/safety-boundary.md) 第2节批次授权与逐例核对
 > 实施记录：[最高危阻断策略修订与六批复跑](../reports/最高危阻断策略修订与六批复跑.md)
 
@@ -132,7 +132,7 @@ class ClassificationResult:
     reviewGroups: List[str]
 ```
 
-**判定逻辑**（v2.3 已实现，见 `_determine_admission`）：
+**判定逻辑**（v2.3 起实现、现役 v2.4，逻辑一致，见 `_determine_admission`）：
 
 ```python
 def determine_admission(classification, details, network_scope, review_groups):

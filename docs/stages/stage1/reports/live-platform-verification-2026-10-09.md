@@ -168,3 +168,7 @@ Windows Agent 的 HTTP 无响应与 Controller 报出的 `CONTRACT_MISMATCH` 是
 2. **Windows Agent 的 `/health` 为何无响应体？** 需在其 VM 内查看服务状态与日志
    （需该 VM 的 SSH 授权或 Controller 管理通道）。
 3. **是否先做契约对齐**，还是直接把三方一起升级到某个统一发布？
+
+---
+
+> **2026-10-10 追加批注（不改写以上原始记录）**：以上记录的提交端机位（`192.168.101.101`，与 Controller 同 `192.168.101.0/24` 段、经 SSH/直连）是 2026-10-09 核查时点的事实。此后转换流程迁至远端宿主，提交端（转换 Agent 工作区）与 Controller 同处一机，现改走回环 `http://127.0.0.1:8443`；样本执行与网络隔离仍只在 VM Agent 内，宿主本身可连公网、同机不构成隔离证明。现役连接坐标与同机边界以[Controller 适配](../../../../references/adapter/controller/remote-controller-adapter.md)和[安全边界](../../../../references/framework/safety-boundary.md)为准。本节仅追加说明，上方原始核查结论保持不动。

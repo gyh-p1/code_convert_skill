@@ -1,4 +1,4 @@
-﻿---
+---
 name: cpp-to-c
 description: Use when converting C++ source code (ISO C++17) to C (ISO C11) while preserving observable behavior; covers semantic downgrades including RAII to manual cleanup, exceptions to error codes, classes/virtual dispatch to structs, and template monomorphization. Not for C to C++ or other language pairs.
 ---
@@ -208,3 +208,13 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 
 1. **模型自检性质**：转换模型生成的 C11 代码必须做一次内部静态核查，清点所有函数分支是否均已显式闭合资源释放路径、错误码是否逐层向上传递。该自检是**模型自评**，严禁标记为编译通过或语法无误。
 2. **语法与行为结论分离**：因当前方向处于 `未验证/阻断` 状态，任何生成的 C 代码在未经独立第三方工具链真实编译之前，一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；绝对不宣称转换成功或行为等价。
+
+---
+
+## 六、转换与验证边界
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
+
+先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。

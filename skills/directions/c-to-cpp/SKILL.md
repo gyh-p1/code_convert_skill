@@ -1,4 +1,4 @@
-﻿---
+---
 name: c-to-cpp
 description: Use when converting C source code (ISO C11) to C++ (ISO C++17) while preserving observable behavior; covers semantic boundaries, RAII/exception boundaries, and container/concurrency mapping. Not for C++ to C or other language pairs.
 ---
@@ -236,4 +236,14 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 1. **模型自检与预检**：转换模型生成的代码仅作内部自审，用于筛查声明遗漏、语法冲突与生命周期疑点。模型说“无问题”不等于无缺陷，严禁给模型自检贴上 `syntaxPassed` 或编译通过标签。
 2. **语法结论来源**：语法结论必须由第三方评估机构在目标 MinGW g++ C++17（或批准的工具链）下执行真实编译后回填；未收到结果前一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`。
-3. **功能行为边界**：编译通过绝对不代表功能正确，功能验收必须依据独立的可观察 oracle 判定。
+3. **功能行为边界**：编译通过绝对不代表功能正确。**功能结论只在任务约定的可观察范围内成立**：需要功能评估的任务，其验收依据是该项冻结的 oracle 与匹配驱动经过第三方平台实际运行后的回传证据；**oracle 是条件义务，不是每项都要造**——无运行入口的库翻译单元按契约补最小中性驱动即可，**不得为凑 oracle 而编造源程序本来没有的行为**。未被观察的维度如实记 `UNVERIFIED`，不外推为普遍等价。
+
+---
+
+## 六、转换与验证边界
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
+
+先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。

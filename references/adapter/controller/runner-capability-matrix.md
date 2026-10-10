@@ -72,7 +72,7 @@
 
 ## 3. 已被本页取代的旧描述（不得再引用）
 
-- 本仓库旧版 `remote-controller-adapter.md`（2026-09-28）只列两个 agent、快照 `CC-Eval-*-8Lang-R7`、控制器 `192.168.101.250`（该地址仍正确）与 VC 名称 `windows-eval`/`linux-eval`；runner 能力与快照身份已过时。
+- 本仓库旧版 `remote-controller-adapter.md`（2026-09-28）只列两个 agent、快照 `CC-Eval-*-8Lang-R7`、控制器 `192.168.101.250`（该地址跨机位仍可达；现役提交端与 Controller 同机、走回环 `http://127.0.0.1:8443`，见 §4）与 VC 名称 `windows-eval`/`linux-eval`；runner 能力与快照身份已过时。
 - 旧仓库工作副本 `apps/remote-controller/remote_host_controller/configs/vm_profiles.yaml` 写的 `linux.enabled=false`、`macos.enabled=false`、`linux` 仅四语言、macOS `supports_snapshot_rollback:false`、快照 `CC-WinEval-RC2`，均与现役部署不符；该文件是平台侧开发工作副本，不是本项目的能力真源。
 - 任何"Linux 不支持 PowerShell/.NET"、"macOS 不支持快照回滚"、"Ruby 无 runner"的表述都已作废。
 
@@ -80,8 +80,8 @@
 
 | 角色 | 地址 |
 |---|---|
-| Controller HTTP API | `http://192.168.101.250:8443` |
-| 本机提交端 | `192.168.101.101`（与 Controller 同 `192.168.101.0/24` 段，实测 HTTP 200 直达） |
+| Controller HTTP API | `http://127.0.0.1:8443`（Controller 本机回环；跨机位仍可 `http://192.168.101.250:8443`） |
+| 提交端 | 与 Controller 同机（转换 Agent 工作区），经回环提交；同机不代表隔离（宿主可连公网），样本执行仍只在 VM Agent |
 | 各 VM Agent | 由 Controller 按 runnerId 编排，提交方不直连 Agent |
 
 健康检查：`GET /api/health`（实测 200，`ready=true`）。只有 runner `ready=true` 且 `contaminated=false` 才接受新任务；当前三者均满足。

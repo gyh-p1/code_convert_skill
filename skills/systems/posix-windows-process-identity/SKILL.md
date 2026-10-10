@@ -87,4 +87,4 @@ description: Use as the source-OS -> target-OS layer when source code starts chi
 - Microsoft Learn：[`ShellExecuteW`](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew) 与 [`_popen`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/popen-wpopen)：shell 关联与 CRT 管道语义（与 POSIX `system`/`popen` 不同）。
 - Microsoft Learn：[`SetConsoleCtrlHandler`](https://learn.microsoft.com/en-us/windows/console/setconsolectrlhandler)、[`GenerateConsoleCtrlEvent`](https://learn.microsoft.com/en-us/windows/console/generateconsolectrlevent)：控制台信号处理与进程组限制。
 
-以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。本 Skill 未经本项目转换样例验证。同时遵守根入口和[安全边界](../../../references/framework/safety-boundary.md)。
+以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。本 Skill 未经本项目转换样例验证。同时遵守根入口和[安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

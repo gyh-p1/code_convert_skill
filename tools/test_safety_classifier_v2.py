@@ -143,6 +143,32 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertTrue(any(t["scope"] == "public" and t["provenance"] == "literal"
                             for t in result.details["files"][0]["network_targets"]))
 
+    # --- v2.4 hostname false-positive (C5, D2-055) ------------------------------------
+
+    def test_filename_literal_in_path_context_is_not_a_network_target(self):
+        # D2-055: `filepath.Join(root, "demo.txt")` — a bare file name must not be
+        # promoted to a DNS target by the nearby variable word `target`.
+        result = self.classify('target := filepath.Join(root, "demo.txt")', ".go")
+        self.assertNotEqual(result.classification, "REVIEW_NETWORK")
+        self.assertAllowed(result)
+        targets = result.details["files"][0].get("network_targets", [])
+        self.assertNotIn("demo.txt", [t["value"] for t in targets])
+
+    def test_real_hostname_with_network_api_is_still_a_target(self):
+        # Reverse regression (anti over-correction): a real external host consumed by a
+        # network API stays a target and blocked without isolation.
+        result = self.classify('conn, _ := net.Dial("tcp", "attacker.example.com")', ".go")
+        self.assertEqual(result.classification, "REVIEW_NETWORK")
+        self.assertBlocked(result, "public_network_unverified")
+
+    def test_hardcoded_ip_with_wsaconnect_is_still_a_target(self):
+        # D2-108 regression: hard-coded IP + WSAConnect stays a network target
+        # (10.x is private, so allowed without isolation, but still REVIEW_NETWORK).
+        result = self.classify('const char* a = "10.9.1.6";\nWSAConnect(s, (SOCKADDR*)&sa, len, 0, 0, 0, 0);', ".cpp")
+        self.assertEqual(result.classification, "REVIEW_NETWORK")
+        targets = result.details["files"][0]["network_targets"]
+        self.assertIn("10.9.1.6", [t["value"] for t in targets])
+
     def test_dynamic_network_remains_unresolved(self):
         result = self.classify("socket.connect((args.host, args.port))")
         self.assertEqual(result.details["files"][0]["network_mode"], "unresolved")

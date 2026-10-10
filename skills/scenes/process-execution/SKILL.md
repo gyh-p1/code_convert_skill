@@ -84,3 +84,7 @@ fmt.Println(json)
 - [Go `os/exec`](https://pkg.go.dev/os/exec)：`Cmd`、`WaitDelay`、`StdoutPipe`/`StderrPipe` 与进程回收边界。
 - [POSIX `posix_spawn`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/posix_spawn.html)、[`waitpid`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/waitpid.html)：启动、状态宏与等待语义。
 - [Microsoft `CreateProcessW`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw)、[`WaitForSingleObject`](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject)：Windows 进程创建、句柄与等待语义。
+
+---
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。

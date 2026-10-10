@@ -1,4 +1,4 @@
-﻿---
+---
 name: python-to-go
 description: Use when converting Python source code (CPython 3.12) to Go (Go 1.27) while preserving observable behavior; covers negative indices/slice bounds, exceptions to (T, error), dynamic types to interfaces, generators, and mutable aliasing/concurrency boundaries. Not for Go to Python or other language pairs.
 ---
@@ -139,3 +139,13 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 1. **模型自检范围**：模型转换完成后核对切片负索引是否全部换算、生成器是否具有生命周期退出保护、共享 map 是否加锁。该自检属于模型自评，严禁充当客观测试依据。
 2. **证据状态声明**：当前 Python→Go 方向无项目目标编译 PASS 证据，状态保持为 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`，不宣称转换成功。
+
+---
+
+## 六、转换与验证边界
+
+> **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
+
+先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。

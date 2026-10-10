@@ -1,4 +1,4 @@
-﻿---
+---
 name: go-to-c
 description: Use when converting Go source code (Go 1.27) to C (ISO C11) while preserving observable behavior; covers goroutines/channels without built-in equivalents, slice triplet & reallocation, interface dynamic types, GC to explicit lifecycle, defer, and error/panic boundaries. Not for C to Go or other language pairs.
 ---
@@ -240,3 +240,11 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
 
 1. **模型自检重点**：核对切片边界检查是否完善、循环内 `defer` 是否被正确剥离至子函数、常量溢出是否在编译前消除。该自检属于模型自评，严禁作为编译通过证据。
 2. **证据状态声明**：当前 Go→C 方向处于 `未验证/阻断` 状态，在未经独立第三方工具链真实编译之前，一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`，绝对不宣称转换成功或行为等价。
+
+---
+
+## 六、转换与验证边界
+
+先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。构建前提与工具链规则见上文第三节末的引用。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
