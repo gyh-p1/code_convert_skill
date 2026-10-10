@@ -20,6 +20,7 @@ metadata:
 ```
 冻结 → 分类(ALLOWED) → 源侧构建预检 → 生成 → 自审
   → 评估就绪核对（安全 + 驱动 + oracle）→ 提交 → 取证 → 先归因再分层报告
+  → 交付完整性/终态门禁（记 DONE/PARTIAL 前）
 ```
 
 1. **分类**：`admissionStatus=ALLOWED` 且 `blockingReason=null`，否则不得预检、不得转换、不得 POST `/api/jobs`。每项都要消费当前分类结果，**不是批次级一次性动作**。
@@ -65,6 +66,8 @@ metadata:
 
    本工作区已授权且需评估的单文件任务默认双侧构建/运行。已有授权与隔离范围内不重复询问是否评估，但仍核对入口、工具链和实际隔离；READY/快照不证明隔离。未冻结的探索稿不能事后冒充正式基线。
 6. **按交付契约收尾**：产出目标文件、中文 `result.md` 与适用的 `evaluator_manifest.json`，长文件另有源码画像。交付完整性、最终版本编译、功能 oracle 三项分别报告；无对应证据为 UNVERIFIED。`executionApproved` 的精确填写规则只维护在[交付与移交契约](references/framework/delivery-handoff-contract.md)；该字段不证明已运行或已通过。安全边界未满足的入口记 RUN_SAFETY_NOT_READY，暂不提交。
+
+   **交付完整性/终态门禁（记 `DONE`/`PARTIAL` 前）**：这是一道收尾相位门禁，与前文"三道硬门禁"（都在提交前）分层——记终态前**机械核对交付物齐备**，缺件不得记终态。形制真源见[交付契约 §2.1.1（单项）/§2.1.2（批次索引）](references/framework/delivery-handoff-contract.md)。**只约束进入过转换的用例**：全套交付物（根级 `target.<ext>`、带功能结论的 `result.md`、`evaluator_manifest.json`[契约要求时]、`job-01-dual-build` 证据）只对已过分类+源侧预检并产出目标的用例要求；非可转换去向（`SOURCE_NOT_BUILDABLE`/`SOURCE_DEPENDENCY_GAP`/`PREPARATION_GAP`/`EXCLUDED`/`DUPLICATE`/`SAFETY_BLOCKED`/`SKIPPED`）只要求适用件（去向+原因、分类如已取、job-00 证据如已跑），缺 target/result/job-01 对它们不算缺档。该门禁只核形制齐备，不合成成功率、不改功能判定。
 
    **批次级两条义务**（整批算**一个**批次，不按条数切分；详见[批量转换工作流](skills/workflows/batch-conversion/SKILL.md)）：① **每新增 40 项到达终态做一次增量对账**，上一轮遗留未决项必须带入下一轮，产出追加式 `reconciliation-<序号>.md`；发现缺档**立即停止新增转换**，先补齐或如实记缺。② 关闭前对全部检查点做一次**终局核对**，仍有 `ACTIVE`/`WAITING`/未处理的 `NOT_STARTED` 时不得记批次 `CLOSED`。
 

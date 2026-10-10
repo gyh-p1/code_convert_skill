@@ -189,7 +189,7 @@ description: Use when one submission contains multiple code conversion tasks. De
 
 **不另设逐项状态文件**：逐项阶段、版本、哈希、用量、回执与终态一律落在该 case 的 `output/<batchId>/`，批次根不复制第二份；`items/<taskId>.json` 只放调度语义（`phase`/`lifecycle`/`pendingAction`/阻断原因/终态），是索引指针而非第二份证据。
 
-记录落于该任务指定的输出区，不要求常驻测试数据目录。批次索引的最小语义集合是 `batch.json`、`items/<task-id>.json`、追加 `events.jsonl` 与 `summary.md`，或同等可追溯格式：原始接入描述、`rawItemId` 去向、派生冻结清单、冻结输入、阶段/版本/哈希、请求身份与用量、提交回执、诊断/evidence 路径、语法/功能修复类型/预算/父版本/反例与重评结果、终态/原因。原始条目去向必须逐个齐全（含 `SKIPPED`/`EXCLUDED` 等未冻结项），不得只列已冻结项。不能把用户原始数据集的路径或内容当作唯一状态；至少要保留能识别接入、冻结关系和恢复边界的元数据。
+记录落于该任务指定的输出区，不要求常驻测试数据目录。批次索引的命名件集合是 `batch.json`、`items/<task-id>.json`、追加 `events.jsonl`、`README.md`（导航件，建索引时即建、保持最新）与 `summary.md`（关闭时须在且定稿），缺任一按[交付契约 §2.1.2](../../../references/framework/delivery-handoff-contract.md#212-批次索引骨架2026-10-09-冻结按-docstestdatasetbatch-01-实测形制) 的批次索引完整性记缺档。"同等可追溯格式"只允许改变**承载格式**（如把 `summary.md` 的分列承载到等价结构化文件），**不允许省掉导航件或整类语义**；无论何种承载，都须覆盖：原始接入描述、`rawItemId` 去向、派生冻结清单、冻结输入、阶段/版本/哈希、请求身份与用量、提交回执、诊断/evidence 路径、语法/功能修复类型/预算/父版本/反例与重评结果、终态/原因。原始条目去向必须逐个齐全（含 `SKIPPED`/`EXCLUDED` 等未冻结项），不得只列已冻结项。不能把用户原始数据集的路径或内容当作唯一状态；至少要保留能识别接入、冻结关系和恢复边界的元数据。
 
 1. 恢复先读原始接入记录、条目去向、冻结清单、单项状态和事件，核对 `intakeId/batchId/taskId` 身份、已完成/进行中/未开始及记录差异。按 §5 分别恢复阶段、调度状态、阻断原因和版本结论；不能仅据一个 DONE/FAIL 标签决定重跑。原始条目暂时不可读时，只有仍能取得冻结快照且契约允许才可继续；否则记准备缺口，不用猜测内容恢复。
 2. 已提交未收尾的项按已保存 jobId 查询，不直接重投。提交可能已接收但回执丢失时，记 `SUBMISSION_UNKNOWN` 并暂停该项提交；恢复证据与出口统一按[Controller 适配“提交结果未知时的恢复”](../../../references/adapter/controller/remote-controller-adapter.md#提交结果未知时的恢复)。不得把本地等待超时或一次查询无结果当作未接收证明。
@@ -213,7 +213,7 @@ description: Use when one submission contains multiple code conversion tasks. De
 | **遗留项必须带进下一次** | 上一轮对账中记为缺档、未登记、无法映射或未解决的项，**必须原样带入下一检查点**，直到解决或在关闭时如实记为未决。**不得**因"已经核过一轮"而翻篇 |
 | **产出** | 在批次索引目录下**追加**一份对账记录 `reconciliation-<序号>.md`（序号从 1 递增），写明确认的范围、双向差集、遗留项及其来源检查点。**只追加，不改写历史记录** |
 | **发现缺档时** | **立即停止新增转换**，先补齐或如实记缺并写清恢复条件；不带着缺口继续推进后面的项 |
-| **交付完整性（终态前门禁）** | 每项记终态前机械核对最终交付物齐备（根级 `target.<ext>`、`result.md`、`evaluator_manifest.json`[契约要求时]、`01-frozen/` 三件套、各 `job-*/returned-evidence/`）；缺件不得记终态。对账时逐项复核此集合，缺 `result.md`/manifest 等按缺档处理（见[交付契约 §2.1.1](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架2026-10-09-冻结按-docstestdataset-实测形制)） |
+| **交付完整性（终态前门禁）** | 每项记终态前机械核对交付物**按去向齐备**，缺件不得记终态。**进入过转换的用例**核全套（根级 `target.<ext>`、`result.md`、`evaluator_manifest.json`[契约要求时]、`01-frozen/` 三件套、各 `job-*/returned-evidence/` 含 `job-01-dual-build`）；**非可转换去向**（`SOURCE_NOT_BUILDABLE`/`SOURCE_DEPENDENCY_GAP`/`PREPARATION_GAP`/`EXCLUDED`/`DUPLICATE`/`SAFETY_BLOCKED`/`SKIPPED`）只核适用件（去向+原因、分类如已取、job-00 如已跑），缺 target/result/job-01 对其不算缺档。**对账时还须核批次索引完整性**：`README.md` 在且最新、`summary.md`（关闭时）在且定稿、`items/` 去向齐、`events.jsonl` 齐。按去向与批次口径见[交付契约 §2.1.1/§2.1.2](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架2026-10-09-冻结按-docstestdataset-实测形制) |
 | **与批次关闭的关系** | 增量对账通过**不等于**批次可关闭；关闭仍须满足 §6 全部条件，并在关闭时对**全部**项做一次**终局核对**（覆盖所有检查点，含历史遗留项） |
 
 **40 这个数不是新拍的**：它与交付基线"单批不少于 40 项"同源，密度适中——比"每项对账"省一个数量级，比"只在关闭时对一次"能早得多暴露漂移。
@@ -247,6 +247,6 @@ description: Use when one submission contains multiple code conversion tasks. De
 
 ## 6. 收尾
 
-逐项清单/终态及事件对账完成后才关闭批次；不得有无声丢失或未解释的重复执行。**关闭前必须做一次终局核对**，覆盖全部检查点（含各轮遗留项），规则见 §4.1。仍有 `ACTIVE`、`WAITING` 或未处理的 `NOT_STARTED` 项时不记批次 `CLOSED`；全部为 `DONE`/`PARTIAL` 且对账完整时可收尾，含 `PARTIAL` 必须标明部分交付。`SUBMISSION_UNKNOWN` 或可能仍在执行/未确认清理的 job 未解决前不能以部分交付关闭批次。汇总至少分列：原始接收条目数、各接入去向数（按 §0 去向表逐项列全，含 `SKIPPED`/`SOURCE_NOT_BUILDABLE`）、实际冻结任务数、各调度状态数量、请求/用量、编译、oracle/行为、安全、方向/OS/战术实际覆盖与未决项，**不合成单一"转换成功率"**。**"单批不少于 40 项"的交付基线看的是本批实际处理条目数与逐项终态记录，不看批次被切成了几段**；队列 `CLOSED` 标签、条目数或大量未评估阻断本身都不能满足该能力验收。
+逐项清单/终态及事件对账完成后才关闭批次；不得有无声丢失或未解释的重复执行。**关闭前必须做一次终局核对**，覆盖全部检查点（含各轮遗留项），规则见 §4.1；该终局核对**含批次索引完整性**——`README.md` 在且最新、`summary.md` 在且定稿、`items/` 去向齐、`events.jsonl` 齐，缺件不得记 `CLOSED`。仍有 `ACTIVE`、`WAITING` 或未处理的 `NOT_STARTED` 项时不记批次 `CLOSED`；全部为 `DONE`/`PARTIAL` 且对账完整时可收尾，含 `PARTIAL` 必须标明部分交付。`SUBMISSION_UNKNOWN` 或可能仍在执行/未确认清理的 job 未解决前不能以部分交付关闭批次。汇总至少分列：原始接收条目数、各接入去向数（按 §0 去向表逐项列全，含 `SKIPPED`/`SOURCE_NOT_BUILDABLE`）、实际冻结任务数、各调度状态数量、请求/用量、编译、oracle/行为、安全、方向/OS/战术实际覆盖与未决项，**不合成单一"转换成功率"**。**"单批不少于 40 项"的交付基线看的是本批实际处理条目数与逐项终态记录，不看批次被切成了几段**；队列 `CLOSED` 标签、条目数或大量未评估阻断本身都不能满足该能力验收。
 
 原始证据在执行和验收期间保留，收尾后保留/移交/清理由任务约定决定；数据可不永久保留，但不得删除尚需恢复的记录或在证据不可得时继续宣称可复核 PASS。Skill 不存测试 case/batch 索引，也不因某次试验未保存就无法应用规则。

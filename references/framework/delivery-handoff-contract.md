@@ -81,7 +81,16 @@
 | 阶段目录按实际产生创建 | 未发生的阶段不建空目录 |
 | `04-evaluation/` 下只有 `job-*` | 不建 `_probes`、`logs` 等旁支目录 |
 
-**交付完整性自检（终态前门禁，2026-10-10 实测补入）**：把某项记为终态（`DONE`/`PARTIAL`）前，必须机械核对该项 `output/<batchId>/` 下**最终交付物齐备**——根级 `target.<ext>`、`result.md`、`evaluator_manifest.json`（契约要求时）、`01-frozen/` 三件套，以及实际发生过的每个 `04-evaluation/job-*` 的 `returned-evidence/`。缺任一必备件即**不得**记终态；该核对同时是批次增量对账（[批量工作流 §4.1](../../skills/workflows/batch-conversion/SKILL.md)）的固定项。曾出现 20 项缺 `result.md` 的反例，故单列为门禁。
+**交付完整性自检（终态前门禁，2026-10-10 实测补入）**：把某项记为终态（`DONE`/`PARTIAL`）前，必须机械核对该项 `output/<batchId>/` 下**交付物按其去向齐备**，缺必备件即**不得**记终态。该核对同时是批次增量对账（[批量工作流 §4.1](../../skills/workflows/batch-conversion/SKILL.md)）的固定项，也在执行主干（[AGENTS.md](../../AGENTS.md) §3、根 [SKILL.md](../../SKILL.md) 第 6 步）作为收尾相位门禁出现。曾出现 20 项缺 `result.md` 的反例，故单列为门禁。
+
+**门禁只约束进入过转换的用例，按去向分别要求**：
+
+| 去向 | 必备交付物 | 不要求 |
+|---|---|---|
+| **已进入转换**（过分类 + 源侧预检并产出目标） | 根级 `target.<ext>`、`result.md`（含功能结论）、`evaluator_manifest.json`（契约要求时）、`01-frozen/` 三件套、实际发生过的每个 `04-evaluation/job-*` 的 `returned-evidence/`（含 `job-01-dual-build`） | —— |
+| **非可转换去向**（`SOURCE_NOT_BUILDABLE`/`SOURCE_DEPENDENCY_GAP`/`PREPARATION_GAP`/`EXCLUDED`/`DUPLICATE`/`SAFETY_BLOCKED`/`SKIPPED`） | 仅**适用件**：`frozen-inputs.md` 记明去向与原因；分类结果（若已取到）；`job-00-source-buildability` 的 `returned-evidence/`（若预检已跑） | 根级 `target.<ext>`、`result.md` 的功能结论、`job-01-dual-build`——**缺这些对非可转换去向不算缺档** |
+
+把非可转换去向按"缺 target/result"记成缺档，会把 §0 去向表里本就不该转换的项错记为转换失败；门禁核的是"**该去向该有的件齐不齐**"，不是"是否产出了目标代码"。
 
 ### 2.1.2 批次索引骨架（2026-10-09 冻结，按 `docs/test/dataset/batch-01/` 实测形制）
 
@@ -94,17 +103,20 @@
 ├── batch.json                      # 批次身份、任务清单、两侧前提、模型/知识快照、授权与恢复条件
 ├── items/<taskId>.json             # 逐项调度状态与结论（每项一个文件）
 ├── events.jsonl                    # 追加式事件日志，只追加不改写
-├── summary.md                      # 批次汇总，按 §6 分列，不合成单一成功率
-├── README.md                       # 本批状态与目录导航
+├── README.md                       # 本批状态与目录导航；**建批次索引时即建、全程保持最新**（导航件，不是关闭时才产）
+├── summary.md                      # 批次汇总：按[批量工作流 §6](../../skills/workflows/batch-conversion/SKILL.md) 分列、不合成单一成功率；**关闭时须存在且定稿**（可作运行草稿，关闭前完成）
 ├── reconciliation-<序号>.md         # 增量对账记录，每 40 项一次；只追加不改写
 └── <按实际发生的批次级记录>.md        # 冻结清单、提交计划、问题审计等；未发生不建
 ```
+
+**`README.md` 与 `summary.md` 触发时点不同，不可混为一谈**：`README.md` 是**导航/状态件**，建批次索引时就建、随批次推进保持最新（它回答"这批现在在哪、各目录怎么走"）；`summary.md` 是**关闭时的汇总件**，按批量工作流 §6 分列各维度，关闭前须存在并定稿。二者都属批次索引的必备件，缺任一在[终态门禁 §2.1.1](#211-单文件任务的标准骨架2026-10-09-冻结按-docstestdataset-实测形制) 的批次级核对与关闭终局核对中记缺档；但**不得**用"summary 关闭时才产"的理由连带省掉本该早建的 `README.md`。
 
 **对账频率**：批次是**一个**，但对账按**每新增 40 项终态一次**做增量检查点，关闭前再做一次覆盖全部检查点的终局核对。规则见[批量工作流 §4.1](../../skills/workflows/batch-conversion/SKILL.md)。
 
 | 规则 | 说明 |
 |---|---|
 | 批次索引**必须**建 | 逐项骨架只记"这项自己怎样"，回答不了"这批有哪几项、哪些没跑完"。[批量工作流 §4](../../skills/workflows/batch-conversion/SKILL.md) 要求可追溯的接入、去向、冻结与恢复边界，本目录是它的落点 |
+| **批次索引完整性受终态门禁核对** | `README.md`（导航件，须在且最新）、`summary.md`（关闭时须在且定稿）、`items/` 去向齐全、`events.jsonl` 齐备——在每次 40 项增量对账与关闭终局核对（[批量工作流 §4.1/§6](../../skills/workflows/batch-conversion/SKILL.md)）中逐项核。缺件按缺档处理，不因"未发生不建"省掉导航件 |
 | **不另设逐项状态文件** | 逐项阶段、版本、哈希、用量、回执与终态一律落在该 case 的 `output/<batchId>/`（§2.1.1）；批次根不再复制一份 |
 | `items/<taskId>.json` 只放调度语义 | `phase`/`lifecycle`/`pendingAction`/阻断原因/终态，按[批量工作流 §5](../../skills/workflows/batch-conversion/SKILL.md) 分列。它是索引指针，不是第二份证据；结论以该 case 的 `04-evaluation/` 实际回传为准 |
 | `events.jsonl` 只追加 | 每行一个 JSON 对象；身份用 `batchId`+`taskId`（+轮次/job）。已写行不改写，更正以新事件追加 |

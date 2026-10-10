@@ -55,11 +55,13 @@
 ```
 冻结 → 分类(ALLOWED) → 源侧构建预检 → 生成 → 自审
   → 评估就绪核对（安全 + 驱动 + oracle）→ 提交 → 取证 → 先归因再分层报告
+  → 交付完整性/终态门禁（记 DONE/PARTIAL 前）
 ```
 
 - **分类**：`admissionStatus=ALLOWED` 且 `blockingReason=null` 才可进入下一步。未取得不得预检、不得转换、不得提交。
 - **源侧预检**：源侧 `build.status=completed` 且 `exitCode=0` 才可投入模型转换；不通过记 `SOURCE_NOT_BUILDABLE` / `SOURCE_DEPENDENCY_GAP`，跳过该项且**不消耗模型调用**。**判定只由编译器诊断定案**：读源码只产出候选 `sourceOs`，**不得凭印象**断言某个头/符号在已登记系统上是否存在；本流程**不设**头文件探针。
 - **评估就绪核对**：安全边界 + **驱动四要素** + oracle 状态三者一起核对，全通过才可提交。细节见[行为保持 §4.1](references/workflow/behavior-preservation-contract.md)。
+- **交付完整性/终态门禁**：这是一道**收尾相位**的门禁，与上面三道"提交前"硬门禁**分层**——它回答的不是"能不能提交"，而是"**能不能把该项记 `DONE`/`PARTIAL`**"。记终态前**机械核对交付物齐备**，缺件不得记终态；真源与形制见[交付契约 §2.1.1（单项）/§2.1.2（批次索引）](references/framework/delivery-handoff-contract.md)，批次层并入[§8 增量对账](#8-每-40-项做一次增量对账)。**只约束进入过转换的用例**：全套交付物（根级 `target.<ext>`、带功能结论的 `result.md`、`evaluator_manifest.json`[契约要求时]、`job-01-dual-build` 证据）只对已过分类+源侧预检并产出目标的用例要求；非可转换去向（`SOURCE_NOT_BUILDABLE`/`SOURCE_DEPENDENCY_GAP`/`PREPARATION_GAP`/`EXCLUDED`/`DUPLICATE`/`SAFETY_BLOCKED`/`SKIPPED`）只要求其**适用件**（`frozen-inputs.md` 记去向+原因、分类结果如已取、job-00 证据如已跑），缺 target/result/job-01 对它们**不算缺档**。它只核形制齐备，不合成成功率、不改功能判定、缺证据照记 `UNVERIFIED`。
 
 **驱动四要素（缺一不可提交）**：① 按冻结 argv/stdin **启动**；② **到达被观察状态**（服务须等就绪，如端口监听，不得启动即判）；③ **采集**真实 stdout/stderr/退出码/副作用；④ **终止**并收尾。"启动后等它自己退出"**不是**通用驱动——常驻服务会必然超时，白白浪费一轮评估并把结果变成 INCONCLUSIVE。
 
@@ -71,7 +73,7 @@
 
 ### 5. 结论分层，不合成单一成功率
 
-交付完整性、语法/编译、功能一致性分别报告；编译、链接、启动、行为、安全分开写。缺独立证据写 `UNVERIFIED`。平台总 verdict 不能当成语法结论；`semantic_pass` 不等于 build PASS；模型自审不是编译或行为结论。
+交付完整性、语法/编译、功能一致性分别报告；编译、链接、启动、行为、安全分开写。缺独立证据写 `UNVERIFIED`。平台总 verdict 不能当成语法结论；`semantic_pass` 不等于 build PASS；模型自审不是编译或行为结论。**交付完整性既是报告维度、也是 §3 的终态门禁**：它核的是"交付物按去向齐备"，不是功能结论，二者分开——门禁通过不代表功能 PASS，功能 PASS 也不免交付物齐备核对。
 
 ### 6. 证据只从真实回传回填
 
