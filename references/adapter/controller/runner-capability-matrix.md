@@ -1,23 +1,23 @@
-> 2026-10-09 19:59（北京时间）部署更新：四角色统一 1.0.26，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约一致。最终快照已生效，macOS 冷启动自动登录通过，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.26部署与快照更新记录-2026-10-09.md)。样本执行与网络隔离未在本次验收，提交仍须逐例核对。
+> 2026-10-10 22:33（北京时间）部署更新：四角色统一 1.0.28，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约一致。最终快照已生效，macOS 冷启动自动登录通过，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.28部署与快照更新记录-2026-10-10.md)。样本执行与网络隔离未在本次验收，提交仍须逐例核对。
 
-# Runner 能力矩阵与 Controller 部署事实（2026-10-09 复核）
+# Runner 能力矩阵与 Controller 部署事实（2026-10-10 复核）
 
 > 文档类型：外部评估基础设施事实（reference）
 > 状态：ACTIVE（以 Controller 实时接口为准的唯一 runner 能力口径）
-> 取值方式：2026-10-09 19:59 原包四角色健康验收、Controller `GET /api/health`、`GET /api/runners` 与部署回执；旧 Ruby/Go/消噪 job 证据保留原适用范围，提交时仍以实时接口为准
+> 取值方式：2026-10-10 22:33 原包四角色健康验收、Controller `GET /api/health`、`GET /api/runners` 与部署回执；旧 Ruby/Go/消噪 job 证据保留原适用范围，提交时仍以实时接口为准
 > 服务与契约身份：`service=remote-host-controller`、`version=1.0.0`、`ready=true`、
-> `contractSetHash=sha256:e088a356b48fd1c3f50e480ac24c2fd03319dc60a49b41de4d076219819c4c45`、`runnerMode=agent`
+> `contractSetHash=sha256:a9ed144595a658a44301a3638e0d14224a130b65e7e5debce8f237ff6ecdd82e`、`runnerMode=agent`
 >
 > **历史契约冲突**：当日部署前 Controller 曾报告 `56b32706…`、Agent 为 `e088a356…`，导致 CONTRACT_MISMATCH。
-> 1.0.26 统一部署后四角色均为上方契约集合，冲突已消除。旧逐版本证据保留于[根因定论](../../../docs/stages/stage1/reports/contract-mismatch-root-cause-2026-10-09.md)，不作为当前状态。
+> 1.0.26 统一部署后该冲突已消除；1.0.28 四角色同步升级到上方新契约集合。旧逐版本证据保留于[根因定论](../../../docs/stages/stage1/reports/contract-mismatch-root-cause-2026-10-09.md)，不作为当前状态。
 
 ## 1. 现役 runner
 
 | runnerId | os / arch | 支持语言（`supportedLanguages`） | 快照回滚 | 基线快照 | 实测状态 |
 |---|---|---|---|---|---|
-| `linux-vm-agent-x64` | linux / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Linux-8Lang-1.0.26` | READY、`contaminated=false` |
-| `windows-vm-agent-x64` | windows / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Windows-8Lang-1.0.26` | READY、`contaminated=false` |
-| `macos-vm-agent-x64` | macos / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Mac-7Lang-1.0.26-AutoLogin` | READY、`contaminated=false` |
+| `linux-vm-agent-x64` | linux / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Linux-8Lang-1.0.28` | READY、`contaminated=false` |
+| `windows-vm-agent-x64` | windows / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Windows-8Lang-1.0.28` | READY、`contaminated=false` |
+| `macos-vm-agent-x64` | macos / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Mac-7Lang-1.0.28-AutoLogin` | READY、`contaminated=false` |
 
 三个 runner 的 `selectionPriority` 均为 100，`lastFailureType`/`lastFailureReason` 均为 `null`。
 

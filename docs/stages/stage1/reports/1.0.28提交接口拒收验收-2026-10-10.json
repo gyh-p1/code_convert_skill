@@ -1,0 +1,7 @@
+﻿{
+    "jobsBefore":  477,
+    "missingFieldsHttpStatus":  422,
+    "jobsAfter":  477,
+    "malformedJsonHttpStatus":  400,
+    "noJobCreated":  true
+}

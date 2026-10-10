@@ -42,12 +42,12 @@
 
 以下核对只回答一个问题：**即将提交的，是否正是分类器判定过的那一份**。任一项不成立说明引用错位，须重新分类或修正引用，而不是给该任务下一个更低的准入结论：
 
-1. **身份对应**：将分类输出 `id/dir/case` 对应冻结任务的 `taskId/direction/caseId`。逐项覆盖，不允许缺项、重复、额外任务。分类器未判定的目标/驱动仍须独立审阅。
+1. **身份对应**：将分类输出 `id/dir/case` 对应冻结任务的 `taskId/direction/caseId`。逐项覆盖，不允许缺项、重复、额外任务。**平台 identity 硬门禁按文件集合校验 `source/` 树（非按扩展名过滤）**：`source/` 里的每个文件——包含源侧驱动 `source/run_case.py`——都必须出现在分类输出的 `details.files[]` 里，否则 `POST /api/jobs` 返回 `403 identity_mismatch`（2026-10-10 实测，详见[Controller 适配](../adapter/controller/remote-controller-adapter.md)）。因此源侧驱动须**与源文件一同提交给分类器**。`target/` 侧驱动不在源分类范围内，仍须独立审阅。
 2. **哈希对应**：核对 `classifierVersion/classifierSha256/inputManifestSha256`，以及提交 capsule 中精确文件集合与 `details.files[].sha256`。
 
-   **必须重新分类的情形只有四项**（分类器只读源码文本，`analysisScope=source-text-only`）：① 源码内容变化；② 随源码一同提交、会被分类器读取的执行输入变化；③ 工具链（源/目标平台、编译器、标准）变化；④ 方向（源→目标语言对）变化。此时创建有父版本关联的新契约/变体并重新分类，不覆盖原冻结输入。
+   **必须重新分类的情形只有四项**（分类器只读源码文本，`analysisScope=source-text-only`）：① 源码内容变化；② 随源码一同提交、会被分类器读取的执行输入变化——**源侧驱动 `source/run_case.py` 位于 `source/` 树、须随源一同分类，归入本项**，其变化触发对 `source/` 文件集合重新分类；③ 工具链（源/目标平台、编译器、标准）变化；④ 方向（源→目标语言对）变化。此时创建有父版本关联的新契约/变体并重新分类，不覆盖原冻结输入。
 
-   **驱动（`run_case.py`）与 oracle 的变化不在此列**：它们是评估契约的组成部分，**不被分类器读取**，其变化**不触发重新分类，只触发「评估就绪核对」重做**（见[行为保持 §4.1](behavior-preservation-contract.md)）。分类器的 `limitations` 本身即声明 `target_driver_dependencies_not_assessed`，不得据此反推它评估过驱动。
+   **oracle（及 `target/` 侧驱动）的变化不在此列**：它们**不在 `source/` 树、不被源分类读取**，其变化**不触发重新分类，只触发「评估就绪核对」重做**（见[行为保持 §4.1](behavior-preservation-contract.md)）。分类器的 `limitations` 声明 `target_driver_dependencies_not_assessed`：源侧驱动的**文本已被覆盖/取哈希**（以过 identity 门禁），但其**运行期依赖未被评估**——不得据此反推分类器评估过驱动行为。
 
    同一冻结契约内的目标代码 repair 另存目标版本和审阅记录，不改原源快照、不重置累计修复预算；分类源未变的修订不需要重复成功过的源码分类。**分类器未判定的目标/驱动仍须独立审阅**，不因"分类通过了"而免于驱动四要素核对。
 

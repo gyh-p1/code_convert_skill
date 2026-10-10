@@ -58,6 +58,8 @@
 
 **驱动（driver）**指 capsule 中真正让被测程序跑起来并观察到行为的那段代码（`source/run_case.py` 与 `target/run_case.py`）。**每个进入 dual-build 的项都必须有一个满足下列四要素的驱动，缺一不可提交。** 这是硬门禁，不是建议。
 
+> **源侧驱动 `source/run_case.py` 还受分类 identity 门禁约束**：它位于 `source/` 树，须随源文件一同提交给分类器并被分类结果覆盖，否则 `POST /api/jobs` 返回 `403 identity_mismatch`（见[分类结果准入 §3](classifier-agent-gate.md)）。本节四要素核的是驱动**行为形态**，identity 门禁核的是驱动**是否被分类覆盖**，两者并存、互不替代。
+
 #### 4.1.1 四要素判定表
 
 | # | 要素 | 合格 | 不合格 |

@@ -178,7 +178,7 @@ for task in batch.tasks:
 > **⚠ 实现修正（2026-10-10，已落地）**：上面这段伪代码有缺陷——`configured=true` 时它跳过规则2，若主 `blockingReason=public_network_unverified` 又非 credential，会落入 `else: allowed`，**漏掉同时命中的凭证线索**；`else` 也不拒绝未知状态。平台 `submission_admission.admit_task()` **不照此实现**，而是：
 > 1. **不 lift 任何 BLOCKED**：`admissionStatus!=ALLOWED` 或 `blockingReason!=null` 一律阻断（原因取分类器给的 `blockingReason`，缺失记 `unknown_status`）。公网阻断的解除**只能靠重新分类**产出新的 ALLOWED（§3.4），不在提交端翻案。
 > 2. **凭证纵深**：任一 `details.files[].credentialFindings` 非空即阻断 `real_credential_suspected`，即便状态被误置 ALLOWED。
-> 3. **身份/哈希绑定**：提交内容的源文件 sha256 必须与分类输入一致，否则 `identity_mismatch`；分类器 SHA 必须在许可集合，否则 `untrusted_classifier`。
+> 3. **身份/哈希绑定**：提交内容 `source/` 树的**每个文件**（含源侧驱动 `run_case.py`）的 sha256 必须与分类输入一致——**按 `source/` 文件集合校验、非按扩展名过滤**，缺任一 source/ 文件即 `identity_mismatch`（2026-10-10 实测）；分类器 SHA 必须在许可集合，否则 `untrusted_classifier`。
 > 4. **隔离假设一致（仅公网目标）**：带**公网/hostname** 网络目标（`details.files[].network_targets[].scope ∈ {public,hostname}`）的 ALLOWED 项，批次授权必须 `networkIsolation.configured=true`，否则 `public_network_unverified`。**private/loopback 不设此门**——准则是"证明危险才阻断"，敏感/副作用/私网代码默认 ALLOWED，安全由 VM 隔离兜底（见 [tiered-admission-policy.md](tiered-admission-policy.md) 二元 3 规则）。
 >
 > 因此 §4 **用例4 重解释**为「**重新分类后得到 ALLOWED**（requiresNetworkIsolation 仍 true）+ 授权 configured 且证据齐全 → allowed」，并新增负向回归「**BLOCKED/public + configured 授权 → 仍 blocked**（不 lift）」。两条均有回归：`test_submission_admission.py::test_case4_...` 与 `test_bypass_blocked_public_with_configured_isolation_is_still_blocked`。
