@@ -1,10 +1,10 @@
-> 2026-10-10 22:33（北京时间）部署更新：四角色统一 1.0.28，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约 `a9ed1445…` 一致。最终快照已生效，macOS 冷启动自动登录通过；提交准入必需字段已在现役接口生效，缺字段 422、非法 JSON 400 且零新 job，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.28部署与快照更新记录-2026-10-10.md)。样本执行与网络隔离未在本次验收，提交仍须逐例核对。
+> 历史部署记录（2026-10-10 22:33，北京时间）：当时四角色统一 1.0.28，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约 `a9ed1445…` 一致。最终快照已生效，macOS 冷启动自动登录通过；当时接口缺准入字段返回 422、非法 JSON 返回 400 且零新 job，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.28部署与快照更新记录-2026-10-10.md)。该历史版本/哈希不作为当前协议固定值；样本执行与网络隔离仍逐例核对。
 
 # 远端 Controller 适配与连接
 
 > 文档类型：外部评估基础设施的连接与提交适配（reference）
 > 状态：ACTIVE（本项目对接已授权隔离第三方 VM Controller 的唯一连接说明）
-> 更新：2026-10-11（文本收口；最后已知部署 1.0.28，未在本轮连接/复验。部署与 runner 当前登记只见[能力矩阵](runner-capability-matrix.md)，比较字段见[比较策略适配](comparison-policy-adapter.md)）
+> 更新：2026-10-11（当前协议适配；历史部署与 runner 记录只见[能力矩阵](runner-capability-matrix.md)，当前扩展接口见[当前协议适配](platform-revision-adapter.md)，比较字段见[比较策略适配](comparison-policy-adapter.md)）
 > 本页列出已登记的连接坐标和提交契约；实际可用性须在每次评估前核对。
 
 本项目**不建设**运行时或评测平台；编译/运行证据一律由已授权的隔离第三方 VM Controller 返回。本文只记录**如何连接该 Controller、如何组装并提交 comparison capsule、如何回传证据**，供转换 Agent 在评估步骤直接复用。凭据不入库（见“安全边界”）。
@@ -36,23 +36,27 @@ Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2]
 | `GET` | `/api/health` | 服务/组件版本、contractSetHash、ready 与服务器 comparison 配置；字段形状见[比较策略适配 §1](comparison-policy-adapter.md#1-区分服务器配置与任务输入) |
 | `GET` | `/api/runners` | 当前 runner、工具链登记、快照与生命周期；不构成网络隔离证明 |
 | `POST` | `/api/jobs` | multipart 提交 job：`file=<capsule.zip>`、`caseId`、`targetOs`、`targetLang`；**必附** `classification`、`batchAuthorization`（JSON 串，每次提交都附；现役 1.0.28 服务端强制校验）。**identity 硬门禁按文件集合校验 `source/` 树（非按扩展名过滤）：`source/` 每个文件——含源侧驱动 `source/run_case.py`——须被 `classification.details.files[]` 覆盖**，否则返回 `403 {detail:{blockingReason:"identity_mismatch"}}`（2026-10-10 实测）；未准入亦 `403 {detail:{blockingReason,…}}`。成功返回 `202 {jobId, jobStatus:"QUEUED"}` |
-| `GET` | `/api/jobs/{jobId}` | 轮询状态，直到终态：`COMPLETED` / `FAILED_COMPILE` / `FAILED_RUNTIME` / `TIMEOUT` / `INFRA_ERROR` |
-| `GET` | `/api/jobs/{jobId}/report` | 结构化评估报告（InputProfile 1.0 对应 schema 3.0；不能假设所有任务均同一报告版本） |
+| `GET` | `/api/jobs/{jobId}` | 轮询状态；`COMPLETED` / `FAILED_COMPILE` / `FAILED_RUNTIME` / `TIMEOUT` / `INFRA_ERROR` 标签须联合 closureBlocked、phase 和真实清理核收尾，阻断/未知保持 WAITING |
+| `GET` | `/api/jobs/{jobId}/report` | 按 jobKind/evaluationMode 判读：普通双侧 3.0/3.1、双侧仅编译 3.2、独立源预检 SourcePreflightReport 1.0；不能仅按 InputProfile 版本选择报告 |
 | `GET` | `/api/jobs/{jobId}/report.md` | 人读报告 |
 | `GET` | `/api/jobs/{jobId}/evidence/source` | 源侧 evidence bundle（build/execution） |
 | `GET` | `/api/jobs/{jobId}/evidence/target` | 目标侧 evidence bundle（build/execution） |
 | `GET` | `/api/jobs/{jobId}/comparison` | 双侧比较结果 |
 | `GET` | `/api/jobs/{jobId}/logs` | Controller 编排日志 |
 
-### 本地待部署的仅编译机制（2026-10-11）
+### 仅编译机制（2026-10-11）
 
-相邻评估系统源码已加入显式 build-only 本地改动；维护资料定位为独立仓库 `third-party-evaluation-system/docs/build-only.md`，不随本仓库交付，不作为转换 Agent 的必读依赖。本页保留当前需消费的机制与待验收边界：它复用 `POST /api/jobs` 及原 capsule/分类/批次授权；comparison manifest 设 `evaluationMode=build-only`，两侧必须有真实 buildCommand、不得出现 runCommand，InputProfile 显式无行为观察/运行输入。平台内部使用 AgentRunRequest 1.2，报告为 EvaluationReport 3.2：逐侧 buildAssessment、原始 build evidence、执行未进行、功能 UNVERIFIED，不产 comparison。普通 job 保持原路径。
+当前平台的显式 build-only 复用 `POST /api/jobs` 及原 capsule/分类/批次授权；comparison manifest 设 `evaluationMode=build-only`，两侧必须有真实 buildCommand、不得出现 runCommand，InputProfile 显式无行为观察/运行输入。平台内部使用 AgentRunRequest 1.2，报告为 EvaluationReport 3.2：逐侧 buildAssessment、原始 build evidence、执行未进行、功能 UNVERIFIED，不产 comparison。普通 job 保持原路径。维护资料定位为独立仓库 `third-party-evaluation-system/docs/build-only.md`，不随本仓库交付，不作为转换 Agent 的必读依赖。
 
-**这是未测试、未部署的源码事实，不是现役支持证明，也不授权现在向现役发送该新形状。** 启用前须确认现役 health 声明 supportedEvaluationModes 含 build-only、参与角色 contractSetHash 一致，并取得合法隔离验收的精确版本双侧编译/未运行/清理证据。未确认前沿用[评估准备 §3](../../framework/evaluation-readiness-contract.md#3-无安全可观察入口)待准备口径，不把普通运行 job 当仅编译。该改动不提供单独源侧预检接口，不能先造目标补预检。仅编译报告没有 comparison，取证按实际发生件，不能伪造比较记录。
+仅编译使用 InputProfile 1.0；1.1 强制 functionalProfile，与仅编译冲突，不能静默降级。提交前核实际 health 声明 supportedEvaluationModes 含 build-only、参与角色 contractSetHash/实现身份匹配，再逐项核授权、隔离和构建命令；返回后核双侧原始编译、未运行与清理证据。支持未知或身份不符按[评估准备 §3](../../framework/evaluation-readiness-contract.md#3-无安全可观察入口)记准备缺口，不把普通运行 job 当仅编译。独立 source-only 预检的完整字段、请求与原件/closure 判读见[当前协议适配](platform-revision-adapter.md)；不能先造目标补预检。仅编译不产 comparison，按实际件取证。
+
+### 当前协议的强制适配核对
+
+使用 Controller 渠道时必读[当前协议适配](platform-revision-adapter.md)，按当前协议选择适用形状，并核实际平台身份与能力。该页登记 source-preflights、SourcePreflightReport 1.0、EvaluationReport 3.2、closure/原件导出、submissionId/busy/恢复、追加归因与 v2 配置。`closureBlocked=true` 或 `jobPhase=CLEANING` 不能因 jobStatus 属终态枚举就收尾；平台 closure 不免转换端 result.md 与适用产物门禁。历史 job 缺 closure 时沿用真实原件/清理核对，不造成功记录。
 
 ### 提交结果未知时的恢复
 
-当前登记的接口支持凭 `jobId` 查询；**按客户端提交标识/caseId/capsule 哈希查找已接收 job，以及服务端幂等去重的能力尚未在本说明中核实**。不能据此断言平台不支持，也不能假设 `caseId` 天然幂等。本地提交尝试记录用于追溯，不是服务端去重保证；使用额外查询或幂等能力前须取得现役契约及其匹配范围/保留期限依据，不自造端点或请求字段。
+当前接口支持凭 `jobId` 查询，以及可选 submissionId 对精确请求的原 job 恢复/去重，见[当前协议适配 §5](platform-revision-adapter.md#5-提交标识busy-与恢复)。没有按 caseId/capsule 哈希通用搜索的接口，不假设 caseId 天然幂等。本地尝试记录不替代服务端保证；首次提交保存 ID/原材料，没有 ID 的历史未知提交不补造 ID 后盲重发。
 
 提交可能已被接收但缺回执/jobId 时，保留任务与目标版本、capsule 哈希、本地尝试标识、接收端、请求时间范围和可取得的传输记录，标记 `SUBMISSION_UNKNOWN`。暂停该项重投与相关环境复用，继续不受影响的项；客户端超时、断连或查询暂未命中均不证明服务端没有接收。
 
@@ -63,7 +67,7 @@ Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2]
 - **原请求已接收但需重提**：先取得原 job 的身份、终止状态与环境清理/恢复证据，再按原条件另记尝试。取消操作只使用实际支持且在授权范围内的能力，不假设存在取消端点。
 - **暂不能确定**：明确待平台补充的接收状态、job 映射或终止/清理证据，保持等待，不记代码失败、不盲重投，也不将可能仍运行的任务标为已收尾。
 
-以上是恢复规则，不表示查询、去重或自动恢复能力已部署/验收；本仓库不为此建设服务端实现。
+以上按当前接口恢复原回执；不提供自动重放、通用搜索或取消端点，本仓库不为此建设服务端实现。
 
 ### batchAuthorization 字段与来源
 
@@ -98,7 +102,7 @@ Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2]
 | 排队状态 | 提交返回 `202 {jobId, jobStatus:"QUEUED"}`，说明存在排队阶段 | 队列位置/预估等待字段 |
 | 轮询间隔 | 无平台声明值 | **须按契约记录实际轮询间隔**；批量流程 §2 要求"轮询间隔按契约记录"，而平台未提供该值，故由本任务冻结时自定并留证 |
 | 忙碌/未就绪 | 历史审阅提及 409/controller_busy、503/controller_not_ready，曾记录在创建 job 前拒收 | 当前部署未经本轮复核；只有覆盖该次请求的契约/接收证据证明未创建才可重提，不外推到任意错误/超时 |
-| 幂等 | 无已核实的服务端幂等或按 caseId/capsule 哈希查找能力（见下节） | 重投前须确认前一次未入队 |
+| 幂等 | submissionId 支持精确材料恢复原 job，不支持通用 caseId/capsule 搜索 | 按当前协议适配核原 ID/材料；没有 ID 的历史未知提交沿用未知提交门禁，不盲重投 |
 | 隔离 | 三 Runner 均 READY/clean；**READY 与快照回滚都不是网络隔离证明** | 批次级网络隔离证据（`batch-authorization.json`）仍待现场 |
 
 **批量提交的引用核对**：逐项核 ALLOWED、精确输入、独立授权/隔离，再提交。字段只见本页 batchAuthorization 节；分类逐项消费。单项条件不足记原因，可继续独立未受影响项；共享批次授权无效则暂停其全部覆盖项，不把等待记目标失败。
@@ -136,7 +140,7 @@ capsule.zip
 
 **生成前源侧预检**：使用现役平台已支持、获授权的预检提交形态，分类/授权随附规则相同；不提前生成转换目标来补包，也不自造平台字段。需行为评估时，源侧须按冻结条件真实构建、运行、观察与终止/清理，回传源 build、execution 和原始观察供[评估准备 §1.1](../../framework/evaluation-readiness-contract.md#11-生成前源侧预检)判读，不能只读 build 摘要。实际 job 的回执与证据归入 `job-00-source-buildability/`，目录名不禁止源运行；不适用运行的文本/片段/仅编译任务须核对应安全构建形态并记录理由。接口支持未知时待准备；本页的普通双侧 capsule 示例不构成源预检形态或仅编译能力已验收的证明。
 
-**本页尚未登记可直接照做的源预检请求示例。** Agent 须从用户或获批平台提供的精确调用契约核实请求形态、仅含源侧时的包/字段要求、适用运行与证据获取方式，并保存非敏感来源/版本依据；已有适用依据可沿用，不重复请求授权。没有这些依据时记 PREPARATION_GAP，按统一收尾入口暂停，下一动作是补平台调用契约，不是发送本页的双侧示例。此说明明确当前文档的能力缺口，不宣称现役平台一定不支持源预检。
+独立源预检按[当前协议适配 §2](platform-revision-adapter.md#2-独立源侧预检请求)使用 source-only 请求；实际平台身份不符、能力或本项前置条件缺失时记 PREPARATION_GAP，按统一收尾入口暂停，不发送普通双侧示例或伪 target。已有适用授权与精确契约依据沿用，不重复请求授权。
 
 ## 提交—轮询—取证流程（本会话实测）
 
@@ -170,8 +174,9 @@ curl.exe -sS -X POST "http://127.0.0.1:8443/api/jobs" `
   -F "classification=<this-task-classification.json" `
   -F "batchAuthorization=<batch-authorization.json"
 
-# 3) 轮询到终态
+# 3) 轮询并核 closureBlocked/phase/清理；阻断或未知继续 WAITING
 curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>"
+curl.exe --fail -sS "http://127.0.0.1:8443/api/jobs/<jobId>/closure" # closure.json
 
 # 4) 取证据（分别保存到 returned-evidence/）
 curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/report"          # evaluation_report.json

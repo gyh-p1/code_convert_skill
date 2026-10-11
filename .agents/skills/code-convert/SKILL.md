@@ -21,4 +21,6 @@ description: Use for code conversion tasks in this repository. Load the project 
 
 能力和证据边界由根入口说明。本入口不索引测试数据集、历史批次或工程阶段；规则应用不依赖一次性测试数据长期存在。
 
+使用 Controller 时按根步骤 1 加载[当前协议适配](../../../references/adapter/controller/platform-revision-adapter.md)，按当前协议选择源预检、报告版本、取证/恢复与收尾形状，并核实际平台身份与能力。平台终态标签不免本项适用原件与清理核对。
+
 转换知识默认离线消费：只读取随仓库交付的正文和本地参考，网页/资料标题不能代替必需知识；缺语义或版本时记录具体缺口，不靠联网推定覆盖。按根入口加载适用正文，不把出处追溯变成联网步骤。

@@ -98,4 +98,6 @@ DONE 表示契约所要求的工作、取证和交付已收尾，**可有真实�
 
 每个已处理项结束/暂停时按[统一收尾入口](delivery-handoff-contract.md#11-统一收尾入口与报告义务)保留 result.md 及实际产物核对，成功、失败、生成前阻断和非可转换去向均不豁免。WAITING 报告说明暂停与恢复条件，不表示 CLOSED；缺报告/核对记录不能记终态，报告存在也不能解除未决执行。
 
+平台报告“终态”与本项 lifecycle 分开：使用 Controller 时按[当前协议适配](../adapter/controller/platform-revision-adapter.md)核平台身份、closure/原件与真实清理；仍收尾阻断或接收/调用/清理未知保持 WAITING。submissionId 只绑定精确提交尝试的恢复，不代 taskId/runId、不增加任务数，也不允许改冻结条件沿用旧 ID 重执行。
+
 仅编译项固定 PARTIAL、功能 UNVERIFIED，编译据实。源不可构建/依赖缺口不回填目标 FAIL；非可转换去向按适用件收尾，不纳入转换失败。可能已接收但缺回执，或 job 仍活动/未确认清理时保持 WAITING，不能用 PARTIAL 绕过未决执行。恢复 PARTIAL 追加重入依据，从最近适用阶段继续且保留预算。

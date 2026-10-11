@@ -39,6 +39,7 @@
 | 文档 | 职责 |
 |---|---|
 | [Controller 适配](adapter/controller/remote-controller-adapter.md) | 连接、外部 schema、classification/batchAuthorization、手工提交/轮询/取证与未知提交恢复 |
+| [Controller 当前协议适配](adapter/controller/platform-revision-adapter.md) | 使用该渠道时随主适配读取；独立源预检/报告 kind、closure/原件、精确 submissionId 与比较配置，提交前核实际平台身份与能力 |
 | [比较策略适配](adapter/controller/comparison-policy-adapter.md) | 平台实际字段、策略/维度能力与已知缺口；不承诺通用语义 oracle |
 | [Runner 能力矩阵](adapter/controller/runner-capability-matrix.md) | 登记组合、部署版本和最后已知能力；任务仍核实际接口/证据 |
 

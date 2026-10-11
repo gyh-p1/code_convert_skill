@@ -1,11 +1,13 @@
-# Controller 比较策略适配：noise-tolerant-v1
+# Controller 比较策略适配：strict、noise-tolerant-v1/v2
 
 > 文档类型：第三方比较策略的提交与证据适配（reference）
-> 状态：ACTIVE。最后已知部署 1.0.28；noise-tolerant-v1 的下述字段依据既有接口/记录，未在本轮动态复验。
+> 状态：ACTIVE，按当前平台协议及实际 comparison 配置冻结比较规则。
 > 更新：2026-10-11（文本收口）
-> 部署身份只见[Runner 能力矩阵](runner-capability-matrix.md)，历史消噪取证见其 §1.3。Stage3 的平台改造/测试记录不自动成为本页已部署、已取证能力；任务仍以实际 health、schema 与回传核验。
+> 历史部署和消噪取证见[Runner 能力矩阵](runner-capability-matrix.md) §1.3；本次任务保存实际 health、schema、启动身份与回传，不沿用历史版本/哈希作为当前固定值。
 
 本页供 Agent 冻结比较需求、组装现役 capsule、核对回传。比较由第三方 Controller 执行；本项目不新增比较器、运行时、Schema 或独立评分。连接、提交与未知回执恢复沿用[Controller 适配](remote-controller-adapter.md)，执行授权与隔离沿用[安全边界](../../framework/safety-boundary.md)。
+
+当前平台支持 noise-tolerant-v2 的 workspace_path_pairs，并使用 JSON 深拷贝和严格类型比较；字段/限制见[当前协议适配 §6](platform-revision-adapter.md#6-追加归因与比较配置)。strict/v1 字段与默认保持兼容，任务必须读实际完整配置。目录映射是服务器配置，须与冻结允许差异对应；它不是任务 InputProfile 字段，不自动忽略计时、错误内容或相对文件名。
 
 ## 1. 区分服务器配置与任务输入
 

@@ -22,6 +22,8 @@ result.md 在该项约定的 run 输出根保存；尚无 run 目录时只创建
 
 这是 Markdown 对 Agent 的必经操作要求，不是自动执行的检查器。加载路径与人工核对记录支持静态可达性；只有实际任务记录能证明该次已遵守，不据文本宣称任意 Agent 一定执行。
 
+Controller 的收尾字段与原件下载消费[当前协议适配 §4](../adapter/controller/platform-revision-adapter.md#4-平台收尾与原件取回)。closureBlocked/CLEANING 或清理/调用未知保持 WAITING，不能只按 jobStatus 终态标签收尾；closure 通过也不能免本契约的 result.md 与转换端适用件核对。历史 job 缺 closure 则按真实原件和逐项清理核对，不补造“完整性通过”。报告 kind/source-only/仅编译不同，按实际阶段核件，不强制无适用 comparison/target。
+
 ## 2. 固定产物集合与目录布局
 
 一次转换 run 的输出落在任务契约指定的同一 run 目录。**run 根目录只放"最终交付物"**，过程产物按阶段归入子目录（见 2.2），使消费方一眼区分"当前交付稿 / 过程记录 / 评估证据"，不必在扁平目录里猜哪份是第几轮转换、哪份是评估证据。

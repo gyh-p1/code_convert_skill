@@ -1,11 +1,13 @@
-> 2026-10-10 22:33（北京时间）部署更新：四角色统一 1.0.28，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约一致。最终快照已生效，macOS 冷启动自动登录通过，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.28部署与快照更新记录-2026-10-10.md)。样本执行与网络隔离未在本次验收，提交仍须逐例核对。
+> 历史部署记录（2026-10-10 22:33，北京时间）：当时四角色统一 1.0.28，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约一致。最终快照已生效，macOS 冷启动自动登录通过，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.28部署与快照更新记录-2026-10-10.md)。样本执行与网络隔离未在该次验收，提交仍须逐例核对。
 
 # Runner 能力矩阵与 Controller 部署事实（2026-10-10 复核）
+
+当前平台协议支持独立 source-only、build-only、closure/原件导出、submissionId 与实现身份机制；请求、取证及身份核对按[当前协议适配](platform-revision-adapter.md)。本页 1.0.28 部署/快照记录属于历史现场事实，保留原范围；其版本和哈希不作为当前协议的固定值，任务以实际 health、发布身份和回传核验。
 
 > 文档类型：外部评估基础设施事实（reference）
 > 状态：ACTIVE（以 Controller 实时接口为准的唯一 runner 能力口径）
 > 取值方式：2026-10-10 22:33 原包四角色健康验收、Controller `GET /api/health`、`GET /api/runners` 与部署回执；旧 Ruby/Go/消噪 job 证据保留原适用范围，提交时仍以实时接口为准
-> 服务与契约身份：`service=remote-host-controller`、`version=1.0.0`、`ready=true`、
+> 上述历史验收的服务与契约身份：`service=remote-host-controller`、`version=1.0.0`、`ready=true`、
 > `contractSetHash=sha256:a9ed144595a658a44301a3638e0d14224a130b65e7e5debce8f237ff6ecdd82e`、`runnerMode=agent`
 >
 > **历史契约冲突**：当日部署前 Controller 曾报告 `56b32706…`、Agent 为 `e088a356…`，导致 CONTRACT_MISMATCH。
