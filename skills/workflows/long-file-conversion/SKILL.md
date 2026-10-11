@@ -9,6 +9,10 @@ description: Use for single-file code conversion when a source file is large or 
 
 ## 0. 准入与边界
 
+开始处理本项即必读[统一收尾入口](../../../references/framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)。准入、分段、合并、审阅或评估任一阶段结束/提前停止/暂停，都写本项 result.md 并核实际适用产物、范围与版本/指针，保存核对结果。没有完整目标或属于非可转换去向也不能免报告；WAITING 是暂停记录，不是终态。
+
+先读[根入口](../../../SKILL.md)、[任务状态契约](../../../references/framework/task-state-contract.md)、[评估准备契约](../../../references/framework/evaluation-readiness-contract.md)与[安全边界](../../../references/framework/safety-boundary.md)。完整顺序为冻结→分类 ALLOWED→源侧预检（build completed/exitCode=0 + 适用运行基线）→生成/分段→自审→适用评估准备→提交/取证→交付门禁。需行为评估时，在任何生成/分段前按[评估准备 §1.1](../../../references/framework/evaluation-readiness-contract.md#11-生成前源侧预检)取得冻结条件下的有效源运行基线；无基线先停，不用片段运行冒充完整源基线。文本/仅编译例外依该契约记录理由。分段不提前生成、不重置预算。驱动仅引用合法提供版本，缺入口待准备，不由 Agent 或模型新写辅助程序。
+
 - 先形成源码画像：任务模式、source/target 语言与系统、架构/ABI、编译器/标准、条件编译分支、真实场景标签，以及 ATT&CK tactic/technique（无证据时记录 `none`）。多平台源文件必须明确本次选用的源分支和目标分支。关键条件缺失且会改变方案时先询问或明确待确认假设。
 - 按源码画像选择语言、场景、系统和长文件 Skill；ATT&CK 索引仅帮助核对分类/覆盖，不根据战术反推 API 或隐藏行为。列出每个 Skill 对应的事实和覆盖缺口。
 - 长文件只要受限于上下文，就不要假装已完整阅读。用可用的文件读取能力分区检查；记录已覆盖范围和未读范围。无法建立全文件地图时，先请求拆分、补文件或确认允许的分段策略。
@@ -34,6 +38,7 @@ description: Use for single-file code conversion when a source file is large or 
 - 优先以完整类型、完整函数或紧密相关的函数组为转换单元；不按固定行数盲切，不把函数体、条件分支、宏或资源清理路径从中间截断。
 - 分段前确定依赖顺序和跨段契约：共享类型/常量/宏、符号名与签名、全局状态、回调约定、错误表示、所有权和调用先后。
 - 每个工作单元分配稳定标识，记录源范围/哈希、依赖、预期输出符号、目标范围/哈希和已完成状态。未转换、部分转换、待合并和已核对要区分；不得凭摘要声称覆盖了未读源码。关联记录放入现有源码地图与阶段元数据，不另建分段框架。
+- 每次请求保留实际单元、共享依赖及知识正文快照，按[任务状态 §2.1](../../../references/framework/task-state-contract.md#21-版本关联与复用边界)关联原响应/单元稿/合并稿/审阅。只改变输出封装不重置重试或修复预算；改冻结知识另记变体，不用更新后的摘要覆盖原注入记录。
 - 若上下文不足以同时保持源段、依赖地图和目标段，缩小单元或暂停并请求确认，不牺牲跨段一致性换取表面完成。
 
 ## 3. 逐单元转换
@@ -62,7 +67,7 @@ description: Use for single-file code conversion when a source file is large or 
 
 只有完整目标已组装、所有应审范围和依赖均有适用于该最终版本的审阅记录、且满足[闭环内部预检门槛](../../../references/workflow/conversion-evaluation-loop.md#41-来源与字段容错)，才可进入评估就绪核对。若仍有未审范围或失效审阅，保留部分稿和缺口，不把单元通过汇总成整文件预检通过。修复预算按闭环 §2 在整项任务内累计，拆段、重分段或重新合并均不重置。
 
-**三段式、分段、合并都不改变门禁与驱动义务**：长文件同样受[根入口](../../../SKILL.md)的三道硬门禁约束——**分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对**，顺序不变。**评估就绪核对包含驱动四要素**（①按冻结 argv/stdin 启动、②到达被观察状态、③采集真实观察、④终止收尾），规则见[行为规范 §4.1](../../../references/workflow/behavior-preservation-contract.md)；**长文件的驱动同样在冻结阶段确定，不得因为"文件长、分段多"而把驱动留到提交前临时拼**。分段不构成跳过门禁或延后驱动的理由。
+**三段式、分段、合并都不改变门禁与驱动义务**：长文件同样受[根入口](../../../SKILL.md)的分类、源侧预检与评估就绪门禁约束，顺序不变。适用驱动四要素及例外直接消费[评估准备契约 §1–3](../../../references/framework/evaluation-readiness-contract.md)，不通过可选行为指导取得门禁。源基线复用另核该契约 §1.2；长文件驱动在冻结阶段确定，不因分段多而延后或自写。
 
 模型转换后按本次源→目标方向 Skill 和已选场景、系统规则做自审与 repair 预判；这只是非独立预检，用于发现疑点，不作语法正确性结论。后续进入[转换—自审—第三方评估闭环](../../../references/workflow/conversion-evaluation-loop.md)，由 Agent 按受限自修、预检门槛、第三方诊断分流与失败停止条件调度。语法结论由第三方评估机构在匹配工具链下编译回填；只有在获批且适用的评估环境中执行。语法结果与行为 oracle 结果分别报告；编译通过不代表行为等价。
 
@@ -70,4 +75,6 @@ description: Use for single-file code conversion when a source file is large or 
 
 提供完整目标文件或明确指出未完成部分。长单文件同时保存 `source-analysis.md`（源/目标配置、证据化标签、ATT&CK 判断、所选 Skill、源码地图与未决项），便于复核 Skill 选择。简要报告：实际完成范围、需要确认的假设、未映射/降级行为、语法与行为检查分别是否执行及结果。未运行或无 oracle 时写明“未验证/无法判断”，不宣称功能等价。源文件较大时可附函数/符号覆盖摘要，但不要用摘要替代用户要求的目标文件。
 
-run 目录只放当前交付物（`target.<ext>`、`source-analysis.md`、`result.md`、`evaluator_manifest.json`），各步骤产物按阶段进 `01-frozen/`、`02-conversion/`、`03-self-review/`、`04-evaluation/` 子目录，版本命名用 `target.gen` / `target.self-repair-<N>` / `target.eval-repair-<N>` 与同 stem 元数据、`job-<NN>-<用途>/` 证据目录。固定产物集合、目录布局与命名规则见[转换交付与移交契约 §2.2](../../../references/framework/delivery-handoff-contract.md)，本文件不重复。长文件同样受**交付完整性/终态门禁**约束：记 `DONE`/`PARTIAL` 前按[交付契约 §2.1.1](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架2026-10-09-冻结按-docstestdataset-实测形制)机械核对交付物齐备（长文件另须 `source-analysis.md`），缺件不得记终态。
+run 根只放适用的当前交付物，过程按交付契约 §2.2 归位。终态前按[交付契约 §2.1.1](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架2026-10-09-冻结按-docstestdataset-实测形制)核模式/已达阶段/停止原因对应的适用件；长文件另有 source-analysis.md，未完整组装的单元稿不能充最终 target，评估前停止不伪造 job。DONE/PARTIAL 按任务状态契约，缺应有件不得记终态。
+
+result.md 记录完整/部分/无目标、实际原因、已审/未审范围及适用件核对，不用单元成功标签或源码地图代替结果报告。长文件尚未进行分析即停止时，不伪造 source-analysis.md 的覆盖；其适用性按实际阶段记录。

@@ -9,11 +9,11 @@
 - **语言规范保证**：`[语言规范保证]` 严格纯值传递；指针传递指针值（内存地址拷贝），显式指针禁用算术运算（除 `unsafe.Pointer`）；切片、map、channel、interface 内部包含指针头部，值传递时其底层数据共享。
 - **实现相关 / 运行时优化行为**：`[指定运行时的实现相关事实]` 编译器逃逸分析（Escape Analysis）决定变量分配在 Goroutine 栈还是堆上，属于编译器实现细节，语言规范不作物理存储位置保证。
 - **机械等价禁区与转换约束**：不可认为切片传递是深拷贝（共享底层数组）；切片扩容后会静默与原数组分离；**不得把 Go 的 `nil`/零值判定与其他语言的真值判定互相当作等价**（见下条）。
-- **官方资料依据**：[GO-SPEC #Type_identity, #Slice_types](https://go.dev/ref/spec)
+- **官方资料依据**：GO-SPEC #Type_identity, #Slice_types
 
 ### L1-GO-01 零值、nil 与长度是三种不同判定
 1. **源码触发条件**：源码用 `if err != nil`、`if x == ""`、`if len(b) == 0`、`if v, ok := m[k]; ok`、`if fi.IsDir()` 之类的判断分流，或用 `map[string]string` 承接解析结果。
-2. **冻结版本/运行时/API 前提**：Go 1.27；零值与比较语义见 [GO-SPEC #The_zero_value, #Comparison_operators](https://go.dev/ref/spec)，nil map 的读写差异见 [GO-SPEC #Map_types](https://go.dev/ref/spec)。
+2. **冻结版本/运行时/API 前提**：Go 1.27；零值与比较语义见 GO-SPEC #The_zero_value, #Comparison_operators，nil map 的读写差异见 GO-SPEC #Map_types。
 3. **原可观察行为**：
    - 只有显式的 `nil`/零值比较才为真；`0`、`""`、空切片、空 map 都是**普通值**，参与布尔上下文时必须写比较式（Go 没有隐式真值转换）。
    - `len(x) == 0` 与 `x == nil` 是**不同**判断：空但非 nil 的切片两者结果不同。
@@ -35,12 +35,12 @@
    if v, ok := m[k]; ok { use(v) }
    ```
 6. **信息不足或实现相关时的处理**：无法确认源的判断表达“未设置（nil/缺键）”还是“值为零/空”时，必须标为“nil 与零值语义待确认”，不得用统一真值判断合并两者。目标语言为动态语言时，须先核对该语言的假值集合（Ruby 只有 `nil`/`false` 为假，`""` 与 `0` 为真）。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #The_zero_value, #Comparison_operators, #Map_types](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #The_zero_value, #Comparison_operators, #Map_types。
 
 ### L1-GO-05 程序实参含程序名，flag 解析与参数消费必须显式重建
 
 1. **源码触发条件**：源码从 `os.Args` 取用实参、用 `flag` 包解析，或在 `flag.Parse()` 后读取 `flag.Args()`/`os.Args[1:]`。
-2. **冻结版本/运行时/API 前提**：Go 1.27（[`os.Args`](https://pkg.go.dev/os#pkg-variables)、[`flag`](https://pkg.go.dev/flag)）。
+2. **冻结版本/运行时/API 前提**：Go 1.27（`os.Args`、`flag`）。
 3. **原可观察行为**：
    - **`os.Args[0]` 是程序名**，用户实参从 **`os.Args[1]`** 开始——与 C# `args`、Ruby `ARGV`（**不含**程序名）不同。
    - `flag` 包在遇到**第一个非 flag 参数**时即停止解析（与 GNU `getopt` 的**置换**行为相反）；之后的参数**不会**被当作 flag。
@@ -60,7 +60,7 @@
    path := os.Args[1]
    ```
 6. **信息不足或实现相关时的处理**：无法确认源是否依赖 flag 与操作数交错、或目标语言实参序列是否含程序名时，标为“实参偏移与解析器语义待确认”。
-7. **直接官方 HTTPS 依据链接**：[Go `os.Args`](https://pkg.go.dev/os#pkg-variables)、[`flag` 包（解析停止与退出码 2）](https://pkg.go.dev/flag)、[`flag.Parse`](https://pkg.go.dev/flag#Parse)。
+7. **资料依据（名称/版本/章节）**：Go `os.Args`、`flag` 包（解析停止与退出码 2）、`flag.Parse`。
 
 ## 二、整数宽度、溢出、符号性与转换
 
@@ -68,11 +68,11 @@
 - **有符号溢出行为**：`[语言规范保证]` **按补码截断回绕**（二进制算术确定行为，非 UB）；**常数表达式溢出属于编译错误**。
 - **无符号溢出行为**：`[语言规范保证]` **按模截断回绕**（二进制算术确定行为）。
 - **隐式提升与转换陷阱**：`[语言规范保证]` **严格禁止隐式类型转换**；即使 `int32` 与 `int` 在 64 位架构下同宽，亦必须显式强制转换。
-- **官方资料依据**：[GO-SPEC #Numeric_types, #Arithmetic_operators](https://go.dev/ref/spec)
+- **官方资料依据**：GO-SPEC #Numeric_types, #Arithmetic_operators
 
 ### L1-GO-02 数值文本输出必须钉住位宽与格式
 1. **源码触发条件**：源码把数值转成文本——`strconv.FormatInt/FormatUint/FormatFloat`、`fmt.Sprintf`/`fmt.Printf` 的 `%d`/`%v`、`json.Marshal`，或对定宽整数做宽度依赖的格式化。
-2. **冻结版本/运行时/API 前提**：Go 1.27；`strconv` 与 `fmt` 的格式语义见 [`strconv`](https://pkg.go.dev/strconv)、[`fmt`](https://pkg.go.dev/fmt)，`int` 宽度依架构见 [GO-SPEC #Numeric_types](https://go.dev/ref/spec)。
+2. **冻结版本/运行时/API 前提**：Go 1.27；`strconv` 与 `fmt` 的格式语义见 `strconv`、`fmt`，`int` 宽度依架构见 GO-SPEC #Numeric_types。
 3. **原可观察行为**：
    - `int`/`uint` 的宽度**依架构**（32 或 64 位）；`fmt.Sprintf("%d", x)` 的输出宽度随类型与平台变化，`%v` 亦不保证与定宽类型一致。
    - `strconv.FormatFloat(v, 'g', -1, 64)` 使用**最短往返表示**；`fmt.Sprintf("%v", f)` 采用 `%g` 但不保证相同位数——两者输出**可能不同**。
@@ -93,7 +93,7 @@
    s := strconv.FormatFloat(1.0/3, 'g', -1, 64)   // 最短往返，与源义务一致
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的有效位数与整数宽度时，标为“数值格式与位宽待确认”，并写入冻结记录；不得靠 `fmt` 默认格式充当依据。
-7. **直接官方 HTTPS 依据链接**：[`strconv`](https://pkg.go.dev/strconv)；[`fmt`](https://pkg.go.dev/fmt)；[GO-SPEC #Numeric_types](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：`strconv`；`fmt`；GO-SPEC #Numeric_types。
 
 ## 三、字符串、字节、NUL、Unicode 与编码
 
@@ -101,11 +101,11 @@
 - **字节序列数据结构**：`[语言规范保证]` `[]byte`：可变 8 位字节切片。
 - **NUL (`\0`) 字符语义与处理**：`[语言规范保证]` 字符串由显式 `len` 界定，允许内部包含 `\0`；跨系统 C 调用需显式转为 NUL 结尾。
 - **编码假设与转换陷阱**：`[语言规范保证]` `for range string` 按 UTF-8 解码出 Unicode 码点（`rune`），直接下标索引 `str[i]` 访问的是裸字节。
-- **官方资料依据**：[GO-SPEC #String_types, #For_statements](https://go.dev/ref/spec)
+- **官方资料依据**：GO-SPEC #String_types, #For_statements
 
 ### L1-GO-03 `string`/`[]byte` 必须按字节进出，不得让隐式解码改写内容
 1. **源码触发条件**：源码对字节做哈希、Base64、压缩、zip 打包、协议帧拼接或读写，并对 `string`/`[]byte` 互转（`string(b)`、`[]byte(s)`、`[]rune(s)`）。
-2. **冻结版本/运行时/API 前提**：Go 1.27；`string`/`[]byte` 的转换与 UTF-8 处理见 [GO-SPEC #String_types, #Conversions](https://go.dev/ref/spec)，`strings.ToValidUTF8` 与 `utf8` 包的替换语义见 [`unicode/utf8`](https://pkg.go.dev/unicode/utf8)。
+2. **冻结版本/运行时/API 前提**：Go 1.27；`string`/`[]byte` 的转换与 UTF-8 处理见 GO-SPEC #String_types, #Conversions，`strings.ToValidUTF8` 与 `utf8` 包的替换语义见 `unicode/utf8`。
 3. **原可观察行为**：
    - `string` 与 `[]byte` 互转**不改变字节**；`len(s)` 是**字节数**，`utf8.RuneCountInString(s)` 才是码点数。
    - `for range string` **按 UTF-8 解码**：非法字节会在迭代结果中产出 `utf8.RuneError`（U+FFFD），且不报告错误；原字符串的字节本身不会被改写。
@@ -125,7 +125,7 @@
    out = append(out, blob...)              // 逐字节操作，不经过 rune 解码
    ```
 6. **信息不足或实现相关时的处理**：无法确认源数据的编码、或源是否依赖按字节的长度与切片下标语义时，标为“编码与字节长度语义待确认”；**禁止**用替换策略（`strings.ToValidUTF8`、U+FFFD）掩盖差异。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #String_types, #Conversions](https://go.dev/ref/spec)；[`unicode/utf8`](https://pkg.go.dev/unicode/utf8)；[`strings.ToValidUTF8`](https://pkg.go.dev/strings#ToValidUTF8)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #String_types, #Conversions；`unicode/utf8`；`strings.ToValidUTF8`。
 
 ## 四、数组、容器、切片、迭代和顺序
 
@@ -133,7 +133,7 @@
 - **键值映射（Map/Dict）实现**：`[语言规范保证]` `map[K]V` 为内建映射类型，值传递共享数据引用。
 - **Map 遍历迭代顺序保证**：`[语言规范保证]` **Go 规范明确未规定 map 迭代顺序**；转换后代码绝对不得依赖遍历顺序。
 - **迭代期间修改（Fail-Fast）**：`[语言规范保证]` Go 数据竞争是错误，必须通过同步机制避免；`[指定运行时的实现相关事实]` 运行时若检测到并发写操作可能终止程序。
-- **官方资料依据**：[GO-SPEC #Map_types, #Range_clause](https://go.dev/ref/spec)
+- **官方资料依据**：GO-SPEC #Map_types, #Range_clause
 
 ## 五、异常、错误、退出码与可观察失败
 
@@ -141,11 +141,11 @@
 - **异常展开与性能模型**：`[语言规范保证]` `panic` 展开当前 Goroutine 栈，执行已注册的 `defer` 链；在 `defer` 中通过 `recover()` 截断崩溃。
 - **进程退出码回传机制**：`[语言规范保证]` `os.Exit(int)` 立即终止进程（**不执行任何 `defer`！**）；`main` 正常返回退出码为 0。
 - **跨语言映射关键风险**：**严禁将常规 error 机械写为 panic**；切忌用 `os.Exit` 代替错误返回，否则资源泄漏。
-- **官方资料依据**：[GO-SPEC #Errors, #Handling_panics](https://go.dev/ref/spec)
+- **官方资料依据**：GO-SPEC #Errors, #Handling_panics
 
 ### L1-GO-04 被丢弃的 error 不得变成目标的异常终止，主动返回的 error 不得被静默吞掉
 1. **源码触发条件**：源码**有意丢弃** error（`f, _ := os.Open(path)`、不检查 `Scanner.Err()`、忽略 `Close()` 的返回值），**或**在失败时 `return err`、`log.Fatal`、`os.Exit(非零)`、`panic`。
-2. **冻结版本/运行时/API 前提**：Go 1.27；nil 接收者方法行为见 [`os.File`](https://pkg.go.dev/os#File)、[`os.ErrInvalid`](https://pkg.go.dev/os#ErrInvalid)，`Scanner.Err` 见 [`bufio.Scanner`](https://pkg.go.dev/bufio#Scanner.Err)。
+2. **冻结版本/运行时/API 前提**：Go 1.27；nil 接收者方法行为见 `os.File`、`os.ErrInvalid`，`Scanner.Err` 见 `bufio.Scanner`。
 3. **原可观察行为**：
    - 丢弃 `os.Open` 的错误时得到 nil `*os.File`；其 `Read`/`Close` **返回 `os.ErrInvalid` 而非自动 panic**，`Scanner.Scan()` 因读取错误返回 false。若调用方不查 `Scanner.Err()`，可继续以空结果写报告并以 0 退出。
    - 主动返回 error 的路径：错误沿调用链传播，由调用方决定退出码；`os.Exit` **不执行任何 `defer`**。
@@ -166,7 +166,7 @@
    ```
    更严重的形态是**反向误判**：以“nil `*os.File` 会 panic”为由撤销正确的 guard 修订。该前提不成立——nil 接收者的 `Read`/`Close` 返回 `os.ErrInvalid`。
 6. **信息不足或实现相关时的处理**：若不清楚源是否检查 `Scanner.Err()`、`defer f.Close()` 的返回值、或后续报告写入是否成功，**不能断言退出码和产物**；把打开失败路径单列为待验证 oracle。
-7. **直接官方 HTTPS 依据链接**：[`os.ErrInvalid`（nil 接收者）](https://pkg.go.dev/os#ErrInvalid)；[`bufio.Scanner.Scan`/`Err`](https://pkg.go.dev/bufio#Scanner.Scan)；[GO-SPEC #Errors, #Handling_panics](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：`os.ErrInvalid`（nil 接收者）；`bufio.Scanner.Scan`/`Err`；GO-SPEC #Errors, #Handling_panics。
 
 ## 六、内存、资源所有权、析构、GC 与终结
 
@@ -174,7 +174,7 @@
 - **资源确定性释放机制**：`[语言规范保证]` `defer` 语句将资源清理延迟到**外层函数返回前按 LIFO 逆序确定性执行**；无作用域级自动析构。
 - **垃圾收集（GC）停顿与机制**：`[指定运行时的实现相关事实]` 并发三色标记清除垃圾回收（依据 `GO-RT-DOC`）；非内存资源通过显式 `Close` 配合 `defer` 逆序释放。
 - **悬垂与泄漏防范**：在长循环内部直接使用 `defer` 会导致资源直到整函数退出才释放，极易耗尽句柄。
-- **官方资料依据**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec)<br>[GO-RT-DOC](https://go.dev/doc/gc-guide)
+- **官方资料依据**：GO-SPEC #Defer_statements<br>GO-RT-DOC
 
 ## 七、异步、并发、取消与阻塞
 
@@ -182,7 +182,29 @@
 - **线程/调度实体映射关系**：`[指定运行时的实现相关事实]` M:N 运行时调度器（G: Goroutine, M: OS 线程, P: 逻辑处理器），由运行时根据协作与系统调用动态调度。
 - **级联取消与超时机制**：`[指定运行时的实现相关事实]` `context.Context`（`WithCancel`, `WithTimeout`）通过 `ctx.Done()` 信道级联传递取消。
 - **内存模型与数据竞争**：`[语言规范保证]` Go 数据竞争是错误，必须通过 channel、sync 或 sync/atomic 等同步机制避免。Go 内存模型对含数据竞争程序仍规定有限的实现约束：实现可以报告该竞争并终止程序；无竞争程序才获得顺序一致性保证。不得将 Go 的数据竞争机械描述为 C/C++ 式完全未定义行为。
-- **官方资料依据**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)<br>[GO-RT-DOC](https://go.dev/doc/gc-guide)<br>[GO-MEM](https://go.dev/ref/mem)<br>[GO-PKG-CONTEXT](https://pkg.go.dev/context)
+- **官方资料依据**：GO-SPEC #Go_statements<br>GO-RT-DOC<br>GO-MEM<br>GO-PKG-CONTEXT
+
+## 八、空白与临时目录
+
+### L1-GO-06 Unicode 空白不等于其他语言的 strip 集合
+
+1. **触发**：strings.TrimSpace、unicode.IsSpace 或去空白后分支。
+2. **前提**：冻结实际 Go 版本、Unicode 表与输入编码；Go 1.27 是知识基线，不证明已安装或文档已对应该构建。
+3. **事实**：TrimSpace 按 Unicode 空白删除两端；unicode.IsSpace 采用 Unicode White_Space，包含 U+00A0，不含 NUL。Trim 的 cutset 与 TrimFunc 的谓词是另一种指定方式。
+4. **映射条件**：源集合一致才用 TrimSpace；否则保留实际 cutset/谓词、删除范围及源变异/返回值。
+5. **反例**：Ruby strip 与 TrimSpace 在 NUL、U+00A0 上会得到不同结果，不能只用 ASCII 正常样例定等价。
+6. **未知**：冻结版本表或非 UTF-8 输入相关边界未知时标待核；不同库名不是缺陷归因证据。
+7. **依据**：strings.TrimSpace/TrimFunc；unicode.IsSpace。
+
+### L1-GO-07 os.TempDir 选路径不检查目录可用性
+
+1. **触发**：os.TempDir 或临时目录落点参与输出/文件副作用。
+2. **前提**：冻结 Go 工具链、GOOS 与环境；文档事实须与实际版本核对。
+3. **事实**：官方 os 文档规定 Unix 取非空 TMPDIR，否则 /tmp；Windows 按 GetTempPath 的规则，Plan 9 为 /tmp。返回目录不保证存在或可访问，不是创建/校验操作。
+4. **映射条件**：仅当源优先级与验证义务一致时直接替换；源逐候选校验/回退的算法仍须保留。
+5. **反例**：TMPDIR 为空、TMP 指向有效目录时，不能把 Ruby Dir.tmpdir 与 Unix os.TempDir 当同义；两个 API 都返回字符串不证明副作用落点相同。
+6. **未知**：Windows API、运行时变更或源自定义算法未明时待核，不从宿主环境代推隔离环境。
+7. **依据**：os.TempDir；Ruby 版本化实现。
 
 ## 使用边界
 

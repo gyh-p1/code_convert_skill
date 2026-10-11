@@ -1,4 +1,4 @@
-﻿---
+---
 name: c-to-csharp
 description: Use when converting C source to C#; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting C source to C#; apply this direction's language
 
 ### 规则 C-CS-01：C 结构体裸指针与定宽整数向 C# struct/class 划分与 checked 上下文映射
 1. **源码触发条件**：C 源码中定义包含数值或数组的结构体并按值传递，或存在定宽无符号整数回绕算术计算。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §6.2.5, §6.2.6.2](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types), [MS-CS-CHECKED](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.2.5, §6.2.6.2）；目标语言 C# 12 / .NET 8（MS-CS-SPEC, MS-CS-CHECKED）。
 3. **原可观察行为**：C 结构体赋值与传参为全量字节值拷贝；无符号整数运算严格按模 $2^n$ 截断回绕；有符号溢出为 UB。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：若需保留值传递与无 GC 堆分配语义，声明为 C# `struct`；若需表达多态或共享引用，声明为 `class`；整数回绕计算在默认 `unchecked` 上下文中执行，若需强校验则使用 `checked` 语句。
@@ -31,11 +31,11 @@ description: Use when converting C source to C#; apply this direction's language
    public struct Point { public int X; public int Y; }
    ```
 6. **信息不足或实现相关时的处理**：若无法确认结构体是否跨线程共享，应向用户标记所有权模型未决并默认采用 `struct`。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types)；[MS-CS-CHECKED](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked)。
+7. **资料依据（名称/版本/章节）**：MS-CS-SPEC；MS-CS-CHECKED。
 
 ### 规则 C-CS-02：C 错误指示码与 errno 向 C# 结构化异常与 using/IDisposable 映射
 1. **源码触发条件**：C 源码中使用负数或非零返回码指示操作失败，或依赖显式资源关闭函数（如 `free`, `close`）。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 C# 12 / .NET 8（[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/), [MS-CS-DISPOSE](https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 C# 12 / .NET 8（MS-CS-EXCEPT, MS-CS-DISPOSE）。
 3. **原可观察行为**：调用方通过 `if (ret < 0)` 检查并手动跳转清理；操作系统错误通过 `errno` 暴露。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：底层严重失败转换为抛出派生自 `System.Exception` 的结构化异常（如 `InvalidOperationException`）；封装非托管资源的对象必须实现 `IDisposable` 并配合 `using` 语句释放。
@@ -54,11 +54,11 @@ description: Use when converting C source to C#; apply this direction's language
    }
    ```
 6. **信息不足或实现相关时的处理**：若出现文件/套接字操作，说明语言层资源释放契约后加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md) 或 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)；[MS-CS-DISPOSE](https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose)。
+7. **资料依据（名称/版本/章节）**：MS-CS-EXCEPT；MS-CS-DISPOSE。
 
 ### 规则 C-CS-03：C 标志位/信号量同步向 C# Task/async-await 与 CancellationToken 映射
 1. **源码触发条件**：C 源码中使用 volatile 标志位循环轮询或条件变量等待操作终止。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §7.17](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-ASYNC](https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/), [MS-CS-CANCEL](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §7.17）；目标语言 C# 12 / .NET 8（MS-CS-ASYNC, MS-CS-CANCEL）。
 3. **原可观察行为**：C 线程阻塞在等待循环或信号量上，通过原子修改标志位通知退出。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：重构为异步方法返回 `Task`，接收 `CancellationToken` 参数，调用 `token.ThrowIfCancellationRequested()` 或使用异步等待 `Task.Delay(..., token)`。
@@ -76,11 +76,11 @@ description: Use when converting C source to C#; apply this direction's language
    }
    ```
 6. **信息不足或实现相关时的处理**：若源代码涉及操作系统原生线程创建，加载 [`skills/systems/posix-windows-threads/SKILL.md`](../../systems/posix-windows-threads/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-ASYNC](https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/)；[MS-CS-CANCEL](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads)。
+7. **资料依据（名称/版本/章节）**：MS-CS-ASYNC；MS-CS-CANCEL。
 
 ### 规则 C-CS-04：C 定长字节缓冲与出参长度向 C# byte[]/Span<byte> 与 BinaryReader 边界映射
 1. **源码触发条件**：C 源码用 `char buffer[BUFFER_SIZE]`、`unsigned char payload[] = {0x..}` 承载原始字节，长度由出参（`DWORD bytesRead`、`int recv_len`）或独立字段（`NameLength / 2`、`ValueOffset`）传递，或对含 `0x00` 的数组调用 `strlen`（如 `strlen(exploit_req)`、`strlen(complete_passwd_line)`）。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §6.2.5, §7.23](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-STRING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/strings/), [MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.2.5, §7.23）；目标语言 C# 12 / .NET 8（MS-CS-STRING, MS-DOTNET-API）。
 3. **原可观察行为**：缓冲区每个元素恒为 1 字节，字节数等于元素个数；当首字节或中间字节为 `0x00` 时，任何按 `\0` 结尾解读的函数都在该处停止，实际发送/比较/复制的字节数因此静默变短。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：原始字节统一声明为 `byte[]` 或 `Span<byte>`/`ReadOnlySpan<byte>`，长度取 `.Length`；C 的出参长度改为方法返回值（如 `Stream.Read(byte[], int, int)` 返回实际读取字节数）或 `BinaryReader` 的显式读取；需要文本时只在边界处用 `Encoding` 显式编码/解码一次。
@@ -96,11 +96,11 @@ description: Use when converting C source to C#; apply this direction's language
    Send(buf, n);
    ```
 6. **信息不足或实现相关时的处理**：若同一 `char*`/缓冲在不同调用点分别承载文本与二进制，必须逐调用点确认语义与编码，不得默认 UTF-8；涉及文件/套接字读写时加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md) 或 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)，并保持字节计数语义。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.2.5, §7.23](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[MS-CS-STRING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/strings/)；[MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.2.5, §7.23；MS-CS-STRING；MS-DOTNET-API。
 
 ### 规则 C-CS-05：C 自相对偏移指针解析与位域/柔性数组成员向 C# Span 切片与显式位掩码映射
 1. **源码触发条件**：C 源码用 `(PCHAR)pApiSetMap + pApiEntry->NameOffset` 形式的自相对偏移在字节块内定位子结构，用 `Array[ANYSIZE_ARRAY]` 柔性数组成员表示变长数组，用 `WORD offset:12; WORD type:4;` 位域压缩字段，或用 `DEREF_32(addr)`/`*(DWORD *)p` 之类宏按固定宽度取值。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §6.7.2.1, §6.5.6](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-ARRAY](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/), [MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.7.2.1, §6.5.6）；目标语言 C# 12 / .NET 8（MS-CS-ARRAY, MS-DOTNET-API）。
 3. **原可观察行为**：记录内偏移指向同一字节块内的另一个位置，越界读取在块内仍会返回"可读但错误"的数据而不报错；位域的存储分配顺序与是否跨存储单元由实现定义；`ANYSIZE_ARRAY` 的实际长度由头部 `Count` 字段决定。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：用 `ReadOnlySpan<byte>` 的 `Slice(offset)` / `Slice(offset, length)` 表达记录内偏移，用 `BinaryPrimitives.ReadUInt16LittleEndian(span)` 之类显式端序读取，用位移掩码还原位域（`raw & 0x0FFF`、`raw >> 12`）；变长数组用 `span.Slice(headerSize, count * elementSize)` 显式长度表达；仅在目标 ABI 已冻结且确有互操作需求时才使用 `[StructLayout]` + `Marshal`。
@@ -118,11 +118,11 @@ description: Use when converting C source to C#; apply this direction's language
    int type = raw >> 12;
    ```
 6. **信息不足或实现相关时的处理**：源文件未给出目标 ABI、字节序、位域分配方向或结构体对齐时，必须停标为待确认，不得用 C# 默认布局反推；若偏移来自未验证的映射内存（如 PEB/API-SET），必须同时说明该数据来源属于平台事实而非 C 语言保证。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.7.2.1, §6.5.6](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[MS-CS-ARRAY](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/)；[MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.7.2.1, §6.5.6；MS-CS-ARRAY；MS-DOTNET-API。
 
 ### 规则 C-CS-06：C 函数指针（取址后强转调用）向 C# UnmanagedFunctionPointer 委托与存活期映射
 1. **源码触发条件**：C 源码声明函数指针变量（如 `BOOL(*MiniDumpWriteDump)(HANDLE, DWORD, HANDLE, DWORD, VOID*, VOID*, VOID*);`、`typedef HMODULE (WINAPI * LOADLIBRARYA)(LPCSTR);`），经 `GetProcAddress` 或 `(LOADLIBRARYA)(uiBaseAddress + DEREF_32(...))` 取址后直接调用，并在调用前做 `== NULL` 检查。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §6.3.2.3, §6.5.2.2](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标语言 C# 12 / .NET 8（[MS-CS-DELEGATES](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/delegates-events), [MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.3.2.3, §6.5.2.2）；目标语言 C# 12 / .NET 8（MS-CS-DELEGATES, MS-DOTNET-API）。
 3. **原可观察行为**：函数地址的调用约定由源码中的 `WINAPI`/`NTAPI` 等宏决定；地址为空时跳过调用；调用发生在当前进程地址空间内，参数按其原生宽度传递。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：声明与源 `typedef` 逐参数对应的委托类型并标注 `[UnmanagedFunctionPointer(CallingConvention...)]`，用 `Marshal.GetDelegateForFunctionPointer<TDelegate>(IntPtr)` 转换为委托后按普通方法调用；`== NULL` 对应 `IntPtr.Zero` 检查；**必须让该委托保持强引用直到不再需要调用**（存字段或局部变量并在同一作用域内使用）。
@@ -139,7 +139,7 @@ description: Use when converting C source to C#; apply this direction's language
    private static DumpFnNative? _dumpKeepAlive = null;
    ```
 6. **信息不足或实现相关时的处理**：源码未展开 `WINAPI`/`NTAPI` 宏、未给出目标架构或参数宽度时，必须停标并要求冻结 ABI；缺少 ABI 事实时不得声称该委托可直接调用，也不得把"语法改写完成"当作可调用性结论。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.3.2.3, §6.5.2.2](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[MS-CS-DELEGATES](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/delegates-events)；[MS-DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.3.2.3, §6.5.2.2；MS-CS-DELEGATES；MS-DOTNET-API。
 
 ## 转换与验证边界
 

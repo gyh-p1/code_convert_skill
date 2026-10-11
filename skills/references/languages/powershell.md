@@ -9,11 +9,11 @@
 - **语言规范保证**：`[语言规范保证]` 变量持有 .NET 对象引用；标量基本类型按值语义求值；管道传递对象流时通过 `PSObject` 包装层反射解包。
 - **实现相关 / 运行时优化行为**：`[指定运行时的实现相关事实]` 管道对象解包与属性投影开销受 PowerShell 引擎管道缓冲区机制支配。
 - **机械等价禁区与转换约束**：管道单元素展开（Unrolling）会将单元素数组隐式退化为标量，破坏类型契约；**不得把 PowerShell 的 `$null`/空数组/空串判定与其他语言互相当作等价**（见下条）。
-- **官方资料依据**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)
+- **官方资料依据**：MS-PS-PIPE
 
 ### L1-PS-01 `$null`、空集合与单元素展开是三种不同判定
 1. **源码触发条件**：源码用 `if ($x)` / `if ($null -ne $x)` / `if ($x.Count -eq 0)` / `if ([string]::IsNullOrEmpty($x))` 分流，或把 `@()`/管道结果直接当真值使用。
-2. **冻结版本/运行时/API 前提**：PowerShell 7.6；`$null` 比较与集合计数语义见 [MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)、[about_Arrays](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)。
+2. **冻结版本/运行时/API 前提**：PowerShell 7.6；`$null` 比较与集合计数语义见 MS-PS-AUTO、about_Arrays。
 3. **原可观察行为**：
    - 布尔上下文中的假值集合包含 `$null`、`$false`、数值 `0`、空串 `""`、空数组 `@()`；单元素集合取该元素的布尔值，所以 `@($null)`、`@(0)` 为假；多元素集合为真，即使各元素均是假值。
    - **单元素展开**：`$x = 1` 与 `$x = @(1)` 在多数上下文中不可区分，`.Count` 在标量上也可用；管道中单元素数组会退化为标量。
@@ -33,12 +33,12 @@
    if (@($items).Count -eq 0) { 'empty' }  # 显式表达空集合
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的判断表达“无值”“空集合”还是“单元素标量”时，标为“空值与集合语义待确认”，不得用统一真值判断合并；**必须**用 `@()` 显式包裹以保证数组合同。
-7. **直接官方 HTTPS 依据链接**：[about_Booleans（集合转换）](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_booleans?view=powershell-7.6)；[about_Arrays](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)；[about_Comparison_Operators](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators)。
+7. **资料依据（名称/版本/章节）**：about_Booleans（集合转换）；about_Arrays；about_Comparison_Operators。
 
 ### L1-PS-05 参数绑定与实参来源必须显式重建
 
 1. **源码触发条件**：函数/脚本用 `param()` 声明参数（`[Parameter(Position=n)]`、默认值、`[switch]`、`ValueFromRemainingArguments`），或读取 `$args`/`$PSBoundParameters`。
-2. **冻结版本/运行时/API 前提**：PowerShell 7.6（[about_Functions_Advanced_Parameters](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters)、[about_Automatic_Variables](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)）。
+2. **冻结版本/运行时/API 前提**：PowerShell 7.6（about_Functions_Advanced_Parameters、about_Automatic_Variables）。
 3. **原可观察行为**：
    - **参数有三种来源**：**未绑定**、**显式传入**、**默认值生效**。默认值**仅在参数被省略时**生效；`$PSBoundParameters` 只含**真正传入**的参数。
    - **位置参数**按 `Position` 绑定；未标 `Position` 的参数只能按名传入。
@@ -62,7 +62,7 @@
    string path = args[0];      // 源里 -Depth 未给出时，args 内容与源的位置绑定不一致
    ```
 6. **信息不足或实现相关时的处理**：无法确定源是否区分"省略/显式默认值"、或源是否依赖参数名缩写时，标为“参数绑定语义待确认”，并保守引入 `ContainsKey`（不影响源未区分时的结果）。
-7. **直接官方 HTTPS 依据链接**：[about_Functions_Advanced_Parameters](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters)；[about_Automatic_Variables（`$PSBoundParameters`、`$args`）](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)；[about_Parameter_Binding（缩写与歧义）](https://learn.microsoft.com/en-us/powershell/scripting/learn/experts/parameter-binding)。
+7. **资料依据（名称/版本/章节）**：about_Functions_Advanced_Parameters；about_Automatic_Variables（`$PSBoundParameters`、`$args`）；about_Parameter_Binding（缩写与歧义）。
 
 ## 二、整数宽度、溢出、符号性与转换
 
@@ -70,11 +70,11 @@
 - **有符号溢出行为**：`[指定运行时的实现相关事实]` 默认算术超出当前类型上限时，PowerShell 引擎会**自动提升为更大宽度整型**（如 `[int32]::MaxValue + 1` 自动转为 `[int64]` 或 `[double]`）。
 - **无符号溢出行为**：`[指定运行时的实现相关事实]` 显式通过 .NET 静态方法或强类型声明时遵循 .NET `unchecked` 回绕规则。
 - **隐式提升与转换陷阱**：`[指定运行时的实现相关事实]` 动态弱类型转换系统在算术中自动升级类型，可能破坏对底层二进制溢出截断的依赖。
-- **官方资料依据**：[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)
+- **官方资料依据**：MS-PS-AUTO
 
 ### L1-PS-02 数值文本输出必须钉住类型与格式字符串
 1. **源码触发条件**：源码把数值转成文本——字符串内插 `"$x"`、`-f` 格式运算符、`.ToString()`、`[string]::Format`，或对定宽整数做宽度依赖的运算。
-2. **冻结版本/运行时/API 前提**：PowerShell 7.6；自动类型提升与格式运算符见 [about_Operators](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)、[about_Arithmetic_Operators](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arithmetic_operators)、[MS-CS-FORMAT](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types)。
+2. **冻结版本/运行时/API 前提**：PowerShell 7.6；自动类型提升与格式运算符见 about_Operators、about_Arithmetic_Operators、MS-CS-FORMAT。
 3. **原可观察行为**：
    - 算术超出当前类型上限时，引擎**自动提升为更大宽度整型**（如 `[int32]::MaxValue + 1` 转为 `[int64]` 或 `[double]`），**不按模回绕**——与 C/Go 语义相反。
    - 字符串内插与 `-f` 使用**当前区域设置**；`.ToString()` 亦受 `CurrentCulture` 影响，小数点符号可能改变。
@@ -95,7 +95,7 @@
    [string]::Format([cultureinfo]::InvariantCulture, '{0}', $value)
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的类型宽度或有效位数时，标为“数值类型与格式待确认”，并把该文本列入 oracle 观察点。
-7. **直接官方 HTTPS 依据链接**：[about_Arithmetic_Operators](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arithmetic_operators)；[about_Operators（-f 格式运算符）](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)；[MS-CS-FORMAT](https://learn.microsoft.com/en-us/dotnet/standard/base-types/formatting-types)。
+7. **资料依据（名称/版本/章节）**：about_Arithmetic_Operators；about_Operators（-f 格式运算符）；MS-CS-FORMAT。
 
 ## 三、字符串、字节、NUL、Unicode 与编码
 
@@ -103,11 +103,11 @@
 - **字节序列数据结构**：`[语言规范保证]` `[byte[]]` 数组。
 - **NUL (`\0`) 字符语义与处理**：`[语言规范保证]` 内容中允许包含 `\0`；重定向到外部原生程序可能受宿主控制台编码截断。
 - **编码假设与转换陷阱**：`[指定运行时的实现相关事实]` PowerShell 7+ 默认将文件重定向与外部管道输出编码设为 UTF-8（无 BOM）。
-- **官方资料依据**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)
+- **官方资料依据**：MS-PS-PIPE
 
 ### L1-PS-03 重定向与外部管道的编码和换行不得静默改写字节
 1. **源码触发条件**：源码做文件重定向（`>`/`>>`/`Out-File`/`Set-Content`/`Add-Content`）、调用外部原生程序并读写其管道（`|`、`$out = & prog`），或用 `[byte[]]`/`Get-Content -Encoding Byte` 处理二进制。
-2. **冻结版本/运行时/API 前提**：PowerShell 7.6；`$OutputEncoding`、`[Console]::OutputEncoding`、`$PSDefaultParameterValues['Out-File:Encoding']` 与 `Set-Content` 的编码语义见 [about_Character_Encoding](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)。
+2. **冻结版本/运行时/API 前提**：PowerShell 7.6；`$OutputEncoding`、`[Console]::OutputEncoding`、`$PSDefaultParameterValues['Out-File:Encoding']` 与 `Set-Content` 的编码语义见 about_Character_Encoding。
 3. **原可观察行为**：
    - **PowerShell 7.4 起**，原生命令 stdout 直接 `>` 到文件、原生字节流直连另一原生命令 stdin 可保留字节，不加文本格式化；在 7.6 基线内不能把它们当成 `Out-File`。
    - Cmdlet/脚本的对象流经 `>`/`Out-File` 仍涉及格式化；`Set-Content`/`Out-File` 在 7+ 默认 UTF-8 无 BOM，覆盖参数须另冻结。
@@ -131,7 +131,16 @@
    Get-Content -AsByteStream -Raw $in          # 仅在源确为字节路径时
    ```
 6. **信息不足或实现相关时的处理**：无法确认源的编码、BOM 策略或换行义务时，标为“编码与换行翻译位置待确认”；**禁止**用替换字符掩盖差异。也不得用文本 cmdlet 的默认行为充当依据。
-7. **直接官方 HTTPS 依据链接**：[about_Redirection（7.4 原生字节流）](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_redirection?view=powershell-7.6)；[about_Character_Encoding](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)；[`Out-File`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/out-file)。
+7. **资料依据（名称/版本/章节）**：about_Redirection（7.4 原生字节流）；about_Character_Encoding；`Out-File`。
+
+### L1-PS-06 固定文本须区分字面值、插值与输出终止符
+
+1. **触发/前提**：PowerShell 7.6；源/目标有固定帮助文本、路径标签、协议字段或多行字符串。冻结宿主/.NET writer、字符编码和允许差异。
+2. **原行为**：双引号字符串会展开变量/子表达式并处理反引号转义；单引号字符串不插值，内部单引号需重复。here-string 也有单/双引号之别；结束标记所用的最后换行不加入其内容，内部行尾仍须核实际文本。
+3. **映射条件**：只改目标语法所需的转义，保持求值后的固定内容、顺序和空白。不擅改固定标签/帮助全文，也不把源已有换行统一替换为 Environment.NewLine。`.NET Console.WriteLine` 另追加 writer 的终止符，即使参数已有换行；若源只写入内含行尾的字符串，须选择符合该行为的 Write/字节通道，具体通道见 §八。
+4. **反例**：固定文本 `cost=$5` 改用可插值字符串；多行常量无意多出/少掉首尾换行；源固定 LF 文本加 WriteLine 后多出宿主行尾；将错误诊断写到 success 流以求显示相同。
+5. **未知处理**：不知道源文本是否固定、writer 配置或捕获通道时逐项记待核；格式化显示/归一化比较不足以证明原始字节保持，不硬编码特定运行时异常栈。
+6. **官方依据**：about_Quoting_Rules、Console.WriteLine；.NET 实际版本按宿主冻结。
 
 ## 四、数组、容器、切片、迭代和顺序
 
@@ -139,7 +148,7 @@
 - **键值映射（Map/Dict）实现**：`[语言规范保证]` `[hashtable]` 与 `[ordered]@{}` 映射结构。
 - **Map 遍历迭代顺序保证**：`[语言规范保证]` 默认 `hashtable` 遍历无序；显式声明 `[ordered]@{}` 保证插入顺序。
 - **迭代期间修改（Fail-Fast）**：`[指定运行时的实现相关事实]` 遍历中修改集合会抛出集合已修改异常。
-- **官方资料依据**：[MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)<br>[MS-PS-HASH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_hash_tables)
+- **官方资料依据**：MS-PS-ARRAY<br>MS-PS-HASH
 
 ## 五、异常、错误、退出码与可观察失败
 
@@ -147,11 +156,11 @@
 - **异常展开与性能模型**：`[指定运行时的实现相关事实]` `try`/`catch` **默认只能捕获终止错误**；受 `$ErrorActionPreference` 偏好变量严格控制。
 - **进程退出码回传机制**：`[指定运行时的实现相关事实]` `$LASTEXITCODE` 记录外部进程最后返回码；Cmdlet 自身成败由 `$?`（`$true`/`$false`）记录；`exit` 终止宿主。
 - **跨语言映射关键风险**：不可将 PS Cmdlet 写入的错误流直接等同于进程标准错误输出；`$?` 会被后续任意语句覆盖。
-- **官方资料依据**：[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)<br>[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)
+- **官方资料依据**：MS-PS-PREF<br>MS-PS-AUTO
 
 ### L1-PS-04 非终止错误不得被压成终止，终止错误不得被静默吞掉
 1. **源码触发条件**：源码产生或处理**非终止错误**（cmdlet 失败后继续、`Write-Error`、`-ErrorAction Continue/SilentlyContinue`），**或**依赖终止错误中断控制流（`throw`、`-ErrorAction Stop`、`exit` 非零）。
-2. **冻结版本/运行时/API 前提**：PowerShell 7.6；`$ErrorActionPreference`/`-ErrorAction` 与 `try/catch` **默认只捕终止错误**见 [about_Preference_Variables](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)、[about_Try_Catch_Finally](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)。
+2. **冻结版本/运行时/API 前提**：PowerShell 7.6；`$ErrorActionPreference`/`-ErrorAction` 与 `try/catch` **默认只捕终止错误**见 about_Preference_Variables、about_Try_Catch_Finally。
 3. **原可观察行为**：
    - **非终止错误**写入错误流后**继续执行**，不改变控制流；进程最终退出码可能仍为 0。
    - **终止错误**中断当前语句/脚本，可被 `try/catch` 捕获。
@@ -170,10 +179,10 @@
    Copy-Item a b
    if ($LASTEXITCODE -ne 0) { throw }   # cmdlet 失败时 $LASTEXITCODE 未被设置
    # 正确：按源的失败语义显式重建
-   try { Copy-Item a b -ErrorAction Stop } catch { Write-Error $_ }   # 需要终止语义时
+   Copy-Item a b -ErrorAction Stop       # 源要求失败传播时，不再 catch 后静默继续
    ```
 6. **信息不足或实现相关时的处理**：无法确认源的失败是终止还是非终止、或无法确认源是否检查 `$?` 时，把该错误路径单列为待验证 oracle；不得用“更严格更安全”为由改变控制流。
-7. **直接官方 HTTPS 依据链接**：[about_Preference_Variables](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)；[about_Try_Catch_Finally](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)；[about_Automatic_Variables](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)。
+7. **资料依据（名称/版本/章节）**：about_Preference_Variables；about_Try_Catch_Finally；about_Automatic_Variables。
 
 ## 六、内存、资源所有权、析构、GC 与终结
 
@@ -181,7 +190,7 @@
 - **资源确定性释放机制**：`[指定运行时的实现相关事实]` 显式调用 `.Dispose()`，COM 对象必须调用 `[System.Runtime.InteropServices.Marshal]::ReleaseComObject()`。
 - **垃圾收集（GC）停顿与机制**：`[指定运行时的实现相关事实]` 随宿主 .NET 运行时触发 GC。
 - **悬垂与泄漏防范**：未释放的 COM 互操作对象将导致宿主子进程句柄泄露、阻碍外部进程终止。
-- **官方资料依据**：[MS-PS-COM](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/new-object)
+- **官方资料依据**：MS-PS-COM
 
 ## 七、异步、并发、取消与阻塞
 
@@ -189,8 +198,25 @@
 - **线程/调度实体映射关系**：`[指定运行时的实现相关事实]` Runspace 池映射至 .NET 线程池线程；脚本块隔离执行。
 - **级联取消与超时机制**：`[指定运行时的实现相关事实]` 支持作业超时与取消命令；受宿主环境与具体命令控制。
 - **内存模型与数据竞争**：`[指定运行时的实现相关事实]` 共享变量访问需使用同步包装或显式 .NET 同步锁，否则竞态数据损毁。
-- **官方资料依据**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)<br>[MS-PS-THREADJOB](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)
+- **官方资料依据**：MS-PS-PIPE<br>MS-PS-THREADJOB
+
+## 八、宿主输出
+
+### 宿主与输出通道
+
+迁入原进程场景的语言事实：success、error、warning、verbose、debug、information 与 host 显示的归属/重定向条件须按源码调用和宿主区分，不能因“都能看见”合成 stdout/stderr。保留 Write-Warning/Write-Verbose/ShouldProcess 的触发条件，不新增 What if 提示文本；公开数据流不能被提示污染。普通脚本输出也适用，进程场景只管子进程捕获与等待。来源：about_Redirection、ShouldProcess。
+
+## 九、普通控制流
+
+### L1-PS-07 标签只能承接目标语言支持的控制流
+
+1. **触发/前提**：PowerShell 7.6；源码存在标签、goto、嵌套 break/continue 或清理出口。本规则对普通单线程程序也适用。
+2. **原行为**：PowerShell 的循环标签以 `:name` 放在循环语句前，`break name` 退出对应循环；不是 C/C++ 的 `name:` 任意跳转目的地。循环外的 break 还可能影响调用栈，不能拿它当任意 return/goto。
+3. **映射条件**：按源的到达条件、跳转目的地、后续语句及清理范围选目标结构。源未被引用的标签可在确认不改变流程后去掉；有 goto/出口引用的标签先重建控制流，再处理名称。`finally`/函数返回/循环退出各有范围，不能只为通过语法而互换。
+4. **反例**：把 C++ `report_ready:` 原样放入目标，被作为命令尝试调用；为消除该命令错误直接删掉仍被跳转引用的目标；合法的 PowerShell `:outer while (...)` 被当残留删除。
+5. **未知处理**：标签引用、清理顺序或循环范围未定位时保留待确认，不声称等价；静态检查只核对应关系，不运行目标来试探语法。
+6. **官方依据**：about_Break、about_Continue。
 
 ## 使用边界
 
-将本页与所选的源→目标方向 Skill 及另一语言的共性页组合使用；映射前先确认源码真实行为。文件、网络、并发和跨 OS API 的具体差异仍按[共性索引的场景/系统分流](../seven-language-common-semantics.md)选读，不从语言事实直接推断系统 API 等价。没有逐例第三方证据时，语法/构建与功能结论保持 `UNVERIFIED`；本机不运行或编译样本。
+将本页与所选方向和另一语言事实页组合；具体场景/系统差异按[共性索引](../seven-language-common-semantics.md)选读。缺逐例第三方证据保持 UNVERIFIED，本机不运行或编译。

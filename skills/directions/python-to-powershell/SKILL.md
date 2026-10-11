@@ -1,4 +1,4 @@
-﻿---
+---
 name: python-to-powershell
 description: Use when converting Python source to PowerShell; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Python source to PowerShell; apply this directi
 
 ### 规则 PY-PS-01：Python 大小写敏感变量/方法向 PowerShell 大小写不敏感环境重构映射
 1. **源码触发条件**：Python 源码中定义仅有大小写差异的不同标识符（如 `data` 与 `Data`，或 `val` 与 `VAL`）。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 PowerShell 7.6（[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 PowerShell 7.6（MS-PS-AUTO）。
 3. **原可观察行为**：Python 严格区分大小写，`data` 和 `Data` 是两个完全独立、互不干扰的变量。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：PowerShell 语法与变量查找**默认大小写不敏感**！`$data` 与 `$Data` 会访问同一个变量。必须对同名大小写变量显式重命名（如 `$dataVal` 与 `$dataObj`），消除冲突。
@@ -33,11 +33,11 @@ description: Use when converting Python source to PowerShell; apply this directi
    $dataRecord = "override"
    ```
 6. **信息不足或实现相关时的处理**：扫描源文件全部符号表，建立大小写冲突清单并报告用户。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)。
+7. **资料依据（名称/版本/章节）**：MS-PS-AUTO。
 
 ### 规则 PY-PS-02：Python 列表推导向 PowerShell 管道过滤与展开映射
 1. **源码触发条件**：Python 源码中使用 `[x * 2 for x in items if x > 0]` 列表推导式。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 PowerShell 7.6（MS-PS-PIPE）。
 3. **原可观察行为**：即时计算并生成新的 `list` 对象。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为 `$items | Where-Object { $_ -gt 0 } | ForEach-Object { $_ * 2 }`；若在循环内追求极速，使用 `foreach ($x in $items)` 语句。
@@ -52,11 +52,11 @@ description: Use when converting Python source to PowerShell; apply this directi
    foreach ($x in $items) { $res.Add($x) }
    ```
 6. **信息不足或实现相关时的处理**：数据规模未标明时，默认提供管道实现并在性能敏感处提示。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)；[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)。
+7. **资料依据（名称/版本/章节）**：MS-PS-ARRAY；MS-PS-PIPE。
 
 ### 规则 PY-PS-03：Python 异常层次向 PowerShell 终止错误与 catch 映射
 1. **源码触发条件**：Python 源码中使用 `raise ValueError(...)` 并通过 `except Exception as e:` 捕获。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 PowerShell 7.6（[MS-PS-ERROR](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 PowerShell 7.6（MS-PS-ERROR）。
 3. **原可观察行为**：抛出异常，中断执行，打印 traceback。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：使用 `throw [System.ArgumentException]::new("...")`；捕获使用 `try { ... } catch { ... }`，通过 `$_` 获取当前异常对象。
@@ -69,11 +69,11 @@ description: Use when converting Python source to PowerShell; apply this directi
    try { Dangerous-Action } catch { Write-Error "Action failed: $_" }
    ```
 6. **信息不足或实现相关时的处理**：若源异常为特定业务自定义类，映射为 `[System.Exception]` 并包含原异常名。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-ERROR](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)。
+7. **资料依据（名称/版本/章节）**：MS-PS-ERROR。
 
 ### 规则 PY-PS-04：Python 任意精度整数与整除向 PowerShell/.NET 定宽数值与舍入语义映射
 1. **源码触发条件**：Python 源码中出现 `int` 参与的累计计数或大数运算、`//` 整除（如 `score // 10`）、`min(...)` 数值裁剪、掩码 `& 0xFFFFFFFF`，或这些结果被写入容器后再读出。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）；目标语言 PowerShell 7.6（[MS-PS-ARITH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arithmetic_operators)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-DATA）；目标语言 PowerShell 7.6（MS-PS-ARITH）。
 3. **原可观察行为**：`int` 为任意精度、无溢出概念；`//` 向下取整（`-7 // 2 == -4`）；如需定宽回绕必须由源码显式施加位掩码。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：可能超出 32/64 位的量用 `[long]`/`[bigint]` 显式承载；`a // b` 映射为 `[math]::Floor($a / $b)`（必要时再转 `[long]`）；需要定宽截断时显式 `-band 0xFFFFFFFF`；`min(...)` 用 `[math]::Min(...)` 并保持两侧同一数值类型。
@@ -89,11 +89,11 @@ description: Use when converting Python source to PowerShell; apply this directi
    $total = [bigint]9223372036854775807 + 2   # 正确：需要任意精度时显式使用 [bigint]
    ```
 6. **信息不足或实现相关时的处理**：源数值的取值范围不明时（字节计数、时间戳差值、哈希值、加密大整数）必须停下并要求给出上界，或直接改用 `[bigint]`，不得默认挑 `[int]`；源若依赖 `& 0xFFFFFFFF` 之类掩码，需逐处确认掩码宽度并在目标显式保留。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)；[MS-PS-ARITH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arithmetic_operators)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA；MS-PS-ARITH。
 
 ### 规则 PY-PS-05：Python 异常兜底与原生命令返回值向 PowerShell 非终止错误与 `$LASTEXITCODE` 映射
 1. **源码触发条件**：Python 源码用 `except Exception: pass`（或 `except Exception:` 后静默继续）包住平台采集类调用，或用 `subprocess.call([...])`、`os.system("...")` 调外部命令而忽略其返回码，以及依赖“失败必然抛异常”的 `try/except` 结构。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-LIB-SUBPROCESS](https://docs.python.org/3.12/library/subprocess.html)）；目标语言 PowerShell 7.6（[MS-PS-TCF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)、[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-LIB-SUBPROCESS）；目标语言 PowerShell 7.6（MS-PS-TCF、MS-PS-PREF）。
 3. **原可观察行为**：Python 中失败即抛异常并被 `except` 捕获；`subprocess.call` 不抛异常而返回退出码，`os.system` 返回等待状态，调用方只有显式检查才能发现失败。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：Cmdlet 的失败默认是**非终止错误**（写入错误流、流程继续），`try`/`catch` 不会捕获它；要捕获须在该语句上显式 `-ErrorAction Stop`，或在作用域内设置 `$ErrorActionPreference = 'Stop'`。原生命令（`& exe @args`、`Start-Process`）的成败用 `$LASTEXITCODE` 判定并显式 `throw`，不要把 `$?` 当退出码使用（`$?` 只反映上一条语句，且会被后续语句覆盖）。
@@ -111,11 +111,11 @@ description: Use when converting Python source to PowerShell; apply this directi
    if ($LASTEXITCODE -ne 0) { throw "native tool failed: $LASTEXITCODE" }   # 正确
    ```
 6. **信息不足或实现相关时的处理**：无法确认某命令写的是终止还是非终止错误时（第三方模块、包装函数），一律按非终止处理并要求 `-ErrorAction Stop`；映射 `subprocess.call`/`os.system` 前须逐条列出退出码含义，不得默认非零码即业务正常，也不得假定目标命令沿用同一套退出码。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-TCF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)；[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)；[PY-LIB-SUBPROCESS](https://docs.python.org/3.12/library/subprocess.html)。
+7. **资料依据（名称/版本/章节）**：MS-PS-TCF；MS-PS-PREF；PY-LIB-SUBPROCESS。
 
 ### 规则 PY-PS-06：Python `str.encode()`/`bytes`/base64 写盘向 PowerShell .NET 字符串与 `[byte[]]` 映射
 1. **源码触发条件**：Python 源码中出现 `data.encode()`、`bytes`/`bytearray`、`base64.b64encode(...)`、`open(path, "wb")` 或 `open(path, "rb")` 的二进制读写。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-LIB-BASE64](https://docs.python.org/3.12/library/base64.html)）；目标语言 PowerShell 7.6（[MS-PS-ENC](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-LIB-BASE64）；目标语言 PowerShell 7.6（MS-PS-ENC）。
 3. **原可观察行为**：`str` 与 `bytes` 严格隔离、混用抛 `TypeError`；`b64encode` 接受并返回 `bytes`；`"wb"` 只接受 bytes，写出的字节与输入逐字节一致（保留 `\0`、不追加换行）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`data.encode()` 映射为 `[System.Text.Encoding]::UTF8.GetBytes($data)`（得到 `[byte[]]`）；`base64.b64encode(...)` 映射为 `[System.Convert]::ToBase64String(<byte[]>)`（返回 `System.String`）；`open(..., "wb")` 映射为 `[System.IO.File]::WriteAllBytes($path, $bytes)` 或 `Set-Content -AsByteStream`；`open(..., "rb")` 映射为 `[System.IO.File]::ReadAllBytes($path)`。
@@ -133,7 +133,7 @@ description: Use when converting Python source to PowerShell; apply this directi
    [System.IO.File]::WriteAllBytes($filename, $bytes)
    ```
 6. **信息不足或实现相关时的处理**：源 `.encode()` 未给实参时须确认其默认编码（Python 3 为 UTF-8）；源声明 `latin-1`/`gbk` 等必须显式映射为对应的 .NET `Encoding`，且 .NET (Core) 默认只内置 Unicode/ASCII 编码、非 Unicode 代码页可能需要先注册代码页提供程序才可取到，属于必须核对的目标运行时前提；`open()` 的写入模式（截断/追加）也要一并确认。
-7. **直接官方 HTTPS 依据链接**：[PY-LIB-BASE64](https://docs.python.org/3.12/library/base64.html)；[MS-PS-ENC](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)；[DOTNET-API](https://learn.microsoft.com/en-us/dotnet/api/)。
+7. **资料依据（名称/版本/章节）**：PY-LIB-BASE64；MS-PS-ENC；DOTNET-API。
 
 ## 转换与验证边界
 

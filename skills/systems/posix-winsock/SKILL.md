@@ -79,7 +79,7 @@ if (n > INT_MAX) { /* 分段或报错，不静默收窄 */ }
 
 **信息不足时的处理**：无法确认目标架构（32/64 位）或目标 Winsock 版本时，标为“目标架构与句柄语义待确认”，并把无效值比较列为 oracle 观察点；不得假定与源侧同宽。
 
-**官方依据**：[Microsoft `SOCKET`/`INVALID_SOCKET`/`SOCKET_ERROR`](https://learn.microsoft.com/en-us/windows/win32/winsock/socket-data-type-2)、[`recv`](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recv)、[`WSAGetLastError`](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsagetlasterror)、[Porting Socket Applications to Winsock](https://learn.microsoft.com/en-us/windows/win32/winsock/porting-socket-applications-to-winsock)；[The Open Group `recv`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/recv.html)。
+**官方依据**：Microsoft `SOCKET`/`INVALID_SOCKET`/`SOCKET_ERROR`、`recv`、`WSAGetLastError`、Porting Socket Applications to Winsock；The Open Group `recv`。
 
 
 ## 方向不对称的陷阱
@@ -130,8 +130,8 @@ if (n > INT_MAX) { /* 分段或报错，不静默收窄 */ }
 
 ## 依据
 
-- [The Open Group Base Specifications Issue 7 / IEEE Std 1003.1（POSIX）](https://pubs.opengroup.org/onlinepubs/9699919799/)：`socket`、`send`/`recv`、`shutdown`、`fcntl`、`select`、`<sys/socket.h>` 与 `errno` 语义。
-- [Microsoft Winsock 参考](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/)：`WSAStartup`、`SOCKET`/`INVALID_SOCKET`/`SOCKET_ERROR`、`closesocket`、`ioctlsocket`、`WSAGetLastError`、`recv`/`send` 签名、`setsockopt`（`SO_RCVTIMEO`）。
-- [Porting Socket Applications to Winsock](https://learn.microsoft.com/en-us/windows/win32/winsock/porting-socket-applications-to-winsock) 与 [WSAPoll](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsapoll)：跨平台移植差异与 `WSAPoll` 行为说明。
+- The Open Group Base Specifications Issue 7 / IEEE Std 1003.1（POSIX）：`socket`、`send`/`recv`、`shutdown`、`fcntl`、`select`、`<sys/socket.h>` 与 `errno` 语义。
+- Microsoft Winsock 参考：`WSAStartup`、`SOCKET`/`INVALID_SOCKET`/`SOCKET_ERROR`、`closesocket`、`ioctlsocket`、`WSAGetLastError`、`recv`/`send` 签名、`setsockopt`（`SO_RCVTIMEO`）。
+- Porting Socket Applications to Winsock 与 WSAPoll：跨平台移植差异与 `WSAPoll` 行为说明。
 
-以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。
+以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

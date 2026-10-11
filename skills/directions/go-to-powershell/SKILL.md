@@ -1,4 +1,4 @@
-﻿---
+---
 name: go-to-powershell
 description: Use when converting Go source to PowerShell; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
 
 ### 规则 GO-PS-01：Go 强类型结构体输出向 PowerShell PSCustomObject 管道对象流映射
 1. **源码触发条件**：Go 源码中处理结构体切片并进行遍历处理。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 PowerShell 7.6（MS-PS-PIPE）。
 3. **原可观察行为**：强类型结构体字段访问，编译期严格类型保证。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为 `[PSCustomObject]@{ Field = val }` 并推入管道，以便下游通过 `$_` 访问属性。
@@ -34,7 +34,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
    }
    ```
 6. **信息不足或实现相关时的处理**：若字段涉及首字母大小写可见性，在 PowerShell 中统一规范为 PascalCase。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)。
+7. **资料依据（名称/版本/章节）**：MS-PS-PIPE。
 
 ### 规则 GO-PS-02：Go os.Exit 向 PowerShell 独立进程入口的退出边界
 1. **源码触发条件**：源调用 `os.Exit(code)`，与普通函数返回/`panic` 清理不同。
@@ -45,7 +45,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
    - *不适用条件*：模块函数中的 `throw` 可以被调用方捕获，设置 `$LASTEXITCODE` 也不等于进程退出；它们不是 `os.Exit` 的自动等价。把独立程序改模块属于显式接口变更，未获允许不能如此降级，更不能退出用户交互会话。
 5. **错误机械替换反例**：把所有 Go defer 都写进 finally，再将 os.Exit 替为 exit，可能新增源退出时不执行的清理；反过来删掉全部 finally 又破坏正常 return 的清理。
 6. **信息不足或实现相关时的处理**：交付形态或退出路径不明时记录缺口；核对正常返回、panic/recover 和 os.Exit 三类路径，不通过新增强杀进程能力绕过。
-7. **直接官方 HTTPS 依据链接**：[Go os.Exit](https://pkg.go.dev/os#Exit)；[PowerShell about_Try_Catch_Finally](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally?view=powershell-7.6)。
+7. **资料依据（名称/版本/章节）**：Go os.Exit；PowerShell about_Try_Catch_Finally。
 
 ### 规则 GO-PS-03：Go 常驻任务向 PowerShell 的生命周期边界
 1. **源码触发条件**：源通过循环/select 等维持进程，并具有请求处理、信号、取消或退出协议。
@@ -56,11 +56,11 @@ description: Use when converting Go source to PowerShell; apply this direction's
    - *不适用条件*：不能自动改为单次触发、定时任务、Start-Job 或计划程序；它们改变可用期、状态、父进程依赖或部署副作用，只有另行明确允许才是可选变体。
 5. **错误机械替换反例**：源持续维护进程内状态，目标单次执行后退出；即使一次输出一致，也没有保留后续请求与状态行为。
 6. **信息不足或实现相关时的处理**：宿主/取消/停止条件不明时加载[并发场景](../../scenes/concurrency/SKILL.md)与[进程场景](../../scenes/process-execution/SKILL.md)，登记缺口；文本转换不因此启动常驻任务，本机不运行。
-7. **直接官方 HTTPS 依据链接**：[PowerShell about_Jobs](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)（后台作业模型，不是常驻生命周期自动等价保证）。
+7. **资料依据（名称/版本/章节）**：PowerShell about_Jobs（后台作业模型，不是常驻生命周期自动等价保证）。
 
 ### 规则 GO-PS-04：Go []byte 字节切片向 PowerShell [byte[]] 与文本编码边界的映射
 1. **源码触发条件**：Go 源码在字节层读写与变换数据，例如 `_ = os.WriteFile(in, []byte("operator=translator\nmode=controlled\n"), 0o644)`、`raw, _ := os.ReadFile(in)`、`[]byte(strings.TrimSpace(string(raw)))`、以及底层的 `sha256.Sum256(data)`/`base64.StdEncoding.EncodeToString`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #String_types](https://go.dev/ref/spec)）；目标语言 PowerShell 7.6（[MS-PS-CONTENT](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content)、[MS-PS-ENCODING](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #String_types）；目标语言 PowerShell 7.6（MS-PS-CONTENT、MS-PS-ENCODING）。
 3. **原可观察行为**：Go 字符串是只读字节序列、允许包含 `0x00`；`[]byte(s)` 与 `string(b)` 互转按原始字节解释且长度按字节计；`os.WriteFile` 写出的正是给的这些字节，不做换行或 BOM 增删。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：字节数组用 `[byte[]]`；需要精确字节级写入时用 `[System.IO.File]::WriteAllBytes($path, $bytes)`，需要精确字节级读取时用 `[System.IO.File]::ReadAllBytes($path)`；确需 cmdlet 路径时使用面向字节的参数（`Set-Content -AsByteStream` / `Get-Content -AsByteStream`），按实际形态核对数组/流及是否需要 `-Raw`。字节流不经过文本编码，不能同时要求 `-Encoding`；只有明确文本交付才另冻结 `utf8NoBOM` 等编码。
@@ -76,11 +76,11 @@ description: Use when converting Go source to PowerShell; apply this direction's
    $roundTrip = [System.IO.File]::ReadAllBytes($in)   # 长度与内容逐字节对应
    ```
 6. **信息不足或实现相关时的处理**：若无法确认原数据的编码（UTF-8 还是本地代码页）以及是否要求“逐字节一致”，必须标注“字节内容与编码前提待确认”，不得用任何默认编码猜测替代。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #String_types](https://go.dev/ref/spec)；[MS-PS-CONTENT](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/set-content)、[MS-PS-ENCODING](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #String_types；MS-PS-CONTENT、MS-PS-ENCODING。
 
 ### 规则 GO-PS-05：Go Goroutine 与 Channel 汇聚向 PowerShell Runspace 并行的近似映射
 1. **源码触发条件**：Go 源码用固定数量工作协程处理任务并汇聚结果，例如 `parallel_cmd_runner.go` 的 `results := make([]cmdResult, len(cmds))` + `var wg sync.WaitGroup` + `go func() { defer wg.Done(); ... }()`，`tcp_port_scanner.go` 的 `portChan` + 多个 `go scanWorker(portChan)`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Go_statements](https://go.dev/ref/spec)、[GO-MEM](https://go.dev/ref/mem)）；目标语言 PowerShell 7.6（[MS-PS-PARALLEL](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/foreach-object)、[MS-PS-JOBS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Go_statements、GO-MEM）；目标语言 PowerShell 7.6（MS-PS-PARALLEL、MS-PS-JOBS）。
 3. **原可观察行为**：并发任务各自执行、共享状态受显式同步保护；`wg.Wait()` 之后全部结果已就绪；结果写入互不覆盖（每个任务写自己的下标/自己的队列位置）；channel 的缓冲容量决定发送端是否阻塞。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：有界并行用 `ForEach-Object -Parallel { ... } -ThrottleLimit N`（外部变量以 `$using:` 引入，结果经管道回收）；需要作业对象与显式等待时用 `Start-ThreadJob`/`Start-Job` 配 `Wait-Job`/`Receive-Job`。
@@ -95,7 +95,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
    $results = 1..4 | ForEach-Object -Parallel { $_ } | Sort-Object
    ```
 6. **信息不足或实现相关时的处理**：若源码依赖 channel 的阻塞背压、`select` 多路复用或 `context` 级联取消，必须标注“PowerShell 无 channel/select 对等物，背压与取消需重新设计”，交由并发场景 Skill 决定，不得声称行为等价。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[MS-PS-PARALLEL](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/foreach-object)、[MS-PS-JOBS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Go_statements；MS-PS-PARALLEL、MS-PS-JOBS。
 
 ### 规则 GO-PS-06：Go error 返回与 defer 清理向 PowerShell 控制流与 finally 映射
 1. **源码触发条件**：源以 `(T, error)` 返回、在调用点检查/忽略错误，并通过 defer 登记清理。
@@ -116,7 +116,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
    # 按冻结契约检查，不把此片段当通用 Go error 映射。
    ```
 6. **信息不足或实现相关时的处理**：错误严重级别、输出/传播边界或 panic/recover 对应未知时登记，不默认升级为终止错误，不默认添加 stderr；清理失败与业务失败分别核对。
-7. **直接官方 HTTPS 依据链接**：[Go defer](https://go.dev/ref/spec#Defer_statements)；[PowerShell about_Automatic_Variables](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)；[about_Try_Catch_Finally](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally?view=powershell-7.6)。
+7. **资料依据（名称/版本/章节）**：Go defer；PowerShell about_Automatic_Variables；about_Try_Catch_Finally。
 
 ### 规则 GO-PS-07：多段路径与空字符串参数的绑定边界
 1. **源码触发条件**：Go 用 `filepath.Join(base, part1, part2, ...)` 拼接多段路径，或 `strings.SplitN(line, "=", 2)` 后允许空键、空值并传给 PowerShell 函数。
@@ -134,7 +134,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
    }
    ```
 6. **信息不足或实现相关时的处理**：若源数据是否会有空键/空值、`$null` 或目标 PS 版本不明，先记待确认；不要把 B22 的错误概括成“`Join-Path` 只能接收两段”，也不靠 build PASS 推断所有输入已匹配。
-7. **直接官方 HTTPS 依据链接**：[PowerShell 7.6 `Join-Path`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/join-path?view=powershell-7.6)；[高级函数参数的 `AllowEmptyString`](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters?view=powershell-7.6)。
+7. **资料依据（名称/版本/章节）**：PowerShell 7.6 `Join-Path`；高级函数参数的 `AllowEmptyString`。
 
 ## 转换与验证边界
 

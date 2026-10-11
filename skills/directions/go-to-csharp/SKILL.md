@@ -1,4 +1,4 @@
-﻿---
+---
 name: go-to-csharp
 description: Use when converting Go source to C#; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Go source to C#; apply this direction's languag
 
 ### 规则 GO-CS-01：Go 结构体值传递向 C# struct/class 语义划分映射
 1. **源码触发条件**：Go 源码中定义 `type Data struct` 并以值接收者 `func (d Data)` 传参。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Struct_types](https://go.dev/ref/spec)）；目标语言 C# 12 / .NET 8（[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Struct_types）；目标语言 C# 12 / .NET 8（MS-CS-SPEC）。
 3. **原可观察行为**：纯值复制，方法内修改 `d` 不影响外部调用者。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：若需保持全量值复制且数据结构较小，声明为 C# `struct`；若为大对象或需支持引用语义，声明为 `class` 并在传参时显式创建副本。
@@ -36,11 +36,11 @@ description: Use when converting Go source to C#; apply this direction's languag
    }
    ```
 6. **信息不足或实现相关时的处理**：若结构体包含大量字段，标记性能权衡并提示用户选择。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types)；[GO-SPEC #Struct_types](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：MS-CS-SPEC；GO-SPEC #Struct_types。
 
 ### 规则 GO-CS-02：Go error 返回向 C# 结构化异常抛出映射
 1. **源码触发条件**：Go 源码中使用 `return nil, errors.New("not found")`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 C# 12 / .NET 8（[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 C# 12 / .NET 8（MS-CS-EXCEPT）。
 3. **原可观察行为**：调用方必须显式判断 `err != nil`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为抛出对应的 C# 异常（如 `throw new KeyNotFoundException(...)`）；或者若该错误属于频繁发生的常规分支，提供形如 `bool TryGetValue(...)` 的 Try 模式方法。
@@ -53,11 +53,11 @@ description: Use when converting Go source to C#; apply this direction's languag
    public bool TryFindUser(int id, out User user) { ... }
    ```
 6. **信息不足或实现相关时的处理**：若源错误代码作为系统进程返回码，映射为带退出码的异常。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)。
+7. **资料依据（名称/版本/章节）**：MS-CS-EXCEPT。
 
 ### 规则 GO-CS-03：Go context.Context 取消树向 C# CancellationTokenSource 映射
 1. **源码触发条件**：Go 源码中使用 `ctx, cancel := context.WithCancel(parentCtx)` 并通过 `<-ctx.Done()` 监听取消。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-PKG-CONTEXT](https://pkg.go.dev/context)）；目标语言 C# 12 / .NET 8（[MS-CS-CANCEL](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-PKG-CONTEXT）；目标语言 C# 12 / .NET 8（MS-CS-CANCEL）。
 3. **原可观察行为**：父 context 取消级联触发所有衍生子 context 的 Done 通道关闭。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：使用 `CancellationTokenSource.CreateLinkedTokenSource(parentToken)` 构造级联取消令牌源，向异步方法传递 `cts.Token`。
@@ -77,11 +77,11 @@ description: Use when converting Go source to C#; apply this direction's languag
    }
    ```
 6. **信息不足或实现相关时的处理**：若 context 携带 Value 数据，转换为基于 `AsyncLocal<T>` 或显式参数传递。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-CANCEL](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads)；[GO-PKG-CONTEXT](https://pkg.go.dev/context)。
+7. **资料依据（名称/版本/章节）**：MS-CS-CANCEL；GO-PKG-CONTEXT。
 
 ### 规则 GO-CS-04：Go 切片/string 向 C# T[]、Span<T> 与 List<T> 的长度容量语义映射
 1. **源码触发条件**：Go 源码使用 `make([]T, 0, n)` 预分配容量、`items = append(items, x)` 追加、`metas[:min(len(metas), 15)]` 截断、`string(bytes.ToUpper([]byte(outText)))` 或 `[]byte(content)` 做字节/文本互转（如 `doc_zip_chunk_upload.go` 的 `make([]FileMeta, 0, n)`、`local_tasking_workers.go` 的 `results[:min(30, len(results))]`）。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Slice_types](https://go.dev/ref/spec)）；目标语言 C# 12 / .NET 8（[MS-CS-ARRAY](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/)、[MS-CS-COLL](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Slice_types）；目标语言 C# 12 / .NET 8（MS-CS-ARRAY、MS-CS-COLL）。
 3. **原可观察行为**：`len` 是元素个数，`cap` 是已分配容量，容量只影响是否重分配而不影响可观察内容；子切片与截断结果共享底层数组直到扩容；`[]byte` 与 `string` 的互转按字节与 UTF-8 编码解释，长度按字节计。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：元素个数固定用 `T[]`，`new T[n]` 的 `Length` 直接对应 `len`；需要追加与容量增长用 `List<T>`，`new List<T>(capacity: n)` 承接 Go 的容量提示而不是长度；只做只读借用时用 `ReadOnlySpan<T>`/`Span<T>` 切片（`span.Slice(offset, length)`）避免拷贝；字符串与字节互转显式用 `Encoding.UTF8.GetBytes/GetString`。
@@ -98,11 +98,11 @@ description: Use when converting Go source to C#; apply this direction's languag
    ReadOnlySpan<FileMeta> head = CollectionsMarshal.AsSpan(metas).Slice(0, limit);
    ```
 6. **信息不足或实现相关时的处理**：若源码依赖子切片与原切片共享底层数组的互相写入，必须先确认目标侧是否有意保留该别名关系，标注“切片别名共享是否需保留待确认”，不得用 `T[]`/`List<T>` 的默认拷贝语义默认承接。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Slice_types](https://go.dev/ref/spec)；[MS-CS-ARRAY](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/arrays/)、[MS-CS-COLL](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Slice_types；MS-CS-ARRAY、MS-CS-COLL。
 
 ### 规则 GO-CS-05：Go nil map 与 nil 切片向 C# null 与空集合的可见性区分映射
 1. **源码触发条件**：Go 源码声明零值集合后再使用，例如 `var obj map[string]string`、`chunks := map[int][]byte{}`、`var ports []int`、`portList, err := parsePortRange(...)` 失败时 `return nil, ...`，并把它们写入 `map[string]any` 后序列化（如 `c2_task_cycle.go` 的 `var obj map[string]string`、`doc_zip_chunk_upload.go` 的 `keys := make([]int, 0, len(chunks))`）。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Map_types, #Slice_types](https://go.dev/ref/spec)）；目标语言 C# 12 / .NET 8（[MS-CS-NULLABLE](https://learn.microsoft.com/en-us/dotnet/csharp/nullable-references)、[MS-CS-JSON](https://learn.microsoft.com/en-us/dotnet/api/system.text.json)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Map_types, #Slice_types）；目标语言 C# 12 / .NET 8（MS-CS-NULLABLE、MS-CS-JSON）。
 3. **原可观察行为**：nil map 可读（返回零值）但写入 panic；nil 切片可 `len`/`range`/`append`；`encoding/json` 把 nil map 与 nil 切片编码为 `null`，把空 map 编码为 `{}`、空切片编码为 `[]`；`len(nil)` 与 `len(空)` 同为 0。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：用 `Dictionary<TKey,TValue>` 承接 map，用 `T[]`/`List<T>` 承接切片；若原 Go 代码把 nil 状态对外暴露（写进 JSON、作为返回值被调用方判空），用可空类型（`null`）显式表示 nil，并用 `JsonSerializerOptions` 与 `[JsonIgnore(Condition = ...)]` 之类的显式标注保留 `null` 与 `[]`/`{}` 的区分；需要“读写都要安全”时改用 `new Dictionary<...>()` 并明确写成空集合。
@@ -118,11 +118,11 @@ description: Use when converting Go source to C#; apply this direction's languag
    obj ??= new Dictionary<string, string>();       // 真正要写入时才物化为空 map
    ```
 6. **信息不足或实现相关时的处理**：若无法确认某个 nil 状态是否可被外部观察（例如只在本文件内读写、从未进入序列化或返回值），必须标注“nil 与空集合是否需区分待确认”，不得自行选择统一策略。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Map_types, #Slice_types](https://go.dev/ref/spec)；[MS-CS-NULLABLE](https://learn.microsoft.com/en-us/dotnet/csharp/nullable-references)、[MS-CS-JSON](https://learn.microsoft.com/en-us/dotnet/api/system.text.json)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Map_types, #Slice_types；MS-CS-NULLABLE、MS-CS-JSON。
 
 ### 规则 GO-CS-06：Go 并发汇聚写入共享容器向 C# 线程安全集合与同步的映射
 1. **源码触发条件**：Go 源码启动多个 `go func()` 工作协程，用 `sync.WaitGroup` 汇聚，并通过 `sync.Mutex` 保护的切片（`local_tasking_workers.go` 的 `ServerStore.addResult`、`addEvent`）或缓冲 channel（`tcp_port_scanner.go` 的 `portChan`/`openPorts`）收集结果。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Go_statements](https://go.dev/ref/spec)、[GO-MEM](https://go.dev/ref/mem)）；目标语言 C# 12 / .NET 8（[MS-CS-THREADING](https://learn.microsoft.com/en-us/dotnet/standard/threading/)、[MS-CS-CONCCOLL](https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Go_statements、GO-MEM）；目标语言 C# 12 / .NET 8（MS-CS-THREADING、MS-CS-CONCCOLL）。
 3. **原可观察行为**：互斥量保护下对共享切片的追加彼此可见且不撕裂；`wg.Wait()` 之后所有工作协程的结果都已汇聚；channel 接收端在发送端 `close` 后结束 `range`；结果集合的内容集合不依赖调度顺序（但顺序可能不同）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：每任务无共享收集时用 `Task.Run` 配 `Task.WhenAll` 承接 `WaitGroup` 的汇聚语义；确需共享收集时用 `ConcurrentQueue<T>`/`ConcurrentBag<T>`（或 `lock` + `List<T>`、`Interlocked` 计数），在汇聚点之后按需 `ToList()` 并显式排序以固定顺序。
@@ -138,7 +138,7 @@ description: Use when converting Go source to C#; apply this direction's languag
    var ordered = results.OrderBy(r => r.Id).ToList();   // 顺序需显式固定
    ```
 6. **信息不足或实现相关时的处理**：若源码依赖 channel 的阻塞/缓冲容量与关闭时机来实现背压或终止条件，必须标注“channel 背压与关闭语义在 C# 中无直接对等物，需重新设计”，交由并发场景 Skill 与架构审阅决定，不得声称行为等价。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[MS-CS-THREADING](https://learn.microsoft.com/en-us/dotnet/standard/threading/)、[MS-CS-CONCCOLL](https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Go_statements；MS-CS-THREADING、MS-CS-CONCCOLL。
 
 ### 规则 GO-CS-07：Go `os.WriteFile` 创建权限向 .NET 文件流选项映射
 1. **源码触发条件**：Go 在 Unix 目标上用 `os.WriteFile(path, data, 0o644)` 等显式模式创建或截断文件，转换需保留新文件的权限意图。
@@ -157,12 +157,12 @@ description: Use when converting Go source to C#; apply this direction's languag
    stream.Write(bytes);
    ```
 6. **信息不足或实现相关时的处理**：先查明文件可能已存在、umask、目标 OS 和源是否丢弃错误；未知时不声称最终权限字节或失败路径等价。`File.SetUnixFileMode` 会改变已有文件权限，不能直接充当本例“只在创建时给 mode”的替代。
-7. **直接官方 HTTPS 依据链接**：[Go `os.WriteFile`](https://pkg.go.dev/os#WriteFile)；[.NET 8 `File` 方法与重载](https://learn.microsoft.com/en-us/dotnet/api/system.io.file?view=net-8.0)；[.NET `FileStreamOptions.UnixCreateMode`](https://learn.microsoft.com/en-us/dotnet/api/system.io.filestreamoptions.unixcreatemode?view=net-8.0)。
+7. **资料依据（名称/版本/章节）**：Go `os.WriteFile`；.NET 8 `File` 方法与重载；.NET `FileStreamOptions.UnixCreateMode`。
 
 ### 规则 GO-CS-08：Go 标准库派生出的宿主元数据必须逐字段保真
 
 1. **源码触发条件**：Go 源码把**标准库派生出的字符串或默认值**写入输出/序列化载荷——`net.Flags` 的 `String()`（`up|broadcast|loopback|pointtopoint|multicast|running`）、`os.Environ()` 的原始条目（**含 `=C:=...` 这类以 `=` 开头的隐藏条目**）、`os/user.Current().Username` 的 `DOMAIN\username` 形式、`http.Client` 的**无超时**行为，或 `time` 格式串；或用**不限定方法**的 `ServeMux` 处理器注册。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[`net.Flags`](https://pkg.go.dev/net#Flags)、[`os.Environ`](https://pkg.go.dev/os#Environ)、[`http.Client`](https://pkg.go.dev/net/http#Client)）；目标语言 C# 12 / .NET 8（[`NetworkInterface`](https://learn.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface)、[`Environment.GetEnvironmentVariables`](https://learn.microsoft.com/en-us/dotnet/api/system.environment.getenvironmentvariables)、[`HttpClient.Timeout`](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.timeout)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（`net.Flags`、`os.Environ`、`http.Client`）；目标语言 C# 12 / .NET 8（`NetworkInterface`、`Environment.GetEnvironmentVariables`、`HttpClient.Timeout`）。
 3. **原可观察行为**：
    - `Flags.String()` 按**固定顺序**输出**全部**已置位标志，包括 `multicast` 与 `running`；`.NET` 的 `NetworkInterface` **没有**同构的“标志字符串”概念，`NetworkInterfaceType` 与 `SupportsMulticast`/`OperationalStatus` 是**不同维度**，不能互相推导。
    - `os.Environ()` 返回**原始环境块**，**不剔除**以 `=` 开头的驱动器条目（`=C:=C:\...`）。这些串以 `0x3D` 开头，按字节序排序会**排在最前**，因此是否保留它们会改变“前 N 条”的**成员集合**。
@@ -198,7 +198,7 @@ description: Use when converting Go source to C#; apply this direction's languag
    if (path == "/task") { ServeTask(); }                      // 镜像 ServeMux：只按路径匹配
    ```
 6. **信息不足或实现相关时的处理**：若目标 API **无法**surface 源的某个派生值（如 .NET 可能取不到 `=C:` 条目、`NetworkInterfaceType` 无法精确表达 broadcast 能力），必须**登记为不可恢复差异**并在交付说明中列明，**不得**把近似实现当作等价，也不得用注释把过滤/近似描述成源的行为。“按能力推导”的启发式须标注为**须由 oracle 验证的近似**。
-7. **直接官方 HTTPS 依据链接**：[Go `net.Flags`](https://pkg.go.dev/net#Flags)、[`os.Environ`](https://pkg.go.dev/os#Environ)、[`os/user.Current`](https://pkg.go.dev/os/user#Current)、[`http.Client`](https://pkg.go.dev/net/http#Client)、[`ServeMux`](https://pkg.go.dev/net/http#ServeMux)；[.NET `HttpClient.Timeout`](https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.timeout)、[`NetworkInterface`](https://learn.microsoft.com/en-us/dotnet/api/system.net.networkinformation.networkinterface)、[`Environment.GetEnvironmentVariables`](https://learn.microsoft.com/en-us/dotnet/api/system.environment.getenvironmentvariables)、[`WindowsIdentity.Name`](https://learn.microsoft.com/en-us/dotnet/api/system.security.principal.windowsidentity.name)。
+7. **资料依据（名称/版本/章节）**：Go `net.Flags`、`os.Environ`、`os/user.Current`、`http.Client`、`ServeMux`；.NET `HttpClient.Timeout`、`NetworkInterface`、`Environment.GetEnvironmentVariables`、`WindowsIdentity.Name`。
 
 ## 转换与验证边界
 

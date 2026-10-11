@@ -5,7 +5,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 
 # C++ → C 语言转换规则
 
-> **适用基线**：源语言 ISO C++17 ([WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)) → 目标语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf))
+> **适用基线**：源语言 ISO C++17 (WG21-N4659) → 目标语言 ISO C11 (WG14-N1570)
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C++](../../references/languages/cpp.md)与[目标语言 C](../../references/languages/c.md)。
 > **规范硬约束**：源基线以 ISO C++17 为限（不含 C++20 Concepts、协程等）；目标基线以 ISO C11 为限（不含 C23 特性）。
 
@@ -52,7 +52,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
    }
    ```
 6. **不确定性处理**：若源 C++ 对象的生命周期被转移（如通过 `std::move` 转交给全局容器或另一个长期对象），禁止转换为函数级局部 `goto cleanup`，必须追溯其所有权终点并设计显式的所有权交接函数。
-7. **官方依据**：[WG21-N4659 Clause 15.4, Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §6.8.6.1, §7.22.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 15.4, Clause 6.7；WG14-N1570 §6.8.6.1, §7.22.3。
 
 ---
 
@@ -77,7 +77,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
    }
    ```
 6. **不确定性处理**：若 C++ 源码捕获的是第三方库未文档化的未知异常（如 `catch (...)`），必须在 C 错误码中预留 `ERR_UNKNOWN`，并记录日志或向调用方暴露未分类失败状态，标注异常语义不确定性。
-7. **官方依据**：[WG21-N4659 Clause 18](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §7.5, §7.13](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 18；WG14-N1570 §7.5, §7.13。
 
 ---
 
@@ -100,7 +100,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
    // ((struct Base*)derived_ptr)->vptr 将读取到 extra_flag，引发野指针崩溃！
    ```
 6. **不确定性处理**：若源 C++ 使用了 RTTI（`dynamic_cast` 或 `typeid`），降级至 C 时必须在基类结构体中显式增加 `int type_tag` 标识，并在类型转换前做显式校验；若继承体系包含复杂的虚继承，应标记为结构性不确定并提请架构审阅。
-7. **官方依据**：[WG21-N4659 Clause 13, Clause 13.3, Clause 13.3.2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §6.2.5, §6.7.2.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 13, Clause 13.3, Clause 13.3.2；WG14-N1570 §6.2.5, §6.7.2.1。
 
 ---
 
@@ -119,14 +119,14 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
    // 存储 int 时必须每个 int 单独 malloc(sizeof(int))，内存碎片暴增，缓存局部性彻底丧失
    ```
 6. **不确定性处理**：若模板包含高度复杂的 SFINAE（`std::enable_if_t`）条件特化，必须静态提取其在当前源码中实际命中的具现化版本，对未使用的特化分支进行剪枝，并记录裁剪理由。
-7. **官方依据**：[WG21-N4659 Clause 17, Clause 17.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §6.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 17, Clause 17.7；WG14-N1570 §6.5。
 
 ---
 
 ### 规则 5：C++ std::string 显式长度与内部 NUL 语义向 C11 指针+长度对与所有权约定映射
 
 1. **触发条件**：C++ 源码用 `std::string` 承载可能含 `\0` 或非文本字节的数据（`std::string data((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());`、`std::string(buf, n)`、`s.substr(i, n)`），并把 `c_str()` 与 `size()` 一起交给字节接口（`send(s, frame.c_str(), static_cast<int>(frame.size()), 0)`）。
-2. **适用前提**：源语言 ISO C++17（[WG21-N4659 Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 ISO C11（[WG14-N1570 §7.22.3, §7.23](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标函数签名允许增加长度出参或由调用方提供缓冲。
+2. **适用前提**：源语言 ISO C++17（WG21-N4659 Clause 24.3）；目标语言 ISO C11（WG14-N1570 §7.22.3, §7.23）；目标函数签名允许增加长度出参或由调用方提供缓冲。
 3. **应保留行为**：`size()` 独立于内容且允许内部 `\0`；`c_str()` 返回指向内部缓冲、以 `\0` 结尾的指针，该指针随对象改动或析构失效；按值返回 `std::string` 传递的是一份独立缓冲。
 4. **可选映射与不适用条件**：
    - *可选映射*：C 侧一律用"指针 + 显式长度"参数对（`const char *data, size_t len`）表达同一数据；需要拥有权时用 `malloc` 复制并同时输出长度，或由调用方提供缓冲 + 容量 + 长度出参；所有权（谁分配、谁释放、何时失效）写入函数注释与每个调用点；
@@ -141,14 +141,14 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
    int n2 = send(s, frame, (int)frame_len, 0);
    ```
 6. **不确定性处理**：若无法确认 `std::string` 内的数据是否可能含 `\0`（尤其来自文件或网络的字节流），必须按"可能含 `\0`"处理并显式传长度；若返回的 `std::string` 所有权终点不明（是否被存入容器或全局），必须追溯并写明释放责任。
-7. **官方依据**：[WG21-N4659 Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §7.22.3, §7.23](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 24.3；WG14-N1570 §7.22.3, §7.23。
 
 ---
 
 ### 规则 6：C++ 引用式 range-for 就地修改与 char 无符号化转型向 C11 下标循环与显式转换映射
 
 1. **触发条件**：C++ 源码用引用式 range-for 就地改写字节（`for (char& c : out) c = static_cast<char>(static_cast<unsigned char>(c) ^ key);`）、用 `c ^= key`，或把字符先转无符号再交给 `<cctype>`（`static_cast<char>(std::toupper(static_cast<unsigned char>(ch)))`）。
-2. **适用前提**：源语言 ISO C++17（[WG21-N4659 Clause 6.9.1, Clause 7.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 ISO C11（[WG14-N1570 §6.2.5, §6.3.1.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **适用前提**：源语言 ISO C++17（WG21-N4659 Clause 6.9.1, Clause 7.6）；目标语言 ISO C11（WG14-N1570 §6.2.5, §6.3.1.1）。
 3. **应保留行为**：每个元素被就地改写（原缓冲被修改，而不是生成副本）；异或在"无符号 8 位"值上进行后再转回字符，因此 0x80 以上字节不会先变成负值；循环按元素顺序覆盖整个序列。
 4. **可选映射与不适用条件**：
    - *可选映射*：改写为 `for (size_t i = 0; i < len; ++i) buf[i] = (char)((unsigned char)buf[i] ^ key);`，显式保留 `(unsigned char)` 中间转换；字符分类/大小写转换同样先转 `(unsigned char)` 后再转回 `char`；若原始数据不可写，先复制到可写缓冲并把长度一并传递；
@@ -163,14 +163,14 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
    }
    ```
 6. **不确定性处理**：若源码未说明 `char` 是否被当作无符号字节使用，必须按"字节缓冲"处理并保留显式无符号转换；若元素类型是 `wchar_t` 或多字节编码单元，必须另行确认宽度与编码后再写循环，不得套用字节级规则。
-7. **官方依据**：[WG21-N4659 Clause 6.9.1, Clause 7.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §6.2.5, §6.3.1.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 6.9.1, Clause 7.6；WG14-N1570 §6.2.5, §6.3.1.1。
 
 ---
 
 ### 规则 7：C++ 流式输出与 std::to_string 向 C11 printf/fputs 格式化映射
 
 1. **触发条件**：C++ 源码用流输出拼装结果（`std::cout << "{\"bytes\":" << data.size() << "}" << std::endl;`、`oss << "-" << p;` 后 `return oss.str();`、`report << kv.first << "=" << kv.second << "\n";`），或把数值转字符串（`std::to_string(i)`）。
-2. **适用前提**：源语言 ISO C++17（[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)，输入/输出库与字符串转换函数一节）；目标语言 ISO C11（[WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)，`<stdio.h>` 一节）。
+2. **适用前提**：源语言 ISO C++17（WG21-N4659，输入/输出库与字符串转换函数一节）；目标语言 ISO C11（WG14-N1570，`<stdio.h>` 一节）。
 3. **应保留行为**：`operator<<` 的重载按静态类型选择格式化方式（`bool` 默认输出 `1`/`0`）；`std::endl` 输出换行并强制刷新缓冲；`std::to_string` 按十进制输出且不带宽度/前导零设置；`size_t` 按完整宽度输出，不截断。
 4. **可选映射与不适用条件**：
    - *可选映射*：`std::cout << x` 改写为 `printf`/`fputs`/`fwrite`，逐个实参按其 C 类型选择转换说明（`const char *` 用 `%s`、`int` 用 `%d`、`size_t` 用 `%zu`、`long long` 用 `%lld`）；需要与 `std::endl` 相同的刷新语义时显式 `fflush(stdout)`；多段拼接在 C 中用固定容量缓冲 + `snprintf` 的返回值做容量/截断检查，或连续 `fputs`/`fwrite`；
@@ -186,7 +186,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
    fflush(stdout);
    ```
 6. **不确定性处理**：若源码依赖流的格式化状态（`std::hex`、`std::setw`、`std::setprecision`）或区域设置，或依赖 `std::cout` 与 `std::cerr` 的相对输出顺序与同步设置，必须先确认这些状态再改写；无法确认时必须停标，不得默认"十进制、无宽度、与 C 的 stdout 同序"。
-7. **官方依据**：[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)（输入/输出库与字符串转换函数一节）；[WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)（`<stdio.h>` 一节）。
+7. **官方依据**：WG21-N4659（输入/输出库与字符串转换函数一节）；WG14-N1570（`<stdio.h>` 一节）。
 
 ---
 
@@ -217,4 +217,4 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。

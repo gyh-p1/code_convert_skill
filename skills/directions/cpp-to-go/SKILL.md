@@ -1,4 +1,4 @@
-﻿---
+---
 name: cpp-to-go
 description: Use when converting C++ source to Go; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting C++ source to Go; apply this direction's langua
 
 ### 规则 CPP-GO-01：C++ 类继承虚函数多态向 Go 隐式接口与结构体内嵌组合映射
 1. **源码触发条件**：C++ 源码中定义包含纯虚函数的基类，派生类通过 `override` 覆写接口。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（[WG21-N4659 Clause 13.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）；目标语言 Go 1.27（[GO-SPEC #Interface_types](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（WG21-N4659 Clause 13.3）；目标语言 Go 1.27（GO-SPEC #Interface_types）。
 3. **原可观察行为**：通过基类指针或引用调用虚函数触发动态分派。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：将纯虚基类定义为 Go 的 `interface`；派生类定义为独立 `struct` 并实现相同签名的方法，实现隐式满足；代码复用通过结构体内嵌（Embedding）实现。
@@ -35,11 +35,11 @@ description: Use when converting C++ source to Go; apply this direction's langua
    func TemplateMethod(h Hooker) { h.Hook() }
    ```
 6. **信息不足或实现相关时的处理**：若 C++ 基类包含非公开私有虚函数，重构为包内私有方法。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Interface_types](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Interface_types。
 
 ### 规则 CPP-GO-02：C++ 异常控制流向 Go 显式多返回值 (T, error) 与 defer 逆序清理映射
 1. **源码触发条件**：C++ 源码中使用 `throw` 抛出异常并在外层 `try ... catch` 捕获。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Go 1.27（[GO-SPEC #Errors, #Defer_statements](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Go 1.27（GO-SPEC #Errors, #Defer_statements）。
 3. **原可观察行为**：异常沿调用栈向上展开，自动析构局部对象，直至被匹配的 catch 捕获。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在允许调整接口时增加 `error` 返回值；同步改所有调用点，保留 catch 的类型选择、传播/恢复边界和错误上下文。清理按源析构时机对应；Go `defer` 在外层函数返回时执行，不是离开任意块即执行。源为块级 RAII、锁释放或循环每次清理时，用受限辅助函数/显式路径清理保持作用域与 LIFO 次序，不能直接把所有释放延迟到大函数结束。
@@ -58,11 +58,11 @@ description: Use when converting C++ source to Go; apply this direction's langua
    }
    ```
 6. **信息不足或实现相关时的处理**：若源异常携带丰富错误上下文，定义自定义错误结构体实现 `Error() string`。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec#Defer_statements)；[Effective Go: Panic/Recover](https://go.dev/doc/effective_go#panic)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Defer_statements；Effective Go: Panic/Recover。
 
 ### 规则 CPP-GO-03：C++ std::mutex/std::condition_variable 向 Go sync/Channel 映射
 1. **源码触发条件**：C++ 源码中使用 `std::unique_lock` 和条件变量进行生产者-消费者通知。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Go 1.27（[GO-SPEC #Channel_types](https://go.dev/ref/spec), [GO-MEM](https://go.dev/ref/mem)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 Go 1.27（GO-SPEC #Channel_types, GO-MEM）。
 3. **原可观察行为**：消费者在条件变量上阻塞等待唤醒，互斥锁保护队列临界区。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：对基于共享谓词的条件变量，优先核对 `sync.Mutex` + `sync.Cond` 的等待循环、Signal/Broadcast 和退出条件；只有任务传递/通知语义确实对应时才使用 `chan T`，并冻结容量、背压、关闭与取消语义。通道不是条件变量的通用替代物。
@@ -79,7 +79,7 @@ description: Use when converting C++ source to Go; apply this direction's langua
    <-done
    ```
 6. **信息不足或实现相关时的处理**：若需级联取消与超时，结合 `context.WithTimeout` 处理。
-7. **直接官方 HTTPS 依据链接**：[Go sync.Cond](https://pkg.go.dev/sync#Cond)；[GO-SPEC #Channel_types](https://go.dev/ref/spec#Channel_types)；[GO-MEM](https://go.dev/ref/mem)。
+7. **资料依据（名称/版本/章节）**：Go sync.Cond；GO-SPEC #Channel_types；GO-MEM。
 
 ## 转换与验证边界
 

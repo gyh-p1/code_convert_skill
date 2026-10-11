@@ -1,4 +1,4 @@
-﻿---
+---
 name: go-to-python
 description: Use when converting Go source to Python; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Go source to Python; apply this direction's lan
 
 ### 规则 GO-PY-01：Go 切片容量共享向 Python list 独立扩容语义隔离映射
 1. **源码触发条件**：Go 源码中使用 `s2 := s1[1:3]` 从原切片截取新切片并修改元素。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Slice_types](https://go.dev/ref/spec)）；目标语言 Python 3.12（[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Slice_types）；目标语言 Python 3.12（PY-REF-DATA §3.2）。
 3. **原可观察行为**：Go 中 `s2` 与 `s1` 共享底层数组，修改 `s2` 会原地影响 `s1`；直到发生 `append` 扩容后才分离。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：Python 的切片操作 `l2 = l1[1:3]` 会**立即创建一个全新的浅拷贝独立列表**！修改 `l2` 绝不会影响 `l1`！若业务必须依赖共享修改，必须封装带视图指针的自定义类或操作同一个列表下标。
@@ -32,11 +32,11 @@ description: Use when converting Go source to Python; apply this direction's lan
    l1[1] = 99
    ```
 6. **信息不足或实现相关时的处理**：扫描所有切片赋值，确认是否有向原切片反写数据的依赖并告警。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Slice_types](https://go.dev/ref/spec)；[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Slice_types；PY-REF-DATA §3.2。
 
 ### 规则 GO-PY-02：Go 显式 error 检查向 Python 结构化异常体系映射
 1. **源码触发条件**：Go 源码中存在大量 `if err != nil { return nil, err }` 样板代码。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 Python 3.12（[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 Python 3.12（PY-REF-DATA §3.2）。
 3. **原可观察行为**：错误通过返回值显式传递，未检查不会自动抛出。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为 Python 标准异常（如 `ValueError`, `FileNotFoundError`, `RuntimeError`），依靠异常自动冒泡传播，消除深层样板检查。
@@ -53,11 +53,11 @@ description: Use when converting Go source to Python; apply this direction's lan
        return a / b
    ```
 6. **信息不足或实现相关时的处理**：若原 Go 错误类型具备专有字段，定义继承自 `Exception` 的子类。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA §3.2。
 
 ### 规则 GO-PY-03：Go 并发 Goroutine 与 Channel 向 Python asyncio 协程与 Queue 映射
 1. **源码触发条件**：Go 源码中使用 `go fn()` 与 `ch := make(chan int)`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 Python 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 Python 3.12（PY-REF-DATA）。
 3. **原可观察行为**：轻量级协程在 M:N 调度器下执行，支持高并发 channel 通信。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：重写为 `async def`，channel 替换为 `asyncio.Queue`，通信使用 `await queue.put()` 与 `await queue.get()`。
@@ -69,11 +69,11 @@ description: Use when converting Go source to Python; apply this direction's lan
    q = asyncio.Queue() # 无当前运行的事件循环时在旧版本报错或引发跨线程异常
    ```
 6. **信息不足或实现相关时的处理**：若代码涉及高吞吐 CPU 运算，向用户建议使用多进程并报告差异。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA。
 
 ### 规则 GO-PY-04：Go nil 与零值向 Python None 的真值判定映射
 1. **源码触发条件**：Go 源码用 `if err != nil`、`if len(parts) == 2`、`if pr.EncodedBlob == ""`、`if line != ""`、`if len(b) == 0`、`if len(matches) > 0` 之类的判断分流，或在 `map[string]any` 里放零值（如 `local_tasking_workers.go` 的 `if len(s.Tasks) == 0`、`signal_score_ingest.go` 的 `if pr.EncodedBlob == ""`、`concurrent_pipeline.go` 的 `if line != "" && len(line) < 200`）。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Comparison_operators](https://go.dev/ref/spec)）；目标语言 Python 3.12（[PY-TRUTH](https://docs.python.org/3.12/library/stdtypes.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Comparison_operators）；目标语言 Python 3.12（PY-TRUTH）。
 3. **原可观察行为**：Go 只显式比较 nil 或具体零值；`len(x) == 0` 与 `x == nil` 是两种不同判断，空切片/空 map/空字符串本身不是 nil；`nil != 0` 且 `nil != ""`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：把 Go 的 nil 状态映射为 `None` 并显式写 `is None` / `is not None`；把长度或内容判断显式写为 `len(x) == 0` / `not x` 只在**确实只想判断非空**时使用；对 `""`、`0`、空容器分别写 `== ""`、`== 0` 或 `not any(...)`，不要合并成一处 `if not v`。
@@ -101,11 +101,11 @@ description: Use when converting Go source to Python; apply this direction's lan
        return fields
    ```
 6. **信息不足或实现相关时的处理**：若无法确认原 Go 判断是想表达“未设置”还是“值为零/空”，必须标注“nil 与零值语义待确认”，不得自行合并两种判断。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Comparison_operators](https://go.dev/ref/spec)；[PY-TRUTH](https://docs.python.org/3.12/library/stdtypes.html)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Comparison_operators；PY-TRUTH。
 
 ### 规则 GO-PY-05：Go time 格式化与 Duration 向 Python datetime/秒的可比性映射
 1. **源码触发条件**：Go 源码取当前时间并按 `time.RFC3339` 序列化（`time.Now().Format(time.RFC3339)`），或使用 `time.Parse`、`time.Sleep(400 * time.Millisecond)`、`context.WithTimeout(ctx, cfg.TimeoutMS*time.Millisecond)`、`time.Now().UnixNano()` 派生时间戳（如 `concurrent_pipeline.go` 的 `Created: time.Now().Format(time.RFC3339)`、`signal_score_ingest.go` 的 `time.Sleep(400 * time.Millisecond)` 与 `time.Now().UnixNano()` 命名临时文件）。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-PKG-TIME](https://pkg.go.dev/time)）；目标语言 Python 3.12（[PY-DATETIME](https://docs.python.org/3.12/library/datetime.html)、[PY-TIME](https://docs.python.org/3.12/library/time.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-PKG-TIME）；目标语言 Python 3.12（PY-DATETIME、PY-TIME）。
 3. **原可观察行为**：RFC3339 输出带明确的时区偏移（本地时间通常为 `+08:00` 形态）；同一进程内两次取时间得到不同值，`time.Now()` 附带单调时钟读数用于测量；`time.Duration` 是纳秒整数，`Duration.Milliseconds()` 等按整数截断。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：时区感知时刻用 `datetime.datetime.now(datetime.timezone.utc)`（或显式 `timezone(timedelta(hours=8))`）后调 `.isoformat()`，并按原格式显式拼接 `Z` 或 `+00:00`；时长统一换算为秒，用 `float(ms) / 1000.0` 或 `datetime.timedelta(milliseconds=ms)`；等待用 `time.sleep(seconds)`；测量间隔用 `time.monotonic()` 而不是 `time.time()`。
@@ -123,11 +123,11 @@ description: Use when converting Go source to Python; apply this direction's lan
    time.sleep(400 / 1000.0)
    ```
 6. **信息不足或实现相关时的处理**：若无法确认原 Go 代码依赖的是本地时区还是固定偏移、是否依赖时间字符串的精确形态（下游按字符串比较或解析），必须标注“时区与时间文本格式前提待确认”，不得自行选择 UTC 或本地时间。
-7. **直接官方 HTTPS 依据链接**：[GO-PKG-TIME](https://pkg.go.dev/time)；[PY-DATETIME](https://docs.python.org/3.12/library/datetime.html)、[PY-TIME](https://docs.python.org/3.12/library/time.html)。
+7. **资料依据（名称/版本/章节）**：GO-PKG-TIME；PY-DATETIME、PY-TIME。
 
 ### 规则 GO-PY-06：Go string 与 []byte 边界向 Python str 与 bytes 显式编解码映射
 1. **源码触发条件**：Go 源码在字符串与字节之间互转并做字节级处理，例如 `string(raw)`、`[]byte(line)`、`buf = []byte(err.Error())`、`base64.StdEncoding.DecodeString(pr.EncodedBlob)`、`sha256.Sum256(b)`、`json.Unmarshal(out, &pr)` 与 `cmd.Output()` 捕获子进程输出（见 `manifest_zip_collect.go` 的 `b := []byte(content)` 与 `hash(b)`、`child_cmd_capture.go` 的 `buf = []byte(err.Error())`、`signal_score_ingest.go` 的 `base64` 校验分支）。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #String_types](https://go.dev/ref/spec)）；目标语言 Python 3.12（[PY-STDTYPES](https://docs.python.org/3.12/library/stdtypes.html)、[PY-BASE64](https://docs.python.org/3.12/library/base64.html)、[PY-JSON](https://docs.python.org/3.12/library/json.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #String_types）；目标语言 Python 3.12（PY-STDTYPES、PY-BASE64、PY-JSON）。
 3. **原可观察行为**：Go 的 `string`/`[]byte` 互转按原始字节进行，长度按字节计；`string` 可包含任意字节序列（包括非法 UTF-8），并可按 UTF-8 迭代出 `rune`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：文本路径用 `str`（`.encode("utf-8")` / `.decode("utf-8")` 显式转换），字节路径用 `bytes`；哈希/Base64 用 `hashlib.sha256(data).hexdigest()` 与 `base64.b64encode/b64decode`；JSON 用 `json.dumps(..., ensure_ascii=False).encode("utf-8")` 与 `json.loads(text_or_bytes)`；子进程输出显式选择 `capture_output=True, text=True`（得到 `str`）或省略 `text`（得到 `bytes`），不做隐式转换。
@@ -145,10 +145,14 @@ description: Use when converting Go source to Python; apply this direction's lan
    text = raw.decode("utf-8")                  # 对照 Go 的 string(raw)
    ```
 6. **信息不足或实现相关时的处理**：若无法确认原数据的编码，或原 Go 代码依赖 `len(string)` 按字节计的长度语义，必须标注“编码与长度语义待确认”，不得用 `errors="replace"` 之类的宽松策略掩盖差异。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #String_types](https://go.dev/ref/spec)；[PY-STDTYPES](https://docs.python.org/3.12/library/stdtypes.html)、[PY-BASE64](https://docs.python.org/3.12/library/base64.html)、[PY-JSON](https://docs.python.org/3.12/library/json.html)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #String_types；PY-STDTYPES、PY-BASE64、PY-JSON。
 
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+## 网络 API 映射
+
+迁入网络场景，仅在 Go net.Conn 到 Python socket 时使用。一次 Read/recv 都不代表完整帧；Go n>0 与 err 非空并存时先保留有效数据再处理错误。重复关闭的返回值/异常若被源观察，必须列入对应行为，不能因目标 close 便利而自动丢弃。关闭唤醒阻塞调用的效果按[并发场景](../../scenes/concurrency/SKILL.md)及目标平台核对，不默认同义。通用字节/协议读[网络场景](../../scenes/network-io/SKILL.md)，未核关闭/错误语义记待确认。

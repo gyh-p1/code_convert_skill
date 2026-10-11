@@ -9,11 +9,11 @@
 - **语言规范保证**：`[语言规范保证]` 纯面向对象模型；一切变量皆持有对象的引用；可变对象原地修改（如 `String#<<`、`Array#push`），不可变对象包含 `Integer`、`Float`、`Symbol`、`true`、`false`、`nil`。
 - **实现相关 / 运行时优化行为**：`[指定运行时的实现相关事实]` 立即数（Immediate values：Fixnum、Symbol 等）在 MRI 中直接编码在指针位中，无独立堆分配，属于实现优化。
 - **机械等价禁区与转换约束**：严禁忽视 Ruby 原地方法（带 `!` 或 `<<`）对全部别名持有者的同步副作用；**不得把 Ruby 的真值表（仅 `nil`/`false` 为假）与其他语言的判空互相当作等价**（见下条）。
-- **官方资料依据**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)
+- **官方资料依据**：RB-DOC-CORE
 
 ### L1-RB-01 只有 `nil` 与 `false` 为假：真值判断不等于判空
 1. **源码触发条件**：源码用 `if x` / `unless x` / `x || default` / `x && y` 分流，或依赖 `nil.to_s`、`nil` 与缺键/未初始化变量的差异。
-2. **冻结版本/运行时/API 前提**：CRuby 3.4；真值与 `nil` 转换语义见 [RB-DOC-CONTROL](https://docs.ruby-lang.org/en/3.4/syntax/control_expressions_rdoc.html)、[RB-DOC-NIL](https://docs.ruby-lang.org/en/3.4/NilClass.html)。
+2. **冻结版本/运行时/API 前提**：CRuby 3.4；真值与 `nil` 转换语义见 RB-DOC-CONTROL、RB-DOC-NIL。
 3. **原可观察行为**：
    - **只有 `nil` 与 `false` 为假**；`0`、`""`、`[]`、`{}`、`0.0` **全为真**。这是与 C 判空、Python 假值集合最易混淆之处。
    - `nil.to_s` → `""`；`nil.to_a` → `[]`；`nil.to_i` → `0`——`nil` 对多数转换方法有定义，不会抛 `NoMethodError`。
@@ -37,20 +37,21 @@
    v = h.fetch("k")                     # 源预期缺键即失败时
    ```
 6. **信息不足或实现相关时的处理**：若无法确认源的判断表达“未设置（nil/缺键）”还是“值为零/空”，必须标注“nil 与零值语义待确认”，不得用统一真值判断合并两者。**特别注意**：`nil.to_s → ""` 会让“nil 被当成空串”在 Ruby 中静默通过，掩盖了语义差异。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CONTROL](https://docs.ruby-lang.org/en/3.4/syntax/control_expressions_rdoc.html)；[RB-DOC-NIL](https://docs.ruby-lang.org/en/3.4/NilClass.html)；[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-CONTROL；RB-DOC-NIL；RB-DOC-HASH。
 
 ### L1-RB-05 程序实参不含程序名，`OptionParser` 绑定与帮助输出必须显式重建
 
 1. **源码触发条件**：源码从 `ARGV` 取用实参，或用 `OptionParser`（含 `opts.banner`、`opts.on(...)`）解析，或直接 `ARGV.shift`/`ARGV[i]` 消费参数。
-2. **冻结版本/运行时/API 前提**：CRuby 3.4（[`ARGV`](https://docs.ruby-lang.org/en/3.4/ARGF.html)、[`OptionParser`](https://docs.ruby-lang.org/en/3.4/OptionParser.html)）。
+2. **冻结版本/运行时/API 前提**：CRuby 3.4（`ARGV`、`OptionParser`）。
 3. **原可观察行为**：
    - **`ARGV` 不含程序名**——`ARGV[0]` 即第一个用户实参（`$0`/`$PROGRAM_NAME` 才是程序名）。
    - `OptionParser#parse!` **就地修改** `ARGV`，返回时 `ARGV` 只剩位置参数；`parse` 则不修改。
    - `OptionParser` 默认支持长选项缩写；须核对选项集合、歧义及 `require_exact` 等实际配置，不能声称“Ruby 不支持缩写”。
    - `-h/--help` 的输出**只有 banner + 选项列表**，没有 `argparse` 的 `description`/`epilog`/完整文档串；该输出属可观察行为。
 4. **目标可选写法和不适用条件**：
-   - *Ruby 作为源*：目标语言实参序列含程序名时（C/C++/Go/Python）须**补上偏移**；`ARGV` 对应目标 `argv[1]`/`os.Args[1]`/`sys.argv[1]`。
+   - *Ruby 作为源*：目标语言实参序列含程序名时（C/C++/Go/Python）须**补上偏移**；`ARGV[0]` 对应目标 `argv[1]`/`os.Args[1]`/`sys.argv[1]`，整个 `ARGV` 对应目标去掉程序名后的范围。
    - *Ruby 作为目标*：须去掉源程序名偏移；按源解析器的缩写、位置参数和剩余参数义务核对实际 OptionParser 配置。`parse!` 后不能忽略原源应拒绝的残留 `ARGV`。
+   - **联合映射守卫与全部使用点**：例如未推进的 C argv 中 `argc < 3` 表示不足两个用户实参，对应 Ruby `ARGV.length < 2`，随后两个参数分别是 `ARGV[0]`、`ARGV[1]`。只改长度守卫而留下旧下标仍错。源/目标已 `shift`、`parse!` 或推进 argv 时重新核当前范围；同时保持缺参默认值、额外参数分支和 `$PROGRAM_NAME` 的诊断用途。
    - *不适用条件*：源码不使用命令行实参时不适用；源禁用缩写时须主动匹配该策略，不能依赖目标默认值。
 5. **错误机械替换反例**：
    ```ruby
@@ -66,7 +67,7 @@
    # 按源规则处理残留参数、缩写歧义与完整帮助文本，不能只更换解析器名
    ```
 6. **信息不足或实现相关时的处理**：无法确定源是否依赖唯一前缀、或源帮助文本的完整构成时，标为“实参绑定与帮助输出待确认”；不得以 `OptionParser` 的默认输出充当等价。
-7. **直接官方 HTTPS 依据链接**：[Ruby `OptionParser`](https://docs.ruby-lang.org/en/3.4/OptionParser.html)、[`OptionParser#parse!`](https://docs.ruby-lang.org/en/3.4/OptionParser.html#method-i-parse-21)、[`ARGV`](https://docs.ruby-lang.org/en/3.4/ARGF.html)；[Python `argparse`](https://docs.python.org/3.12/library/argparse.html)。
+7. **资料依据（名称/版本/章节）**：Ruby `OptionParser`、`OptionParser#parse!`、`ARGV`；Python `argparse`。
 
 ## 二、整数宽度、溢出、符号性与转换
 
@@ -74,11 +75,11 @@
 - **有符号溢出行为**：`[语言规范保证]` **无溢出概念**；超出机器字长时自动无缝升级为大数表示。
 - **无符号溢出行为**：`[语言规范保证]` 无原生无符号整数；按位操作将负数视为无限补码展开。
 - **隐式提升与转换陷阱**：`[语言规范保证]` 位操作中未显式截断可能导致带符号大数，需显式使用 `& ((1 << N) - 1)` 保持位宽。
-- **官方资料依据**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)
+- **官方资料依据**：RB-DOC-CORE
 
 ### L1-RB-02 `to_i` 的宽松解析与格式化区域不得静默改变数值文本
 1. **源码触发条件**：源码把字符串转数值（`to_i`/`Integer()`/`Float()`）或把数值转文本（内插 `"#{x}"`、`to_s`、`format`/`sprintf`）。
-2. **冻结版本/运行时/API 前提**：CRuby 3.4；`String#to_i` 的**前缀解析**语义见 [RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)、[RB-DOC-KERNEL](https://docs.ruby-lang.org/en/3.4/Kernel.html)。
+2. **冻结版本/运行时/API 前提**：CRuby 3.4；`String#to_i` 的**前缀解析**语义见 RB-DOC-STRING、RB-DOC-KERNEL。
 3. **原可观察行为**：
    - `String#to_i` **宽松解析**：`"12abc".to_i == 12`、`"abc".to_i == 0`、`"  42  ".to_i == 42`，**不抛异常**；`Integer("abc")` 才抛 `ArgumentError`。二者不可互替。
    - `Integer` **无溢出**：超出机器字长自动升级为大数；无原生无符号整数。
@@ -100,7 +101,7 @@
    s = format("%.17g", 1.0 / 3)       # 精度按源义务冻结
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的解析严格性与有效位数时，标为“解析严格性与数值格式待确认”；不得用 `to_i` 的返回 0 冒充“解析成功得到 0”。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-STRING `to_i`](https://docs.ruby-lang.org/en/3.4/String.html#method-i-to_i)；[RB-DOC-KERNEL `Integer()`](https://docs.ruby-lang.org/en/3.4/Kernel.html#method-i-Integer)；[RB-DOC-KERNEL `format`](https://docs.ruby-lang.org/en/3.4/Kernel.html#method-i-format)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-STRING `to_i`；RB-DOC-KERNEL `Integer()`；RB-DOC-KERNEL `format`。
 
 ## 三、字符串、字节、NUL、Unicode 与编码
 
@@ -108,11 +109,11 @@
 - **字节序列数据结构**：`[语言规范保证]` 同样为 `String`，其编码标记为 `Encoding::BINARY` (`ASCII-8BIT`)。
 - **NUL (`\0`) 字符语义与处理**：`[语言规范保证]` 显式记录长度，允许包含 `\0` 字节；底层 C 扩展遇到 `\0` 可能抛出 `ArgumentError`。
 - **编码假设与转换陷阱**：`[语言规范保证]` 两个不同 Encoding 的 String 进行拼接时，若无法无损转码将抛出 `Encoding::CompatibilityError`。
-- **官方资料依据**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)
+- **官方资料依据**：RB-DOC-CORE
 
 ### L1-RB-03 字节路径必须固定为 BINARY，不得依赖默认 UTF-8
 1. **源码触发条件**：源码读写二进制（`File.binread`/`binwrite`、`IO#read` 带长度、`Digest`、`Base64`、`pack`/`unpack`、socket 收发），或在文本与字节之间用 `force_encoding`/`encode` 转换。
-2. **冻结版本/运行时/API 前提**：CRuby 3.4；`String#b`、`force_encoding`、`Encoding::BINARY`（`ASCII-8BIT`）与 `encode` 的转换失败语义见 [RB-DOC-ENCODING](https://docs.ruby-lang.org/en/3.4/Encoding.html)、[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)。
+2. **冻结版本/运行时/API 前提**：CRuby 3.4；`String#b`、`force_encoding`、`Encoding::BINARY`（`ASCII-8BIT`）与 `encode` 的转换失败语义见 RB-DOC-ENCODING、RB-DOC-STRING。
 3. **原可观察行为**：
    - `File.read` 使用**默认外部编码**（通常 UTF-8）并**受 `Encoding.default_external` 影响**；`File.binread` 返回 `ASCII-8BIT`。
    - 字节串默认标记为 UTF-8 时，`valid_encoding?` 可能为假；对非法字节序列 `encode`/正则匹配会抛 `Encoding::InvalidByteSequenceError`/`UndefinedConversionError`。
@@ -138,7 +139,7 @@
    text = content.dup.force_encoding(Encoding::UTF_8)
    ```
 6. **信息不足或实现相关时的处理**：无法确认源的编码、或源依赖按字节的长度与切片语义时，标为“编码与字节长度语义待确认”；**禁止**用 `scrub`/`encode(invalid: :replace)` 掩盖差异。也不得用 `String#length` 承接源按字节计的长度。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-ENCODING](https://docs.ruby-lang.org/en/3.4/Encoding.html)；[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)；[RB-DOC-IO](https://docs.ruby-lang.org/en/3.4/IO.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-ENCODING；RB-DOC-STRING；RB-DOC-IO。
 
 ## 四、数组、容器、切片、迭代和顺序
 
@@ -146,7 +147,7 @@
 - **键值映射（Map/Dict）实现**：`[语言规范保证]` `Hash` 为内建键值映射容器。
 - **Map 遍历迭代顺序保证**：`[语言规范保证]` **语言规范保证保持键的插入顺序**。
 - **迭代期间修改（Fail-Fast）**：`[语言规范保证]` 迭代中修改散列表键值可能导致遗漏或抛出异常。
-- **官方资料依据**：[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)<br>[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)
+- **官方资料依据**：RB-DOC-ARRAY<br>RB-DOC-HASH
 
 ## 五、异常、错误、退出码与可观察失败
 
@@ -154,11 +155,11 @@
 - **异常展开与性能模型**：`[语言规范保证]` 栈回溯与异常对象实例化。
 - **进程退出码回传机制**：`[语言规范保证]` `exit(int)` 抛出 `SystemExit` 异常；`exit!` 绕过 `ensure` 立即底层退出。
 - **跨语言映射关键风险**：`rescue => e` 默认只捕获 `StandardError`，不捕获 `Exception`（如 `NoMemoryError`、`SignalException`）。
-- **官方资料依据**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)
+- **官方资料依据**：RB-DOC-EXCEPT
 
 ### L1-RB-04 被丢弃的错误不得变成异常终止，主动失败不得被 `rescue` 吞掉
 1. **源码触发条件**：源码**有意忽略**失败（不检查返回的 `nil`/`false`、裸 `File.open`、`rescue` 后继续），**或**在失败时 `raise`、`abort`、`exit(非零)`、`warn` 后返回错误状态。
-2. **冻结版本/运行时/API 前提**：CRuby 3.4；异常层次（`Exception` vs `StandardError`）与 `exit`/`exit!` 语义见 [RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)、[RB-DOC-KERNEL](https://docs.ruby-lang.org/en/3.4/Kernel.html)。
+2. **冻结版本/运行时/API 前提**：CRuby 3.4；异常层次（`Exception` vs `StandardError`）与 `exit`/`exit!` 语义见 RB-DOC-EXCEPT、RB-DOC-KERNEL。
 3. **原可观察行为**：
    - 多数 I/O 失败在 Ruby 中**以异常报告**：`File.open` 缺文件抛 `Errno::ENOENT`。若源语言丢弃该错误，Ruby 版必须显式 `rescue` 才能复现“继续执行”。
    - `rescue => e` **只捕获 `StandardError`**，`NoMemoryError`/`SignalException`/`SystemExit` 会穿透——这是与 `rescue Exception` 的重要区别。
@@ -191,7 +192,7 @@
    end
    ```
 6. **信息不足或实现相关时的处理**：不清楚源是否检查返回值、是否输出诊断、失败后是否继续时，**不能断言退出码和产物**；把打开失败路径单列为待验证 oracle。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[RB-DOC-ERRNO](https://docs.ruby-lang.org/en/3.4/Errno.html)；[RB-DOC-KERNEL `exit`/`exit!`](https://docs.ruby-lang.org/en/3.4/Kernel.html#method-i-exit)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；RB-DOC-ERRNO；RB-DOC-KERNEL `exit`/`exit!`。
 
 ## 六、内存、资源所有权、析构、GC 与终结
 
@@ -199,7 +200,7 @@
 - **资源确定性释放机制**：`[语言规范保证]` 代码块闭包确保资源释放模式（如 `File.open(...) do |f| ... end` 保证自动关闭）。
 - **垃圾收集（GC）停顿与机制**：`[指定运行时的实现相关事实]` 分代三色 RGenGC；GC 扫描期间受运行时机制支配。
 - **悬垂与泄漏防范**：遗漏 block 形式直接调用裸 `File.open` 会导致文件描述符泄漏直至下一次 GC。
-- **官方资料依据**：[RB-DEV-GC](https://docs.ruby-lang.org/en/3.4/extension_rdoc.html)
+- **官方资料依据**：RB-DEV-GC
 
 ## 七、异步、并发、取消与阻塞
 
@@ -207,8 +208,70 @@
 - **线程/调度实体映射关系**：`[指定运行时的实现相关事实]` MRI 全局 VM 锁（GVL）限制多线程同一时刻仅有一个在 CPU 上执行 Ruby 字节码。
 - **级联取消与超时机制**：`[语言规范保证]` 线程超时控制（`Timeout.timeout`）；Fiber 协作式让出控制权。
 - **内存模型与数据竞争**：`[指定运行时的实现相关事实]` 跨线程共享可变对象需互斥锁（`Mutex`）保护。
-- **官方资料依据**：[RB-DEV-GC](https://docs.ruby-lang.org/en/3.4/extension_rdoc.html)<br>[RB-DOC-THREAD](https://docs.ruby-lang.org/en/3.4/Thread.html)
+- **官方资料依据**：RB-DEV-GC<br>RB-DOC-THREAD
+
+## 八、输出终止符
+
+### 输出换行：puts 与字节写入
+
+迁入原进程场景的语言事实：Ruby puts 的字符串参数已有换行时不再追加，不能视为无条件追加终止符；print/STDOUT.write 的字节输出与 puts 分开。对哈希、JSON 行或协议文本先核源函数的终止符规则。该事实不要求源码创建子进程。来源：Ruby Kernel#puts。
+
+## 九、进程返回、替换与环境
+
+### L1-RB-06 fork 的父、子与失败分支分别映射
+
+1. **触发**：源码依赖 fork 返回值、调用后续语句或退出清理。
+2. **前提**：CRuby 3.4，冻结 OS 是否提供 fork、是否有 block、线程与退出钩子；不从语言版本推定平台支持。
+3. **事实**：无 block 的 fork 在父进程返回子 PID、子进程返回 nil；0 在 Ruby 中为真。带 block 时子进程执行 block，正常结束即退出，不继续外部后续语句。创建失败须按异常路径处理，不假定返回 C 的 -1。
+4. **映射条件**：逐一对应源父/子/失败出口及等待、退出钩子；无 block 与 block 不是同形替换。源 C/POSIX 事实另读[进程系统页](../../systems/posix-windows-process-identity/SKILL.md#原生-forkexec-事实)。
+5. **反例**：照抄 C 的 `pid == 0` 会漏掉 Ruby 子分支；为简洁改成 block 可能丢失源子进程的后续语句。
+6. **未知**：平台不支持或源分支/退出钩子未知，记映射缺口；spawn 不提供内存副本，不自动视为等价。
+7. **依据**：Ruby 3.4 Process.fork 方法说明；CRuby v3_4_0 的 process.c / rb_f_fork 实现。本条所需返回、分支与未知条件已在正文列明。
+
+### L1-RB-07 exec 的环境与失败续行
+
+1. **触发**：替换自身映像、指定环境或处理 exec 失败。
+2. **前提**：CRuby 3.4，冻结调用形态、argv、OS 与环境契约。
+3. **事实**：成功 exec 不回到 Ruby 调用点；失败抛异常。省略环境或传空 hash 默认仍继承；环境 hash 修改继承项，nil 值删除该项；`unsetenv_others: true` 清除其他项。直接参数形式与 shell 命令字符串分别核对。
+4. **映射条件**：显式区分继承、合并覆盖、完整替换及空环境；源失败后继续时只处理该调用适用的异常并保持后续出口，不扩大 rescue 范围。
+5. **反例**：把空 hash 当空环境；把 exec 改 system 后继续；让 C 的失败返回变成未捕获异常，均可能改变可观察行为。
+6. **未知**：Linux 的 NULL envp 不能外推到其他 OS，见[系统页](../../systems/posix-windows-process-identity/SKILL.md#原生-forkexec-事实)；诊断、环境与失败路径未知时不猜。
+7. **依据**：Kernel.exec；Ruby 执行环境与选项。
+
+## 十、空白集合与临时目录
+
+### L1-RB-08 strip 不是通用 Unicode 空白删除
+
+1. **触发**：strip/lstrip/rstrip、空白判定或去空白后分支。
+2. **前提**：CRuby 3.4 String 方法，冻结编码；正则、split 和应用自定义谓词另核。
+3. **事实**：上述 String 去空白方法的集合为 NUL、HT、LF、VT、FF、CR、普通空格；不等于 Unicode White_Space。strip! 还须保持原地修改及未改变时返回 nil。
+4. **映射条件**：按源方法实际集合、两端/全部删除、变异与返回值选择目标谓词，不按“空白”名称套 API。
+5. **反例**：换成 Go TrimSpace 会删去源 strip 保留的 U+00A0，并保留源 strip 会删的 NUL。
+6. **未知**：源用正则或自定义集合时定位定义；缺编码/定义只记录条件差异，不定案历史缺陷。
+7. **依据**：Ruby String 空白定义；strip!。
+
+### L1-RB-09 Dir.tmpdir 的候选顺序与有效性
+
+1. **触发**：源码调用 tmpdir 标准库的 Dir.tmpdir 或依赖临时目录路径。
+2. **前提**：冻结实际 tmpdir 库版本、OS、环境和初始目录状态；这里依据 Ruby v3_4_0 附带实现。
+3. **事实**：依次尝试 TMPDIR、TMP、TEMP、系统临时路径、/tmp、当前目录；跳过空值及不适用候选，核目录、可写性和 world-writable/sticky 条件，找不到时抛错；会展开路径并可能写警告。
+4. **映射条件**：保持候选优先级、有效性、路径展开与错误/警告；不把“返回临时路径”换成“创建目录”。
+5. **反例**：Unix 上直接用 Go os.TempDir，可能忽略 TMP/TEMP 或返回 Ruby 会拒绝的路径。
+6. **未知**：库可能独立升级，准确版本未知不得把此顺序当已核事实；用户显式目录优先按源调用处理。
+7. **依据**：Ruby v3_4_0 的 lib/tmpdir.rb / Dir.tmpdir / Tmpname::TMPDIR_CANDIDATES；本条正文保留了所需候选顺序、校验与失败条件。
+
+## 十一、终端键输入
+
+### L1-RB-10 getch、getc 与 gets 的输入单位不同
+
+1. **触发**：交互暂停、读键/字符/整行、回显或终端模式。
+2. **前提**：CRuby 3.4，io/console 的实际版本、OS、输入设备与编码；合法驱动来源另见[评估准备](../../../references/framework/evaluation-readiness-contract.md)。
+3. **事实**：io/console 的 getch 在 raw 模式读取字符，须加载 io/console；getc 读流字符，gets 读行。getch 不直接给出 .NET ConsoleKeyInfo 的完整键/修饰键对象。
+4. **映射条件**：按源消费单位、回显、特殊键、EOF/失败与模式恢复选择；确认输入设备，不把流读取视为终端键事件。
+5. **反例**：用 gets 暂停替代单键等待会增加换行要求；只取 getch 字符可能丢失源修饰键分支。
+6. **未知**：无合法终端入口属于准备缺口，不伪造源栈、不删暂停或静默改读整行；只做文本/仅编译的适用性由契约定。
+7. **依据**：Ruby IO.getch/getc/gets。
 
 ## 使用边界
 
-将本页与所选的源→目标方向 Skill 及另一语言的共性页组合使用；映射前先确认源码真实行为。文件、网络、并发和跨 OS API 的具体差异仍按[共性索引的场景/系统分流](../seven-language-common-semantics.md)选读，不从语言事实直接推断系统 API 等价。没有逐例第三方证据时，语法/构建与功能结论保持 `UNVERIFIED`；本机不运行或编译样本。
+将本页与所选方向和另一语言事实页组合；具体场景/系统差异按[共性索引](../seven-language-common-semantics.md)选读。缺逐例第三方证据保持 UNVERIFIED，本机不运行或编译。

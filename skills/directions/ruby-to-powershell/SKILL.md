@@ -1,4 +1,4 @@
-﻿---
+---
 name: ruby-to-powershell
 description: Use when converting Ruby source to PowerShell; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Ruby source to PowerShell; apply this direction
 
 ### 规则 RB-PS-01：Ruby 动态方法与哈希向 PowerShell PSCustomObject 映射
 1. **源码触发条件**：Ruby 源码中定义包含动态方法或属性的纯数据对象，或操作复杂 `Hash`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)）；目标语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-HASH）；目标语言 PowerShell 7.6（MS-PS-PIPE）。
 3. **原可观察行为**：通过方法或键访问对象属性。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为 `[PSCustomObject]`；若需附加动态计算方法，使用 `Add-Member -MemberType ScriptMethod`。
@@ -32,11 +32,11 @@ description: Use when converting Ruby source to PowerShell; apply this direction
    $obj | Add-Member -MemberType ScriptMethod -Name "DoAction" -Value { Write-Output $this.Name }
    ```
 6. **信息不足或实现相关时的处理**：若包含深度嵌套字典，使用自定义递归包装。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)；[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-HASH；MS-PS-PIPE。
 
 ### 规则 RB-PS-02：Ruby 异常捕获向 PowerShell 终止错误与 $? 状态映射
 1. **源码触发条件**：Ruby 源码中使用 `rescue` 捕获异常并返回降级值。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)）；目标语言 PowerShell 7.6（[MS-PS-ERROR](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-EXCEPT）；目标语言 PowerShell 7.6（MS-PS-ERROR）。
 3. **原可观察行为**：捕获异常并执行恢复分支。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 PowerShell 中使用 `try { ... } catch { ... }` 结构。
@@ -56,7 +56,7 @@ description: Use when converting Ruby source to PowerShell; apply this direction
    }
    ```
 6. **信息不足或实现相关时的处理**：区分内部 Cmdlet 异常与外部进程退出码。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[MS-PS-ERROR](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；MS-PS-ERROR。
 
 ### 规则 RB-PS-03：Ruby 字符串内插与正则表达式向 PowerShell 语法适配映射
 1. **源码触发条件**：Ruby 源码中使用 `"hello #{name}"` 字符串内插或 `/pattern/` 正则表达式字面量。
@@ -76,11 +76,11 @@ description: Use when converting Ruby source to PowerShell; apply this direction
    $str = "Hello $($user.Name)"
    ```
 6. **信息不足或实现相关时的处理**：扫描所有正则修饰符，确保与 .NET 正则引擎选项对应。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)；[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **资料依据（名称/版本/章节）**：MS-PS-PIPE；RB-DOC-CORE。
 
 ### 规则 RB-PS-04：Ruby 真值模型（仅 nil/false 为假）向 PowerShell $null 与布尔转换判定映射
 1. **源码触发条件**：Ruby 源码用对象的真值直接控制流程或取后备值，例如 `enum_subkeys(x)&.each do |y| ... end`、`return nil unless key_str`、`subkeys.empty? ? nil : subkeys`、`k = 'Manufacturer' ... value: hash['Mfg'] || 'Unknown'`、`unless session.commands.include?(...)`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）；目标语言 PowerShell 7.6（[MS-PS-TYPES](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_booleans)、[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 PowerShell 7.6（MS-PS-TYPES、MS-PS-OPERATORS）。
 3. **原可观察行为**：**Ruby 只有 `nil` 与 `false` 为假**：空字符串 `''`、`0`、空数组、空 Hash 全是真，因此 `if s` 对空串仍进入分支；`a || b` 返回第一个为真的**值本身**，因此 `'' || 'Unknown'` 得到 `''`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`x.nil?` → `$null -eq $x`（把 `$null` 放左侧，避免与数组比较时的元素过滤语义）；`x || default` 在 x 只可能是 `$null` 时 → `if ($null -eq $x) { $default } else { $x }`；需要在管道里做空值兜底时才用 `??`（PowerShell 7 的空合并运算符），并确认左操作数确实只有 `$null`；`x&.m` → `if ($null -ne $x) { $x.m }`。
@@ -96,11 +96,11 @@ description: Use when converting Ruby source to PowerShell; apply this direction
    if ($null -eq $value -or $value -eq '') { $label = 'Unknown' } else { $label = $value }
    ```
 6. **信息不足或实现相关时的处理**：条件的判据在源码中不显式（`if $v`、`unless $v`）而 v 可能是字符串/数值/集合时，必须标注"真值判据待确认"并询问；PowerShell 版本与宿主决定可用运算符（`??`、`?.` 需 7.x），任务未冻结宿主版本时不得假定可用。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)；[MS-PS-TYPES](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_booleans)；[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；MS-PS-TYPES；MS-PS-OPERATORS。
 
 ### 规则 RB-PS-05：Ruby 迭代/块向 PowerShell 管道与显式集合操作映射（单元素解包与上游失败语义）
 1. **源码触发条件**：Ruby 源码用块遍历或做集合变换，例如 `paths.each do |path| ... end`、`paths.count`、`files.each do |file| next if ['.', '..'].include?(file) ... end`、`resp.split("\r\r\n\r\r\n").map do |ent| next if ent.strip.empty? ... end`、`objects[:values].compact.each do |k| results << k end`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-ENUMERABLE](https://docs.ruby-lang.org/en/3.4/Enumerable.html)、[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)）；目标语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)、[MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-ENUMERABLE、RB-DOC-ARRAY）；目标语言 PowerShell 7.6（MS-PS-PIPE、MS-PS-ARRAY）。
 3. **原可观察行为**：Ruby 的 `each` 逐元素执行块，块内 `next` 跳过本次、`break` 终止整个迭代；集合 `count`/`empty?` 得到确定的元素个数；`Array#compact`/`flatten!` 会就地或复制地改变元素集合；一个元素的数组仍是数组（`size` 恒为 1）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`each` → `foreach ($item in $items) { ... }`（需要流式与 `-Parallel` 时才用 `ForEach-Object`）；`select`/`map` → `Where-Object`/`ForEach-Object`，但把结果显式落进 `@()` 以免被单元素解包；计数用 `@($items).Count`（`@()` 保证计数对象是数组）；判空用 `@($items).Count -eq 0`；`next` → `continue`，`break` → `break`。
@@ -117,11 +117,11 @@ description: Use when converting Ruby source to PowerShell; apply this direction
    foreach ($p in $paths) { ... }
    ```
 6. **信息不足或实现相关时的处理**：Ruby 块内是否含 `break`/`next` 且其返回值被使用，必须逐个确认后再选 `foreach` 或 `ForEach-Object`（后者在管道中无法用 `break` 跳出整条管道）；集合是否可能为空、是否可能只有一个元素必须从源码与用法确认，空/单元素两种情况都要在报告里写明按哪一侧语义处理。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-ENUMERABLE](https://docs.ruby-lang.org/en/3.4/Enumerable.html)；[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)；[MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-ENUMERABLE；MS-PS-PIPE；MS-PS-ARRAY。
 
 ### 规则 RB-PS-06：Ruby 字节串与编码转换向 PowerShell .NET 字符串/字节数组映射
 1. **源码触发条件**：Ruby 源码在字节与文本之间转换，或按字节/十六进制处理内容，例如 `out << format("%<label>5s\t%<value>75s\n", label: v, value: u.gsub("\x00", ''))`、`ret[data.unpack('V').map { |x| "Disk #{x.to_s(16)}" }.join(' ')] = drive`、`payload.encode('ASCII')`、`resp.split("\r\r\n\r\r\n")` 后 `.lines.map(&:strip)`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)）；目标语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)、[MS-DOTNET-ENCODING](https://learn.microsoft.com/en-us/dotnet/api/system.text.encoding)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-STRING）；目标语言 PowerShell 7.6（MS-PS-PIPE、MS-DOTNET-ENCODING）。
 3. **原可观察行为**：Ruby `String` 是字节序列 + `Encoding` 标签，`encode('ASCII')` 在不兼容时抛 `Encoding::UndefinedConversionError`，`gsub("\x00", '')` 按**字节**删除 NUL，`unpack('V')` 按小端把 4 字节读成整数；内容可含 `\0` 而不被截断。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：文本一律用 .NET `[string]`（UTF-16 代码单元序列）；字节一律用 `[byte[]]`，两者互转显式调用 `[System.Text.Encoding]::UTF8.GetBytes($s)` / `.GetString($bytes)`；按字节删除 NUL 用 `[byte[]]` 过滤后重建，而不是对 `[string]` 做 `-replace`；重定向到外部原生程序时显式设置 `$OutputEncoding`/`[Console]::OutputEncoding`。
@@ -140,7 +140,7 @@ description: Use when converting Ruby source to PowerShell; apply this direction
    $text = [System.Text.Encoding]::UTF8.GetString($cleanBytes)
    ```
 6. **信息不足或实现相关时的处理**：Ruby 串的 `encoding` 标签无法从局部源码确定（来自子进程输出、注册表数据、文件读回）时必须标注"编码待确认"并询问，不得默认 UTF-8；跨进程读写的编码还受宿主 `$OutputEncoding`、`[Console]::OutputEncoding` 与被调程序自身编码影响，需按 OS/宿主单独核验，不从语言层相似性推定一致。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)；[MS-DOTNET-ENCODING](https://learn.microsoft.com/en-us/dotnet/api/system.text.encoding)；[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-STRING；MS-DOTNET-ENCODING；MS-PS-PIPE。
 
 ## 转换与验证边界
 

@@ -1,4 +1,4 @@
-﻿---
+---
 name: powershell-to-c
 description: Use when converting PowerShell source to C; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting PowerShell source to C; apply this direction's 
 
 ### 规则 PS-C-01：PowerShell 动态对象管道向 C 底层字节流与固定结构体降级映射
 1. **源码触发条件**：PowerShell 源码中通过管道传递具备属性的对象（如 `Get-Process | Select-Object Id, ProcessName`）。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)）；目标语言 ISO C11（[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-PIPE）；目标语言 ISO C11（WG14-N1570 §6.2.5）。
 3. **原可观察行为**：传递强类型 .NET PSObject 包装对象，下游通过属性名直接提取字段。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C 中定义明确的 `struct` 结构体，字段定宽且强类型化；管道传递转换为结构体指针数组或线性缓冲区循环处理。
@@ -32,11 +32,11 @@ description: Use when converting PowerShell source to C; apply this direction's 
    } ProcessInfo;
    ```
 6. **信息不足或实现相关时的处理**：若源对象属性动态不固定，提取所需字段子集并向用户确认。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)；[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **资料依据（名称/版本/章节）**：MS-PS-PIPE；WG14-N1570 §6.2.5。
 
 ### 规则 PS-C-02：PowerShell 弱类型隐式转换向 C 严格显式转换与溢出防范映射
 1. **源码触发条件**：PowerShell 源码中将字符串数字与整数直接混算（如 `'100' + 20` 或 `20 + '100'`）。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6；目标语言 ISO C11（[WG14-N1570 §6.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6；目标语言 ISO C11（WG14-N1570 §6.3）。
 3. **原可观察行为**：PowerShell 根据左操作数类型决定是执行字符串拼接（`'100' + 20 -> '10020'`）还是数值相加（`20 + '100' -> 120`）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C 语言中严禁依赖隐式转换！数值计算显式调用 `strtol` 转换并校验错误；字符串拼接显式使用 `snprintf`。
@@ -51,11 +51,11 @@ description: Use when converting PowerShell source to C; apply this direction's 
    if (*endptr != '\0') { /* 解析失败处理 */ }
    ```
 6. **信息不足或实现相关时的处理**：标记由于操作数顺序导致语义分化的潜在风险。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.3。
 
 ### 规则 PS-C-03：PowerShell 错误偏好与 $LASTEXITCODE 向 C 显式错误状态码映射
 1. **源码触发条件**：PowerShell 源码中配置 `$ErrorActionPreference` 并检查 `$LASTEXITCODE`。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables), [MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)）；目标语言 ISO C11。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-AUTO, MS-PS-PREF）；目标语言 ISO C11。
 3. **原可观察行为**：非终止错误被忽略或打印，最后外部程序退出码被 `$LASTEXITCODE` 记录。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C 中每一步系统调用显式检查返回值与 `errno`，在 `main` 退出时通过 `return code;` 或 `exit(code)` 回传。
@@ -70,11 +70,11 @@ description: Use when converting PowerShell source to C; apply this direction's 
    }
    ```
 6. **信息不足或实现相关时的处理**：若涉及外部进程执行，加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)；[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)。
+7. **资料依据（名称/版本/章节）**：MS-PS-AUTO；MS-PS-PREF。
 
 ### 规则 PS-C-04：PowerShell `$null`/空字符串/空数组/空集合的真值差异向 C 指针与长度双重判定映射
 1. **源码触发条件**：源码把可能为空的取值结果直接放进条件或比较，例如 `if ($UserList -eq "")`、`while ($SmallestLockoutThreshold -eq "0")` 的反面写法、`if ( $PSOs.count -gt 0)`、`if (!$CallResult)`、`if ($DomainController -and $Credential.GetNetworkCredential().Password)`；取值来源可返回“无结果”，如 `Get-Content`、`$searcher.FindAll()`、`[ADSI]`、P/Invoke 布尔返回值与 `IntPtr` 返回值。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators), [MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)）；目标语言 ISO C11（[WG14-N1570 §6.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-OPERATORS, MS-PS-ARRAY）；目标语言 ISO C11（WG14-N1570 §6.5）。
 3. **原可观察行为**：PowerShell 把 `$null`、空字符串、空数组、空集合以及数值 0 都按“假”参与布尔化，`$null` 参与左侧字符串比较时按空字符串处理，单元素结果自动退化为标量使 `.Count` 语义随元素个数变化；因此“无结果”“空结果”“结果为空串”在源码里往往走同一分支。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：C 中拆成两个显式事实——指针是否为 `NULL`、以及长度/计数是否为 0；返回“可能有/没有”的取值函数统一用 `int f(T *out, size_t *out_len)` 形式，调用点两项都判断。
@@ -91,11 +91,11 @@ description: Use when converting PowerShell source to C; apply this direction's 
    }
    ```
 6. **信息不足或实现相关时的处理**：若无法确认某取值点在无结果时是返回 `$null`、空数组还是空字符串，必须停下标注该点并向用户确认；不要把 `.Count` 与 `.Length`、把 `[int]` 转换后的 0 与 `$null` 当作同一事实处理。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)；[WG14-N1570 §6.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **资料依据（名称/版本/章节）**：MS-PS-OPERATORS；WG14-N1570 §6.5。
 
 ### 规则 PS-C-05：PowerShell 字符串内插与 `-f`/`-join` 格式组装向 C `snprintf` 与显式字节长度映射
 1. **源码触发条件**：源码用双引号内插拼装文本，或使用格式/连接运算符，例如 `"$ProcessName_$ProcessId.dmp"`、`"[*] The smallest lockout threshold ... is $SmallestLockoutThreshold login attempts."`、`("PS " + (Get-Location).Path + '>')`、`$packet[10..13] -join ""`、`("{0,-10}{1,0}" -f "PORT","STATE")`、`("{0:x}" -f $value)`、`$buffer.Value -join ""`；随后把结果交给字节编码或写入。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators), [MS-PS-QUOTES](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_quoting_rules)）；目标语言 ISO C11（[WG14-N1570 §7.21.6.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-OPERATORS, MS-PS-QUOTES）；目标语言 ISO C11（WG14-N1570 §7.21.6.5）。
 3. **原可观察行为**：内插自动对任意对象调用其字符串化（`[string]`）语义；`-f` 支持对齐与进制说明符（`{0,-10}`、`{0:x}`、`{0}`）并自动格式化参数；`-join` 连接元素序列；`.Length` 报告 UTF-16 代码单元数，而 `.NET` 编码器产出的字节数与之不同，二者在源码里常被混用（如把 `.Length` 当作字节长度传给写入 API）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：用 `snprintf(buf, sizeof buf, "...%s...%d...", ...)` 组装文本，返回值先与 `sizeof buf` 比较以判定截断；需要十六进制/对齐补零时显式写字宽与进制（`%08x`、`%-10s`、`%02x`）；编码后的字节数与字符数分别用独立变量保存，缓冲区容量按编码后的最坏字节数计算。
@@ -113,11 +113,11 @@ description: Use when converting PowerShell source to C; apply this direction's 
    size_t nbytes = (size_t)rc;        /* 实际写入字节数 */
    ```
 6. **信息不足或实现相关时的处理**：源内插的对象字符串化依赖宿主与文化设置时（例如日期、浮点），必须停下标注该点的确切格式来源；目标输出编码（ASCII/UTF-8/ANSI 代码页）未冻结前，不要假定 `snprintf` 的字节数与源编码结果一致。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §7.21.6.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[MS-PS-QUOTES](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_quoting_rules)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §7.21.6.5；MS-PS-QUOTES。
 
 ### 规则 PS-C-06：PowerShell 非终止错误、`-ErrorAction Stop`、`$Error` 与 `try/catch` 向 C 返回码与错误出口映射
 1. **源码触发条件**：源码使用 `-ErrorAction Stop`/`-EA SilentlyContinue`、读取 `$Error[0]`/`$_`、`$Error.Clear()`，或把易失败调用包在 `try { } catch { }` 里，例如 `Get-Content $UserList -ErrorAction stop`、`throw "[!] Could not connect to the domain..."`、`$error[0] | Out-String`、`$error.clear()`、P/Invoke 返回布尔值后的 `if (!$CallResult)` 分支。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables), [MS-PS-TRY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)）；目标语言 ISO C11（[WG14-N1570 §7.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-PREF, MS-PS-TRY）；目标语言 ISO C11（WG14-N1570 §7.5）。
 3. **原可观察行为**：Cmdlet 的多数失败是非终止错误：写入错误流、`$?` 变为 `$false`、`$Error` 集合头部追加一条记录，而脚本继续执行；只有 `-ErrorAction Stop`（或偏好变量为 `Stop`、或显式 `throw`）才转成终止错误并被 `catch` 捕获；`$Error.Clear()` 会清空历史，使后续错误记录索引改变。源中“看起来像异常”的分支与其“是否中断控制流”的实际语义必须逐点确认。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：C 用返回值表达失败：每个可能失败的系统调用/库调用检查其返回值与 `errno`，向上返回 `int` 错误码、或在输出参数中带出错误信息；进程级失败用 `return code;`/`exit(code)` 回传；`try/catch` 的捕获点对应到调用点的错误检查，`finally` 中“总会执行”的清理对应到统一的 `goto cleanup` 出口。
@@ -134,7 +134,7 @@ description: Use when converting PowerShell source to C; apply this direction's 
    fclose(f);
    ```
 6. **信息不足或实现相关时的处理**：若无法确定源命令的失败在当前偏好设置下是终止还是非终止（例如来自模块的 Cmdlet、或偏好由调用方设置），必须停下标注该点；`$Error` 的历史顺序与 `$Error.Clear()` 时机不要在 C 中尝试复刻，只需保留“哪个失败被观察到、是否中断”的事实。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-TRY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)；[MS-PS-PREF](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_preference_variables)。
+7. **资料依据（名称/版本/章节）**：MS-PS-TRY；MS-PS-PREF。
 
 ## 转换与验证边界
 

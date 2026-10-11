@@ -1,4 +1,4 @@
-﻿---
+---
 name: go-to-cpp
 description: Use when converting Go source to C++; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Go source to C++; apply this direction's langua
 
 ### 规则 GO-CPP-01：Go (T, error) 显式多返回值向 C++17 自定义 Result 结构体或 std::optional 映射
 1. **源码触发条件**：Go 源码中函数返回 `(Result, error)`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Errors](https://go.dev/ref/spec)）；目标语言 ISO C++17（[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Errors）；目标语言 ISO C++17（WG21-N4659）。
 3. **原可观察行为**：显式多值返回，调用方通过 `if err != nil` 检查错误。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：若只需表达有无数据，使用 `std::optional<T>`；若需携带错误细节，定义 `struct ResultOrError { T val; std::string error_msg; bool ok; }` 或使用输出参数；或者在失败时抛出异常。
@@ -30,11 +30,11 @@ description: Use when converting Go source to C++; apply this direction's langua
    struct Result { int value; std::string err; bool is_ok() const { return err.empty(); } };
    ```
 6. **信息不足或实现相关时的处理**：若原 Go 代码无错误传递直接返回，直接映射为 C++ 对应单一返回值。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Errors](https://go.dev/ref/spec)；[WG21-N4659 Clause 23.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Errors；WG21-N4659 Clause 23.6。
 
 ### 规则 GO-CPP-02：Go defer 逆序清理向 C++17 局部作用域析构 (RAII) 映射
 1. **源码触发条件**：Go 源码中使用 `defer mu.Unlock()` 或 `defer file.Close()`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Defer_statements](https://go.dev/ref/spec)）；目标语言 ISO C++17（[WG21-N4659 Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Defer_statements）；目标语言 ISO C++17（WG21-N4659 Clause 6.7）。
 3. **原可观察行为**：注册的清理函数在外层函数返回前以 LIFO（后进先出）逆序确定性执行。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：互斥锁使用 `std::lock_guard`；文件/资源封装为 RAII 守卫类；或编写简易 ScopeGuard 类在析构时调用 lambda。
@@ -54,11 +54,11 @@ description: Use when converting Go source to C++; apply this direction's langua
    }
    ```
 6. **信息不足或实现相关时的处理**：若 defer 包含修改具名返回值的副作用，需在 C++ 中显式转化为返回前变量修改。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec)；[WG21-N4659 Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Defer_statements；WG21-N4659 Clause 6.7。
 
 ### 规则 GO-CPP-03：Go Goroutine 与 Channel 向 C++17 std::thread 与并发阻塞队列映射
 1. **源码触发条件**：Go 源码中使用 `go worker()` 启动协程并通过 `chan T` 通信。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Go_statements](https://go.dev/ref/spec)）；目标语言 ISO C++17（[WG21-N4659 Clause 33](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Go_statements）；目标语言 ISO C++17（WG21-N4659 Clause 33）。
 3. **原可观察行为**：轻量级 Goroutine 协作调度，Channel 阻塞传递数据。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：按资源边界核对 `std::thread` 或经允许的调度实现。固定线程池不是大量 goroutine 的自动等价：阻塞发送/接收可能占满 worker，令负责解锁的任务无法被调度而死锁。先核对依赖拓扑、背压、唤醒/取消和资源上限，不能只把每个 goroutine 塞入固定池。Channel 须保持无缓冲 rendezvous/有缓冲容量、close 后排空、关闭发送错误与 select 语义；普通阻塞队列不能冒充这些义务全部已映射。
@@ -76,11 +76,11 @@ description: Use when converting Go source to C++; apply this direction's langua
    }
    ```
 6. **信息不足或实现相关时的处理**：所有实际并发都加载[并发场景](../../scenes/concurrency/SKILL.md)，网络另读[网络场景](../../scenes/network-io/SKILL.md)。调度/Channel 义务未明确时标知识缺口，不通过改变原并发模型掩盖。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[WG21-N4659 Clause 33](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Go_statements；WG21-N4659 Clause 33。
 
 ### 规则 GO-CPP-04：Go 切片与 string 向 C++17 std::vector/std::string 的所有权与共享语义选择
 1. **源码触发条件**：Go 源码在 `[]byte`/`[]T`/`string` 上做子切片、`append`、`bytes.NewReader(...)`、`strings.Join(parts, "|")`、`string(output)` 与 `[]byte(text)` 互转（如 `crypto/sha256` + `hex.EncodeToString(sum[:])`、`payload, _ := json.Marshal(inObj)`）。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Slice_types](https://go.dev/ref/spec)）；目标语言 ISO C++17（[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Slice_types）；目标语言 ISO C++17（WG21-N4659）。
 3. **原可观察行为**：`s[a:b]` 得到的新切片与原切片共享底层数组，通过任一路径写入都可被另一路径观察到，直到 `append` 触发扩容后才分离；`string` 为只读字节序列且自带长度；切片值传递不复制元素。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：需要持有数据所有权时用 `std::vector<uint8_t>` / `std::string` 取值拷贝；只需要借用视图且不保活时用 `std::string_view` / `std::span<const uint8_t>`；显式声明“谁持有、谁保活、何时失效”，需要保活就用容器本身或 `std::shared_ptr` 承载。
@@ -96,11 +96,11 @@ description: Use when converting Go source to C++; apply this direction's langua
    std::vector<uint8_t> owned = src;  // 独立副本，语义与 Go 扩容后的分离一致
    ```
 6. **信息不足或实现相关时的处理**：若源码中存在跨线程共享同一底层数组的切片，必须先确认目标侧的同步与保活责任，标注“共享视图的线程安全与生命周期待确认”，不得仅凭类型相近就断定语义等价。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Slice_types, #String_types](https://go.dev/ref/spec)；[WG21-N4659 Clause 24, Clause 21](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Slice_types, #String_types；WG21-N4659 Clause 24, Clause 21。
 
 ### 规则 GO-CPP-05：Go error 返回与 panic 向 C++17 异常或错误码的选择边界
 1. **源码触发条件**：Go 源码以 `(T, error)` 返回并 `if err != nil` 分流（`errors.New`、`fmt.Errorf("...: %w", err)`），或在越界/非法输入处 `panic`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Errors, #Handling_panics](https://go.dev/ref/spec)）；目标语言 ISO C++17（[WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Errors, #Handling_panics）；目标语言 ISO C++17（WG21-N4659）。
 3. **原可观察行为**：错误经返回值显式传递，未检查不会自动中断控制流；`panic` 展开当前 Goroutine 的栈并执行已注册的 `defer`，可由 `recover()` 截断。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在纯 C++ 边界内，把可恢复失败映射为异常（定义派生自 `std::runtime_error` 的类别，抛 `throw`），把结构性致命错误映射为 `std::terminate` 前的最小必要处理；在 C ABI 边界（`extern "C"` 导出函数、回调进 C 库）**改为返回错误码或出参**，异常必须在边界内被捕获并翻译。
@@ -123,11 +123,11 @@ description: Use when converting Go source to C++; apply this direction's langua
    }
    ```
 6. **信息不足或实现相关时的处理**：若原 Go 代码把 `err` 作为可忽略的普通值继续执行（例如仅记录日志后返回部分结果），必须先确认哪一侧语义是契约，标注“异常安全性/错误传播范围待确认”后再选异常或错误码。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Errors, #Handling_panics](https://go.dev/ref/spec)；[WG21-N4659 Clause 18.8, Clause 15](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Errors, #Handling_panics；WG21-N4659 Clause 18.8, Clause 15。
 
 ### 规则 GO-CPP-06：Go interface{} 动态类型向 C++17 std::variant/std::any 的标签与访问映射
 1. **源码触发条件**：Go 源码把任意类型装入 `interface{}`/`any`，例如 `map[string]any{"count": n, "results": results}`、`logInfo(title string, content interface{})`，并通过类型断言 `v, ok := x.(*net.IPNet)` 或 `switch v := x.(type)` 取回具体类型。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Interface_types, #Type_assertions](https://go.dev/ref/spec)）；目标语言 ISO C++17（[WG21-N4659 Clause 20.7, Clause 20.8](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Interface_types, #Type_assertions）；目标语言 ISO C++17（WG21-N4659 Clause 20.7, Clause 20.8）。
 3. **原可观察行为**：类型标签随值一起保存；类型断言失败返回该类型的零值与 `false`，`switch x.(type)` 的 `default` 分支承接未知类型；接口值为 `nil` 与持有一个“值为 nil 的具体类型”是两种不同状态。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：类型集合封闭时用 `std::variant<...>` 并配 `std::visit` / `std::get_if`，把 Go 的类型断言失败显式映射为 `get_if` 返回空指针；类型集合真正开放时用 `std::any` 并配 `std::any_cast`；需要保留“nil 具体类型”这一区分时，额外保存一个显式标签（枚举或 `std::monostate`）而不是依赖空值推断。
@@ -147,7 +147,7 @@ description: Use when converting Go source to C++; apply this direction's langua
    }
    ```
 6. **信息不足或实现相关时的处理**：若 `interface{}` 承载的具体类型集合无法从源码穷举（依赖反射、注册表或调用方注入），必须标注“类型集合封闭性待确认”，在 `std::variant` 与 `std::any` 之间取舍前先向调用方确认。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Interface_types, #Type_assertions](https://go.dev/ref/spec)；[WG21-N4659 Clause 20.7.3, Clause 20.8](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Interface_types, #Type_assertions；WG21-N4659 Clause 20.7.3, Clause 20.8。
 
 ### 规则 GO-CPP-07：Go 监听器关闭向 C++ 裸 fd 的唤醒与唯一所有权映射
 1. **源码触发条件**：Go 在 `net.Listener.Close()` 或 `http.Server.Close()` 后等待服务协程退出；目标 C++ 用监听 fd、`accept()` 线程和 `join()` 表达该生命周期。
@@ -161,10 +161,14 @@ description: Use when converting Go source to C++; apply this direction's langua
    // 目标方案须先通知/唤醒 worker，再一次性关闭并使持有者失效。
    ```
 6. **信息不足或实现相关时的处理**：若无法确认线程对 fd 的并发访问、`shutdown`/`poll` 的目标平台语义、关闭后是否仍有回调或析构，保留为未解决的生命周期问题；只看到 build PASS 不能证明没有挂起或误关。
-7. **直接官方 HTTPS 依据链接**：[Go `net.Listener`](https://pkg.go.dev/net#Listener)；[Linux `close(2)` 的多线程说明](https://man7.org/linux/man-pages/man2/close.2.html)；[Linux `poll(2)`](https://man7.org/linux/man-pages/man2/poll.2.html)。
+7. **资料依据（名称/版本/章节）**：Go `net.Listener`；Linux `close(2)` 的多线程说明；Linux `poll(2)`。
 
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+## 子进程 API 映射
+
+迁入进程场景的 Go→C++ 细节，仅在 os/exec 触发时读取。CommandContext 的默认取消针对直接进程，WaitDelay 约束管道等待，不承诺整树回收。目标用实际平台 API 分别映射启动、双流排空、等待与超时，不能将 Cmd 字段臆造给 std::system/popen。通用观察义务读[进程场景](../../scenes/process-execution/SKILL.md)，跨 OS 读[进程系统页](../../systems/posix-windows-process-identity/SKILL.md)。源自定义 Cancel/WaitDelay 或目标杀树能力未知时记录待确认，不声明已验证。

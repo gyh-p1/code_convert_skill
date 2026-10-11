@@ -1,4 +1,4 @@
-﻿---
+---
 name: go-to-ruby
 description: Use when converting Go source to Ruby; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 
 ### 规则 GO-RB-01：Go map 无序遍历向 Ruby Hash 有序插入遍历的隔离映射
 1. **源码触发条件**：Go 源码中通过 `for k, v := range m` 遍历哈希表。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Map_types](https://go.dev/ref/spec)）；目标语言 CRuby 3.4（[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Map_types）；目标语言 CRuby 3.4（RB-DOC-HASH）。
 3. **原可观察行为**：Go 语言规范明确未规定 map 遍历顺序（故意引入随机种子打乱顺序）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：Ruby 的 `Hash` 规范**强制保证按键值对的插入顺序遍历**！转换至 Ruby 后，代码切不可隐式产生“顺序依赖”；若业务需要无序性（如测试随机打乱），必须显式调用 `.to_a.shuffle`。
@@ -29,11 +29,11 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    # Ruby: h.each { |k, v| ... } // 永远按照严格的插入顺序遍历！
    ```
 6. **信息不足或实现相关时的处理**：在转换报告中明确标记 Ruby Hash 存在插入有序性保证的事实。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Map_types](https://go.dev/ref/spec)；[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Map_types；RB-DOC-HASH。
 
 ### 规则 GO-RB-02：Go 定宽整数模截断向 Ruby 任意精度 Integer 显式掩码映射
 1. **源码触发条件**：Go 源码中使用 `uint32` 进行运算，依赖其超出 $2^{32}-1$ 时自动按模截断回绕。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Arithmetic_operators](https://go.dev/ref/spec)）；目标语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Arithmetic_operators）；目标语言 CRuby 3.4（RB-DOC-CORE）。
 3. **原可观察行为**：达到上限后自动截断回绕（非 UB）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 Ruby 中计算后显式施加位掩码 `& 0xFFFFFFFF`，保留截断值。
@@ -48,11 +48,11 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    h = (h + 1) & 0xFFFFFFFF
    ```
 6. **信息不足或实现相关时的处理**：若涉及有符号数转换，提供补码还原函数。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Arithmetic_operators](https://go.dev/ref/spec)；[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Arithmetic_operators；RB-DOC-CORE。
 
 ### 规则 GO-RB-03：Go CSP 并发模型向 Ruby Queue/Mutex 与 GVL 约束映射
 1. **源码触发条件**：Go 源码中使用多个 Goroutine 通过信道传递流水线数据。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 CRuby 3.4（[RB-DOC-THREAD](https://docs.ruby-lang.org/en/3.4/Thread.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 CRuby 3.4（RB-DOC-THREAD）。
 3. **原可观察行为**：轻量协程高效流水线调度。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：使用 `Thread` 配合 `Thread::SizedQueue` 模拟带缓冲 Channel；在队列关闭时使用特定的标志对象（Sentinel Object）。
@@ -66,11 +66,11 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    q.close
    ```
 6. **信息不足或实现相关时的处理**：若需完全独立并发，建议采用 Ractor 模型并记录实验性质。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-THREAD](https://docs.ruby-lang.org/en/3.4/Thread.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-THREAD。
 
 ### 规则 GO-RB-04：Go nil 与零值向 Ruby nil 与真值判断的映射
 1. **源码触发条件**：Go 源码用 `if err != nil`、`if pr.EncodedBlob == ""`、`if len(b) == 0`、`if len(kv) != 2`、`if line != "" && len(line) < 200` 之类的判断分流，并用 `map[string]string` 承接解析结果（如 `inbox_batch_validate.go` 的 `if len(kv) != 2 { return nil, fmt.Errorf(...) }`、`signal_score_ingest.go` 的 `if err != nil || fi.IsDir()`、`manifest_hash_catalog.go` 的 `make([]fileMeta, 0, len(files))`）。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Comparison_operators](https://go.dev/ref/spec)）；目标语言 CRuby 3.4（[RB-DOC-CONTROL](https://docs.ruby-lang.org/en/3.4/syntax/control_expressions_rdoc.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Comparison_operators）；目标语言 CRuby 3.4（RB-DOC-CONTROL）。
 3. **原可观察行为**：Go 中只有显式的 `nil`/零值比较才为真，`0`、`""`、空切片、空 map 都是普通值；`len(x) == 0` 与 `x == nil` 是不同判断；从 nil map 读取返回零值、写入则 panic。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：nil 状态映射为 Ruby `nil` 并显式写 `if x.nil?` / `unless x.nil?`；长度或内容判断显式写 `if x.empty?` / `if x == ""` / `if x.zero?`；从 map 取值需要区分“缺键”时用 `fetch` 或 `key?` 判断而不是 `h[k]`。
@@ -102,11 +102,11 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    end
    ```
 6. **信息不足或实现相关时的处理**：若无法确认原 Go 判断表达的是“未设置（nil/缺键）”还是“值为零/空”，必须标注“nil 与零值语义待确认”，不得用统一真值判断合并两者。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Comparison_operators](https://go.dev/ref/spec)；[RB-DOC-CONTROL](https://docs.ruby-lang.org/en/3.4/syntax/control_expressions_rdoc.html)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Comparison_operators；RB-DOC-CONTROL。
 
 ### 规则 GO-RB-05：Go defer 逆序清理向 Ruby ensure 块与块式资源方法的映射
 1. **源码触发条件**：Go 源码用 `defer` 登记清理动作，例如 `signal_score_ingest.go` 的 `defer os.Remove(tmpPy)`、`defer resp.Body.Close()`、`defer cancel()`，以及 `loopback_tcp_receiver.go`/`notes_zip_bundle.go` 中 `defer ln.Close()`、`defer f.Close()` 与 zip 写入器的 `defer zipWriter.Close()` 顺序。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #Defer_statements](https://go.dev/ref/spec)）；目标语言 CRuby 3.4（[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)、[RB-DOC-FILE](https://docs.ruby-lang.org/en/3.4/File.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Defer_statements）；目标语言 CRuby 3.4（RB-DOC-EXCEPT、RB-DOC-FILE）。
 3. **原可观察行为**：`defer` 在外层函数返回前按 LIFO 逆序执行，对正常返回、提前 `return` 与异常展开均生效；`os.Exit` 会跳过所有 `defer`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：函数级清理用 `begin ... ensure ... end`，多个清理按 Go 的逆序从上到下排列；文件/套接字等资源优先用块式 API（`File.open(path, "wb") { |f| ... }`）把关闭责任交给语言；只应清理一次的临时文件用 `ensure` 中的 `File.delete(path) if File.exist?(path)` 显式判存。
@@ -135,11 +135,11 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    end
    ```
 6. **信息不足或实现相关时的处理**：若原 Go 代码在 `defer` 中修改具名返回值，或依赖 `defer` 在 `panic` 展开期间仍执行，必须标注“具名返回值副作用 / panic 展开期间的清理语义待确认”，不得假定 `ensure` 无条件承接。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec)；[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)、[RB-DOC-FILE](https://docs.ruby-lang.org/en/3.4/File.html)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Defer_statements；RB-DOC-EXCEPT、RB-DOC-FILE。
 
 ### 规则 GO-RB-06：Go []byte 字节切片向 Ruby String 编码标签的边界映射
 1. **源码触发条件**：Go 源码对字节切片做哈希、Base64 编解码、压缩打包与读写，例如 `manifest_hash_catalog.go` 的 `sumHex(b []byte)`（`sha256` + `hex.EncodeToString`）、`notes_zip_bundle.go` 的 zip 写入、`signal_score_ingest.go` 的 `base64.StdEncoding.DecodeString(pr.EncodedBlob)` 校验分支、`loopback_ack_exchange.go` 的按字节拼接 `"ACK|" + parts[1] + "\n"`。
-2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（[GO-SPEC #String_types](https://go.dev/ref/spec)）；目标语言 CRuby 3.4（[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)、[RB-DOC-ENCODING](https://docs.ruby-lang.org/en/3.4/Encoding.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #String_types）；目标语言 CRuby 3.4（RB-DOC-STRING、RB-DOC-ENCODING）。
 3. **原可观察行为**：Go 的 `[]byte`/`string` 按原始字节处理，长度按字节计，允许非法 UTF-8；`string(b)` 与 `[]byte(s)` 互转不改变字节。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：字节路径用 `String#b` 或显式 `force_encoding(Encoding::BINARY)` 固定为 ASCII-8BIT，再做 `Digest::SHA256.digest`/`Base64.strict_encode64`/`pack("H*")` 等字节级操作；文本路径显式标 `Encoding::UTF_8` 并用 `encode`/`force_encoding` 在边界处转换；文件读写按用途选 `File.binread`/`File.binwrite` 与文本模式。
@@ -156,7 +156,7 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    text = text.encode(Encoding::UTF_8) if text.valid_encoding? == false  # 边界处显式处理
    ```
 6. **信息不足或实现相关时的处理**：若无法确认原数据的编码，或原 Go 代码依赖按字节的长度与切片下标语义，必须标注“编码与字节长度语义待确认”，不得用 `scrub`/`encode(invalid: :replace)` 之类的宽松策略掩盖差异。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #String_types](https://go.dev/ref/spec)；[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)、[RB-DOC-ENCODING](https://docs.ruby-lang.org/en/3.4/Encoding.html)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #String_types；RB-DOC-STRING、RB-DOC-ENCODING。
 
 ### 规则 GO-RB-07：被丢弃的文件打开错误不能变成 Ruby 的异常终止
 1. **源码触发条件**：Go 以 `f, _ := os.Open(path)` 丢弃打开错误，将可能为 nil 的 `*os.File` 交给 `bufio.Scanner`，不检查 `Scanner.Err()`，后续仍生成结果。
@@ -178,7 +178,11 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    end
    ```
 6. **信息不足或实现相关时的处理**：若不清楚 Go 是否检查 `Scanner.Err()`、`defer f.Close()` 的返回值、或后续报告写入是否成功，不能断言退出码和产物；把打开失败路径单列为待验证 oracle。
-7. **直接官方 HTTPS 依据链接**：[Go `os.File` nil 接收者的 `ErrInvalid`](https://pkg.go.dev/os#ErrInvalid)；[Go `bufio.Scanner.Scan`](https://pkg.go.dev/bufio#Scanner.Scan)；[Ruby 3.4 `Errno`](https://docs.ruby-lang.org/en/3.4/Errno.html)。
+7. **资料依据（名称/版本/章节）**：Go `os.File` nil 接收者的 `ErrInvalid`；Go `bufio.Scanner.Scan`；Ruby 3.4 `Errno`。
+
+### 临时目录选择的适用边界
+
+涉及 Go os.TempDir 与 Ruby Dir.tmpdir 时，分别读[Go L1-GO-07](../../references/languages/go.md#l1-go-07-ostempdir-选路径不检查目录可用性)与[Ruby L1-RB-09](../../references/languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)。上文进程/清理例中的 Dir.tmpdir 只演示清理结构，不证明源目录选择已等价；候选优先级、可用性、回退/诊断依准确版本对应，不能借换目录使评估匹配。
 
 ## 转换与验证边界
 

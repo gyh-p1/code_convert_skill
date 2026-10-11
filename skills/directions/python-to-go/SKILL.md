@@ -5,7 +5,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 # Python → Go 语言转换规则
 
-> **适用基线**：源语言 Python 3.12 / CPython 3.12 ([PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html), [PY-REF-YIELD](https://docs.python.org/3.12/reference/expressions.html)) → 目标语言 Go 1.27 ([GO-SPEC](https://go.dev/ref/spec), [GO-PKG-CONTEXT](https://pkg.go.dev/context))
+> **适用基线**：源语言 Python 3.12 / CPython 3.12 (PY-REF-DATA, PY-REF-YIELD) → 目标语言 Go 1.27 (GO-SPEC, GO-PKG-CONTEXT)
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Python](../../references/languages/python.md)与[目标语言 Go](../../references/languages/go.md)。
 > **规范硬约束**：严格遵循 Python 3.12 规范与 Go 1.27 语言规范；纠正负索引认知（Go 常量负下标为编译期报错，非常数表达式负索引在运行期触发 panic）；消除任何不具官方依据的实现数字。
 
@@ -44,7 +44,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
    }
    ```
 6. **不确定性处理**：若源 Python 代码使用了复杂的动态切片步长（如 `s[::-1]` 倒序），在 Go 中切片不支持负步长表达式，必须手工编写双指针原地逆序循环或构造新切片，标注切片步长算法展开。
-7. **官方依据**：[GO-SPEC #Index_expressions, #Slice_expressions](https://go.dev/ref/spec)；[PY-REF-DATA §3.2 Sequences](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **官方依据**：GO-SPEC #Index_expressions, #Slice_expressions；PY-REF-DATA §3.2 Sequences。
 
 ---
 
@@ -66,7 +66,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
    }
    ```
 6. **不确定性处理**：若 Python 代码捕获了第三方库未文档化的高基类异常，需在 Go 中提供通用 `errors.New("unknown error")`，并在返回时包装原始错误链（`fmt.Errorf("operation failed: %w", err)`）。
-7. **官方依据**：[GO-SPEC #Errors, #Handling_panics](https://go.dev/ref/spec)；[PY-REF-DATA §3.2 Exceptions](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **官方依据**：GO-SPEC #Errors, #Handling_panics；PY-REF-DATA §3.2 Exceptions。
 
 ---
 
@@ -95,7 +95,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
    }
    ```
 6. **不确定性处理**：若 Python 生成器依赖 `generator.send()` 或 `.throw()` 等高级双向协程通信，应将其判定为复杂的协程状态机，必须使用显式双向信道重构并标注协程协议依赖。
-7. **官方依据**：[PY-REF-YIELD](https://docs.python.org/3.12/reference/expressions.html)；[GO-SPEC #Function_types, #Channel_types](https://go.dev/ref/spec)。
+7. **官方依据**：PY-REF-YIELD；GO-SPEC #Function_types, #Channel_types。
 
 ---
 
@@ -119,7 +119,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
    }
    ```
 6. **不确定性处理**：若静态分析无法穷尽所有跨 Goroutine 的并发读写点，必须在项目测试或交付契约中建议开启 Go 的竞态检测器（`-race`），并在交付说明中提示未验证的数据竞争风险。
-7. **官方依据**：[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)；[GO-SPEC #Map_types](https://go.dev/ref/spec)。
+7. **官方依据**：CPY-DEV-GC；GO-SPEC #Map_types。
 
 ---
 
@@ -148,4 +148,8 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+
+## 网络 API 映射
+
+迁入网络场景，仅在 Python socket 到 Go net.Conn 时使用。Python recv 的空 bytes 与 Go io.EOF 对应关闭，Go 的 n 与 err 须同时处理，不丢已有字节、不将 EOF 当普通网络失败。Python 非阻塞/无限阻塞/相对超时与 Go 绝对 Deadline 分开映射；按源每次调用预算决定重设，不机械沿用过期截止。异常按 errors.Is/As 和实际平台类别对应，名称相近不等价。通用 I/O 与协议读[网络场景](../../scenes/network-io/SKILL.md)，未核错误/超时差异写待确认。

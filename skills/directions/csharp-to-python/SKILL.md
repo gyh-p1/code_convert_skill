@@ -1,4 +1,4 @@
-﻿---
+---
 name: csharp-to-python
 description: Use when converting C# source to Python; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting C# source to Python; apply this direction's lan
 
 ### 规则 CS-PY-01：C# 泛型强类型容器向 Python 动态列表/字典与类型注解映射
 1. **源码触发条件**：C# 源码中使用 `List<T>`、`Dictionary<TKey, TValue>` 等静态强类型集合。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-COLL](https://learn.microsoft.com/en-us/dotnet/csharp/iterators)）；目标语言 Python 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-COLL）；目标语言 Python 3.12（PY-REF-DATA）。
 3. **原可观察行为**：编译器在编译期强制元素类型一致，插入不匹配类型直接编译失败。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为 Python 原生 `list` 与 `dict`，添加标准类型提示（`list[T]`, `dict[K, V]`）；若需严格运行时类型校验，可使用轻量装饰器或辅助检查。
@@ -33,11 +33,11 @@ description: Use when converting C# source to Python; apply this direction's lan
        items.append(val)
    ```
 6. **信息不足或实现相关时的处理**：若包含多维数组，转换为嵌套列表或记录结构转换。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)；[MS-CS-COLL](https://learn.microsoft.com/en-us/dotnet/csharp/iterators)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA；MS-CS-COLL。
 
 ### 规则 CS-PY-02：C# IDisposable/using 向 Python with 上下文管理器映射
 1. **源码触发条件**：C# 源码中使用 `using (var r = ...)` 管理互斥锁、数据库连接或临时文件。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-DISPOSE](https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose)）；目标语言 Python 3.12（[PY-REF-DATA §3.3.9](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-DISPOSE）；目标语言 Python 3.12（PY-REF-DATA §3.3.9）。
 3. **原可观察行为**：退出 `using` 代码块时确定性调用 `Dispose()`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为 Python 的 `with` 上下文管理器，自定义对象实现 `__enter__` 与 `__exit__` 方法，或使用 `contextlib.contextmanager` 装饰器。
@@ -53,11 +53,11 @@ description: Use when converting C# source to Python; apply this direction's lan
        def __exit__(self, exc_type, exc_val, exc_tb): release_lock()
    ```
 6. **信息不足或实现相关时的处理**：若涉及标准库原生支持（如 `threading.Lock`），直接使用 `with lock:`。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-DISPOSE](https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose)；[PY-REF-DATA §3.3.9](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：MS-CS-DISPOSE；PY-REF-DATA §3.3.9。
 
 ### 规则 CS-PY-03：C# async/await (TAP) 向 Python asyncio 协程映射
 1. **源码触发条件**：C# 源码中使用 `async Task<string>` 与 `await` 进行并发异步调用。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-ASYNC](https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/)）；目标语言 Python 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-ASYNC）；目标语言 Python 3.12（PY-REF-DATA）。
 3. **原可观察行为**：基于线程池的非阻塞异步任务执行。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：定义为 `async def`，内部调用 `await`；调用顶层使用 `asyncio.run()` 驱动事件循环。
@@ -72,11 +72,11 @@ description: Use when converting C# source to Python; apply this direction's lan
        await asyncio.sleep(5)
    ```
 6. **信息不足或实现相关时的处理**：若必须调用阻塞库，使用 `asyncio.to_thread()` 将其分流至单独线程。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-ASYNC](https://learn.microsoft.com/en-us/dotnet/csharp/asynchronous-programming/)。
+7. **资料依据（名称/版本/章节）**：MS-CS-ASYNC。
 
 ### 规则 CS-PY-04：C# NullReferenceException/键缺失失败向 Python 显式 None 判断与等价异常映射
 1. **源码触发条件**：C# 源码使用强制解引用与 `?.`/`??` 组合（`cred.TicketBlob?.Length ?? 0`、`(_targetUser ?? "无")`），或在未先判空的情况下取成员（`string.IsNullOrEmpty(hex)` 后 `hex.Replace(...)`），或依赖 `Dictionary` 的 `containsKey`/索引器区分"键缺失"。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)）；目标语言 Python 3.12（[PY-REF-EXCEPT](https://docs.python.org/3.12/reference/executionmodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-EXCEPT）；目标语言 Python 3.12（PY-REF-EXCEPT）。
 3. **原可观察行为**：空引用取成员抛 `System.NullReferenceException`，`Dictionary` 键缺失抛 `KeyNotFoundException`，`??` 只在左值为 `null` 时取右值；这些失败都可被 `catch` 按类型分辨并转成退出码或错误输出。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：空值统一用 `None` 表达，判空写 `if x is None`，缺省用 `x if x is not None else default`；异常按语义就近映射（空引用→`AttributeError`/`TypeError`，字典缺键→`KeyError`，下标越界→`IndexError`，参数非法→`ValueError`），并按"具体类型在前、`Exception` 在后"的顺序排列 `except`。
@@ -96,11 +96,11 @@ description: Use when converting C# source to Python; apply this direction's lan
        print("[X] /servicekey is not valid hex")
    ```
 6. **信息不足或实现相关时的处理**：若源属性 getter 带副作用或可能抛非空引用类异常，或 `?.` 链中每一跳的空语义不同（"缺失" vs "空集合" vs "业务 0 值"），必须停下来标注该字段的空值契约，不得按单一 `None` 统一改写。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-EXCEPT](https://docs.python.org/3.12/reference/executionmodel.html)；[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)。
+7. **资料依据（名称/版本/章节）**：PY-REF-EXCEPT；MS-CS-EXCEPT。
 
 ### 规则 CS-PY-05：C# Encoding.UTF8/Unicode 字节序列向 Python str/bytes 与 codec 显式映射
 1. **源码触发条件**：C# 源码出现 `Encoding.UTF8.GetBytes`/`GetString`、`Encoding.Unicode.GetBytes`（即 `Encoding.Unicode`）、`ASCIIEncoding`、`Convert.FromBase64String`/`ToBase64String`，并在其后用 `.Length`、`Substring`、`BitConverter.ToString` 处理结果。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-STRING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/strings/)）；目标语言 Python 3.12（[PY-LIB-CODECS](https://docs.python.org/3.12/library/codecs.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-STRING）；目标语言 Python 3.12（PY-LIB-CODECS）。
 3. **原可观察行为**：`Encoding.UTF8` 产出的字节等于 UTF-8 字节序列；`Encoding.Unicode` 是 UTF-16 小端、**不写 BOM**（ASCII 字符占 2 字节）；`Convert.FromBase64String` 忽略其支持的空白字符，对非法字符/长度/填充抛 `FormatException`，null 则是 `ArgumentNullException`；`string.Length` 计 UTF-16 代码单元（代理对占 2）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`str` 与 `bytes` 严格分离，`s.encode('utf-8')` / `b.decode('utf-8')` 成对出现；UTF-16 小端用 `s.encode('utf-16-le')`，UTF-16BE 用 `'utf-16-be'`，需要 BOM 时写 `'utf-8-sig'`/`'utf-16'` 并在注释中说明；Base64 解码先按 .NET 8 的白空格、TAB、CR、LF（`U+0020/U+0009/U+000D/U+000A`）规则处理，再作严格字母表/长度/填充校验与解码并映射失败；直接 `validate=True` 会错误拒绝源允许的空白，而默认 `validate=False` 又可能吞掉源会拒绝的非法字符。`base64.b64encode(b)` 返回 bytes，若对应 `ToBase64String` 的 string 需显式 ASCII 解码；`Encoding.ASCII` 用 `'ascii'` 并显式处理不可编码字符。正常有效文本的映射不覆盖畸形代理项/非法字节：.NET 实际 Encoder/DecoderFallback 与 Python 默认 strict 并非自动一致，需冻结具体编码实例和替换/报错行为后逐类核对，不能只指定编码名就声称完整等价。
@@ -116,11 +116,11 @@ description: Use when converting C# source to Python; apply this direction's lan
    n_bytes = len(sig_string.encode('utf-16-le'))    # 正确：需要字节长度时先编码再计数
    ```
 6. **信息不足或实现相关时的处理**：源码若在非 ASCII 文本上做 `Length`/`Substring` 定位，必须先确认按"字符"还是"字节/代码单元"语义，并确认目标侧是否要求逐字节复现（例如十六进制替换的偏移量），无法确认时把编码契约写为待确认。
-7. **直接官方 HTTPS 依据链接**：[PY-LIB-CODECS](https://docs.python.org/3.12/library/codecs.html)；[PY-LIB-BASE64](https://docs.python.org/3.12/library/base64.html)；[.NET FromBase64String](https://learn.microsoft.com/en-us/dotnet/api/system.convert.frombase64string?view=net-8.0)；[.NET 8 Convert 实现](https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Private.CoreLib/src/System/Convert.cs)。
+7. **资料依据（名称/版本/章节）**：PY-LIB-CODECS；PY-LIB-BASE64；.NET FromBase64String；.NET 8 Convert 实现。
 
 ### 规则 CS-PY-06：C# unchecked 定宽整数回绕与装箱向 Python 任意精度 int 的显式截断映射
 1. **源码触发条件**：C# 源码对 `int`/`uint`/`long` 做加减乘或移位并依赖默认 `unchecked` 回绕（哈希、异或混淆、长度/校验和计算），或把定宽值装箱进 `object`/`Dictionary<string, object>` 后在两处强转。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-CHECKED](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked)）；目标语言 Python 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-CHECKED）；目标语言 Python 3.12（PY-REF-DATA）。
 3. **原可观察行为**：已确定的运行时 `unchecked` 上下文中定宽整数按补码截断回绕（值为 `int.MaxValue` 的 int 变量加 1 得 `int.MinValue`；常量表达式另核 checked 规则），`checked` 作用域内则抛 `OverflowException`；拆箱必须匹配实际被装箱的值类型，直接拆为另一宽度类型抛 `InvalidCastException`，并不是截断；先正确拆箱再数值转换，才按 checked/unchecked 的转换规则处理。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：Python `int` 为任意精度，需要保留回绕语义时显式施加位掩码并回解读符号位：`v = (v + 1) & 0xFFFFFFFF`；`& 0x7FFFFFFF` 用于只保留 31 位等特定位宽场景；有符号回绕按位宽写 `mask = 0xFFFFFFFF; v = v & mask; v = v - (1 << 32) if v >= (1 << 31) else v`；装箱参与类型测试/拆箱时还需保留被装箱类型身份与类型不符的失败，不能统一消成 Python int 后只掩码。把定宽意图写进类型标注并在 docstring 中声明位宽契约。
@@ -140,10 +140,30 @@ description: Use when converting C# source to Python; apply this direction's lan
        return h
    ```
 6. **信息不足或实现相关时的处理**：源码未显式写 `checked`/`unchecked` 时，其实际语义还受项目编译选项与常量表达式规则影响，无法从单个方法体确认时，把"该表达式是否允许回绕"标为待确认；需要真任意精度继续运算的场景，则不要手工模拟回绕。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-CHECKED](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/checked-and-unchecked)；[C# 装箱与拆箱](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/types/boxing-and-unboxing)；[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：MS-CS-CHECKED；C# 装箱与拆箱；PY-REF-DATA。
+
+### 规则 CS-PY-07：枚举按消费者映射，不能只保留属性值
+
+1. **触发/前提**：C# enum/Flags、数值构造、显示或类型检查；冻结 .NET 8 / Python 3.12、底层位宽、显式值与别名。
+2. **源/目标事实**：读[C# L1-CS-06](../../references/languages/csharp.md#l1-cs-06-enum-的类型值域与显示分别保持)与[Python L1-PY-08](../../references/languages/python.md#l1-py-08-enumintenum-与普通常量的身份不同)。
+3. **条件映射**：显式保留数值而非默认 auto；按类型身份、整数互操作、位组合及未知值选择表示，分别处理名称/数值显示、反射与序列化。不因使用 IntEnum 就认为已经保留 C# 类型约束。
+4. **反例**：普通 class 属性丢类型身份；直接 Enum(value) 可拒绝源允许的未命名值；IntEnum 默认 str 又可能把名称改成数字。
+5. **未知/依据**：仅常量使用且约定不观察类型时才可用常量；其他消费者未明记缺口。官方定义在两事实页；不生成新的反射/兼容工具作为 Agent 辅助脚本。
+
+### 规则 CS-PY-08：ReadKey 按设备、键与回显映射
+
+1. **触发/前提**：ReadKey 或 Key/KeyChar/Modifiers；冻结 OS、控制台/重定向、intercept 与源失败出口。
+2. **源/目标事实**：读[C# L1-CS-07](../../references/languages/csharp.md#l1-cs-07-readkey-不是-readline-或普通流字符读取)与[Python L1-PY-09](../../references/languages/python.md#l1-py-09-流读取一个字符不等于读取一个终端键事件)。
+3. **条件映射**：只读普通字符且设备/模式一致时才考虑字符 API；完整键/修饰键、回显、阻塞和模式恢复另保持。平台专用 API 不能一律当可移植方案。
+4. **反例**：input 增加 Enter，read(1) 不自动绕过 canonical 模式；伪造同形异常不是源观察。
+5. **未知/依据**：缺键映射记知识缺口，缺合法 TTY 驱动记准备缺口；遵守评估准备，不删交互或静默改仅编译。依据见两事实页。
 
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+## 网络 API 映射
+
+迁入网络场景，仅在 Socket/NetworkStream 到 Python socket 时使用。非零长度接收的有序关闭返回 0 与 Python recv 空 bytes 对应，不变成无限重试；连接重置等异常与正常 EOF 分开映射。源 BeginReceive/ReceiveAsync/Task 若改阻塞 recv，先核并发拓扑、取消和同时服务多个连接义务，不能静默串行化。通用行为读[网络场景](../../scenes/network-io/SKILL.md)、并发读[并发场景](../../scenes/concurrency/SKILL.md)，未知入口/错误类别写待确认。

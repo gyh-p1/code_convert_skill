@@ -7,7 +7,7 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 
 本文件是**检索/分类入口**,不是转换规则。它把 ATT&CK Enterprise 战术映射到本项目已有的语言/场景/系统知识,方便"按攻防用途思考"的人找到对应的转换知识。它**不**为每个战术建独立转换 Skill,**不**由战术标签推断代码用了哪个 API、哪个 OS 或哪种行为,也**不**凌驾于对源码实际行为的分析之上。战术只是缩小"该找什么",不决定"该产出什么"。
 
-> 战术名称与 ID 以 [MITRE 官方 Enterprise 战术列表](https://attack.mitre.org/tactics/enterprise/) 为准。下表按 2026-09-25 核对的 MITRE 官方 Enterprise 列表记录 15 个战术（TA0005 为 Stealth，并包含 TA0112 Defense Impairment）;使用前仍须核对官方列表;引用本索引不代表该战术已有专属转换能力。
+> 下表是项目记录于 2026-09-25 核对的 MITRE ATT&CK Enterprise 战术快照，列 15 个名称/ID（含 TA0005 Stealth 与 TA0112 Defense Impairment）。离线调用仅按该已记录版本作分类导航；未确认与任务要求版本一致或缺少所需名称/ID 时记录分类版本缺口，不要求调用者联网更新，也不宣称这是最新列表。版本更新由维护侧核验后修订本表；索引存在不代表专属转换能力。
 
 > 外部样本目录与旧资料中的战术缩写只作线索；逐例分类须按当前官方 ID/名称和源码实际行为核对。七语言转换知识仍位于根入口、`skills/directions/` 与 `skills/references/`。
 
@@ -26,19 +26,19 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 |---|---|---|
 | Reconnaissance (TA0043) | 主机/网络信息收集 | 涉及网络时用 [网络 I/O](../scenes/network-io/SKILL.md);主机/环境枚举场景缺口 |
 | Resource Development (TA0042) | 多为工具/基础设施准备,常不在被转换目标代码内 | 通常无直接代码场景;按实际行为判断 |
-| Initial Access (TA0001) | 投递、入口利用,常含网络 I/O 与文件写入 | 网络部分用 [网络 I/O](../scenes/network-io/SKILL.md) + [安全行为](../scenes/network-io/references/security-behavior.md);文件写入用 [文件 I/O](../scenes/file-io/SKILL.md) |
+| Initial Access (TA0001) | 投递、入口利用,常含网络 I/O 与文件写入 | 网络部分用 [网络 I/O](../scenes/network-io/SKILL.md) + [安全行为](../references/security-behavior.md);文件写入用 [文件 I/O](../scenes/file-io/SKILL.md) |
 | Execution (TA0002) | 命令/进程启动、脚本解释 | [进程执行](../scenes/process-execution/SKILL.md)；按 shell/argv、输出、超时与后代回收边界选择 |
 | Persistence (TA0003) | 服务/计划任务/启动项/文件落地 | 文件落地用 [文件 I/O](../scenes/file-io/SKILL.md);服务与启动项写注册表时用 [Windows 注册表与服务子系统](../systems/windows-registry-service-subsystem/SKILL.md);计划任务本身仍缺口 |
 | Privilege Escalation (TA0004) | 令牌/权限/提权系统 API | 跨 POSIX↔Windows 的身份与特权差异用 [进程创建与身份/权限](../systems/posix-windows-process-identity/SKILL.md);具体提权漏洞利用链不属现有知识 |
 | Stealth (TA0005) | 隐匿/隐藏操作、呈现为正常活动 | 按源码实际行为选场景;文件行为可读 [文件 I/O](../scenes/file-io/SKILL.md);不因普通网络/文件功能自动归类;注意安全边界 |
 | Defense Impairment (TA0112) | 直接削弱、关闭或篡改防御机制 | 需识别具体系统/进程行为;进程终止用 [进程执行](../scenes/process-execution/SKILL.md) 与 [进程创建与身份/权限](../systems/posix-windows-process-identity/SKILL.md);服务篡改用 [Windows 注册表与服务子系统](../systems/windows-registry-service-subsystem/SKILL.md);PE 解析/驱动与安全产品交互仍缺口;不把普通服务/日志差异推断为该战术 |
-| Credential Access (TA0006) | 凭证读取与比较 | 校验/恒定时间比较见 [安全行为](../scenes/network-io/references/security-behavior.md);凭证存储涉及文件时用 [文件 I/O](../scenes/file-io/SKILL.md) |
+| Credential Access (TA0006) | 凭证读取与比较 | 校验/恒定时间比较见 [安全行为](../references/security-behavior.md);凭证存储涉及文件时用 [文件 I/O](../scenes/file-io/SKILL.md) |
 | Discovery (TA0007) | 本地/网络发现 | 网络部分用 [网络 I/O](../scenes/network-io/SKILL.md);进程与身份查询用 [进程创建与身份/权限](../systems/posix-windows-process-identity/SKILL.md);注册表读取用 [Windows 注册表与服务子系统](../systems/windows-registry-service-subsystem/SKILL.md);其余主机/环境枚举场景缺口 |
 | Lateral Movement (TA0008) | 远程服务、跨主机网络 | [网络 I/O](../scenes/network-io/SKILL.md) + 跨 OS 时 [POSIX↔Winsock](../systems/posix-winsock/SKILL.md);无横向移动专门场景 |
 | Collection (TA0009) | 文件/输入/剪贴板采集 | 文件采集用 [文件 I/O](../scenes/file-io/SKILL.md);输入/剪贴板场景缺口 |
-| Command and Control (TA0011) | 网络通信、自定义/伪装协议 | 最贴合现有知识:[网络 I/O](../scenes/network-io/SKILL.md) + [安全行为](../scenes/network-io/references/security-behavior.md) + [POSIX↔Winsock](../systems/posix-winsock/SKILL.md) |
+| Command and Control (TA0011) | 网络通信、自定义/伪装协议 | 最贴合现有知识:[网络 I/O](../scenes/network-io/SKILL.md) + [安全行为](../references/security-behavior.md) + [POSIX↔Winsock](../systems/posix-winsock/SKILL.md) |
 | Exfiltration (TA0010) | 通过网络外传数据 | [网络 I/O](../scenes/network-io/SKILL.md) + 跨 OS 时 [POSIX↔Winsock](../systems/posix-winsock/SKILL.md);本地暂存用 [文件 I/O](../scenes/file-io/SKILL.md) |
-| Impact (TA0040) | 加密/删除/篡改、拒绝服务 | 文件加密/删除用 [文件 I/O](../scenes/file-io/SKILL.md);抗 DoS 相关约束见 [安全行为](../scenes/network-io/references/security-behavior.md) |
+| Impact (TA0040) | 加密/删除/篡改、拒绝服务 | 文件加密/删除用 [文件 I/O](../scenes/file-io/SKILL.md);抗 DoS 相关约束见 [安全行为](../references/security-behavior.md) |
 
 ## 覆盖现状
 
@@ -46,5 +46,5 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 
 ## 依据
 
-- [MITRE ATT&CK Enterprise 战术](https://attack.mitre.org/tactics/enterprise/):战术名称与 ID 的权威来源;本表为快照,须以官方为准。
+- 资料来源：MITRE ATT&CK Enterprise 战术列表；本地快照核对日期为 2026-09-25，具体名称/ID 见上表。维护侧核对来源版本后才能更新，离线调用不补猜新战术或自动改表。
 - ATT&CK 是分类/检索维度,不代替代码行为判断;组合原则与能力边界见根 [通用 Skill 入口](../../SKILL.md) §选择适用知识。

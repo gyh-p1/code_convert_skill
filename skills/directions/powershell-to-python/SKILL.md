@@ -1,4 +1,4 @@
-﻿---
+---
 name: powershell-to-python
 description: Use when converting PowerShell source to Python; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting PowerShell source to Python; apply this directi
 
 ### 规则 PS-PY-01：PowerShell 管道命令链向 Python 迭代器生成器与高阶函数映射
 1. **源码触发条件**：PowerShell 源码中使用 `$input | Where-Object { ... } | ForEach-Object { ... }`。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)）；目标语言 Python 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-PIPE）；目标语言 Python 3.12（PY-REF-DATA）。
 3. **原可观察行为**：对象逐个在管道中流式传递，处理大流时不占用全部内存。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：使用生成器表达式 `(fn(x) for x in input if cond(x))` 保持流式惰性求值；若需立即全量结果，使用列表推导 `[fn(x) for x in input if cond(x)]`。
@@ -26,15 +26,15 @@ description: Use when converting PowerShell source to Python; apply this directi
    ```python
    # 错误：针对大文件流或无限生成流使用列表推导，撑爆内存
    # lines = [line.strip() for line in huge_file]
-   # 正确：使用生成器表达式流式处理
-   lines = (line.strip() for line in huge_file)
+   # 流式结构候选；是否去空白及其集合须依源操作另核
+   lines = (line for line in huge_file)
    ```
 6. **信息不足或实现相关时的处理**：若源管道包含特定 Cmdlet（如 `Sort-Object`），在 Python 中需要物化为列表再排序。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)；[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：MS-PS-PIPE；PY-REF-DATA。
 
 ### 规则 PS-PY-02：PowerShell 单元素解包机制向 Python 列表长度隔离映射
 1. **源码触发条件**：PowerShell 源码中处理管道输出，当结果仅有一项时自动变为标量。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)）；目标语言 Python 3.12。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-ARRAY）；目标语言 Python 3.12。
 3. **原可观察行为**：PS 管道输出零个元素返回 `$null`，一个元素返回标量对象，两个以上返回 `object[]`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：Python 函数必须保持确定的返回类型契约！若声明返回 `list`，无论空、单元素还是多元素，统一返回 `list`。
@@ -51,11 +51,11 @@ description: Use when converting PowerShell source to Python; apply this directi
        return fetch()
    ```
 6. **信息不足或实现相关时的处理**：对现有调用方做出防御性 `isinstance(res, list)` 适配。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)。
+7. **资料依据（名称/版本/章节）**：MS-PS-ARRAY。
 
 ### 规则 PS-PY-03：PowerShell 退出码回写向 Python sys.exit 与返回值映射
 1. **源码触发条件**：PowerShell 源码中使用 `exit $code` 或检查 `$LASTEXITCODE`。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)）；目标语言 Python 3.12。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-AUTO）；目标语言 Python 3.12。
 3. **原可观察行为**：回传退出状态码。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 CLI 入口处调用 `sys.exit(code)`；在普通模块函数中返回整数状态码或抛出异常。
@@ -70,11 +70,11 @@ description: Use when converting PowerShell source to Python; apply this directi
        if not cfg: raise ValueError("Invalid configuration")
    ```
 6. **信息不足或实现相关时的处理**：若需要调用外部原生命令并获取退出码，使用 `subprocess.run(..., check=False).returncode`。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-AUTO](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_automatic_variables)。
+7. **资料依据（名称/版本/章节）**：MS-PS-AUTO。
 
 ### 规则 PS-PY-04：PowerShell 对象属性、属性包与单元素退化向 Python `dict`/属性访问映射
 1. **源码触发条件**：源码通过属性名从对象或属性包取值，并把结果直接参与后续处理，例如 `$Props = @{ Key = $Key; Time = [DateTime]::Now; Window = $Title.ToString() }` 与 `$obj = New-Object psobject -Property $Props`、`$UserProps.Add('AccountExpires', ...)`、`$attr = $m.Matches.Groups | Where-Object {$_.Name -eq 'Variable'} | ForEach-Object {$_.Value}`、`$userPrincipal.$a` 这种按名动态取值、`$_.properties['ServicePrincipalName']` 与 `$_.properties.name` 混用、以及 `Get-Random -Count 10` 返回单元素时结果为标量而非数组。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-HASH](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_hash_tables), [MS-PS-ARRAY](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_arrays)）；目标语言 Python 3.12（[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html), [PY-LIB-DATACLASSES](https://docs.python.org/3.12/library/dataclasses.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-HASH, MS-PS-ARRAY）；目标语言 Python 3.12（PY-REF-DATA §3.2, PY-LIB-DATACLASSES）。
 3. **原可观察行为**：属性缺失时 PS 返回 `$null` 而不抛错，把它内插进字符串则得到空串；`@{}` 的键名大小写不敏感，`[ordered]@{}` 才保证插入顺序；同一个属性在不同记录上可能是字符串、日期或数字；管道/枚举结果在只有一个元素时退化为标量，`Group`/`Groups` 这类集合在只有一项时 `.Value` 与 `[0].Value` 表现不同。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：字段集合固定时用 `@dataclass`（或 `NamedTuple`）并显式声明类型；列集合确实动态时用 `dict` 并配 `TypedDict` 或键集合常量；按名动态取值用 `getattr(obj, name, None)`；需要保持插入顺序用 `dict`（3.7+ 语言保证）或 `collections.OrderedDict`；“可能没有值”用 `None`/`Optional[T]` 表达并在使用点显式分支。
@@ -90,11 +90,11 @@ description: Use when converting PowerShell source to Python; apply this directi
        account = ""                               # 与源的空串内插一致
    ```
 6. **信息不足或实现相关时的处理**：属性集合是否随输入变化、键名大小写是否被依赖、以及源在该字段缺失时究竟是空串还是 `None`，都必须先确认；确认不了就停下标注，不要默认用 `dict` 或默认属性名拼写。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)；[PY-LIB-DATACLASSES](https://docs.python.org/3.12/library/dataclasses.html)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA §3.2；PY-LIB-DATACLASSES。
 
 ### 规则 PS-PY-05：PowerShell `$null`/空数组/数值 0 真值向 Python `None` 与假值判定映射
 1. **源码触发条件**：源码在条件或 `Where-Object` 脚本块里依赖 PS 真值，例如 `if (($ShiftState -band 0x8000) -eq 0x8000)` 与 `if ($Shift -xor $Caps)`、`if ($HND -eq $null)`、`$waveInGetNumDevsAddr = $null` 后的 `if ($waveInGetNumDevsAddr -eq $null) { Throw ... }`、`if ($DeviceCount -gt 0)`、`if ($Result.ReturnValue -eq 0)`、`if ($PSBoundParameters.Timeout -and (...))`、`while (!($FileDownload.IsCompleted))`、`if ($global:credential.UserName -and $global:credential.UserName -ne '')`。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)）；目标语言 Python 3.12（[PY-REF-EXPRESSIONS](https://docs.python.org/3.12/reference/expressions.html), [PY-REF-DATA §3.1](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-OPERATORS）；目标语言 Python 3.12（PY-REF-EXPRESSIONS, PY-REF-DATA §3.1）。
 3. **原可观察行为**：`$null`、空数组、空字符串与数值 0 在布尔化时都为假，且 `$null` 与 0 在 `-eq` 下可区分（`$null -eq 0` 为假）但都为假值；`$PSBoundParameters.Timeout` 在参数未提供时不存在（相当于假），而显式传入 0 时同样为假，两条路径在源里走同一分支；把 `$null` 内插进字符串得到空串；`.ToString()` 对 `$null` 会抛错而不是返回空串。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：按源真实集合选择判定——`x is None`、`x == ""`、`not x`、`isinstance(x, (list, tuple)) and len(x) == 0`；需要区分“未提供”与“传 0”时用 `None` 作默认值并显式判 `is None`；可选值用 `Optional[T]` 标注，`typing.Optional` 与 `dataclass` 默认值配合表达缺省。
@@ -111,11 +111,11 @@ description: Use when converting PowerShell source to Python; apply this directi
        raise RuntimeError("Failed to enumerate any recording devices")
    ```
 6. **信息不足或实现相关时的处理**：源里某个判定到底针对 `$null`、空集合还是数值 0，以及参数默认值是 `$null` 还是 0，都必须先确认；确认不了就停下标注，不要用 `not x` 合并这些语义。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-EXPRESSIONS](https://docs.python.org/3.12/reference/expressions.html)；[MS-PS-OPERATORS](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_operators)。
+7. **资料依据（名称/版本/章节）**：PY-REF-EXPRESSIONS；MS-PS-OPERATORS。
 
 ### 规则 PS-PY-06：PowerShell `-match`/`-replace` 与 `.Replace()` 向 Python `re` 与显式空值替换映射
 1. **源码触发条件**：源码用正则匹配或替换，例如 `if ($VideoController.VideoModeDescription -match '(?<ScreenWidth>^\d+) x (?<ScreenHeight>\d+) x .*$')`、`if ($caption -match $r)` 后 `Select-String -Pattern $r` 取 `$m.Matches.Groups`、`$Path -replace '\s+',""`、`$exportdata = $wlans | Foreach-Object {$_.Replace("    All User Profile     : ",$null)}`、`$caption.Replace("{$attr}", $v)`、`.Split('|')` 与 `.Contains('|')`。
-2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（[MS-PS-COMPARE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators)）；目标语言 Python 3.12（[PY-LIB-RE](https://docs.python.org/3.12/library/re.html), [PY-LIB-STDTTYPES](https://docs.python.org/3.12/library/stdtypes.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-COMPARE）；目标语言 Python 3.12（PY-LIB-RE, PY-LIB-STDTTYPES）。
 3. **原可观察行为**：`-match`/`-replace` 默认大小写不敏感（可用 `-cmatch`/`-creplace` 改为敏感），使用 .NET 正则语法（命名组 `(?<name>...)`、替换串里的 `$1`/`${name}`），匹配成功会把结果放入 `$Matches` 自动变量；`-replace` 的替换值为 `$null` 时等价于空串，即删除匹配文本；`String.Replace` 是字面量子串替换、区分大小写、不做正则解释；`Select-String` 返回的是 `MatchInfo` 包装对象，其 `Matches.Groups` 结构与 `re.Match.groupdict()` 不同。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`-match` 默认不敏感语义用 `re.search(pattern, s, re.IGNORECASE)`（需要源的大小写敏感分支时用 `-cmatch` 对应的 `re.search(pattern, s)`）；命名组 `(?<name>...)` 改写为 Python 的 `(?P<name>...)` 并用 `m.group("name")` 取值；`-replace` 用 `re.sub(pattern, repl, s, flags=re.IGNORECASE)`，替换串里的 `$1`/`${name}` 改写为 `\1`/`\g<name>`；`String.Replace` 对应 `str.replace(old, new)`；`$null` 替换值对应 `""`。
@@ -130,10 +130,14 @@ description: Use when converting PowerShell source to Python; apply this directi
    normalized = re.sub(r"\s+", "", s, flags=re.IGNORECASE)
    ```
 6. **信息不足或实现相关时的处理**：源里该处用的是不敏感还是敏感语义（`-match` 与 `-cmatch`、`.Replace` 与 `-replace` 不同）、命名组名与反引用编号、以及替换值是否可能为 `$null`，都必须先确认；确认不了就停下标注，不要默认按敏感或按字面量替换处理。
-7. **直接官方 HTTPS 依据链接**：[PY-LIB-RE](https://docs.python.org/3.12/library/re.html)；[MS-PS-COMPARE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_comparison_operators)。
+7. **资料依据（名称/版本/章节）**：PY-LIB-RE；MS-PS-COMPARE。
 
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+## 网络 API 映射
+
+迁入网络场景，仅在 TcpClient/NetworkStream 到 Python socket 时使用。源读取返回 0（按源请求长度与契约核有序关闭）映射为空 bytes；.NET Write 与 Python send 的返回形状不同，源完整写义务在目标不能遗漏短写处理。StreamReader/Writer 的编码、换行和读取到行尾须保留，不能降裸字节或给裸流加文本层；.Dispose 的异常/提前返回释放在目标用有相同作用域的 with/finally。通用行为读[网络场景](../../scenes/network-io/SKILL.md)，未知编码/异常写待确认。

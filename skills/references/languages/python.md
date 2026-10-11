@@ -9,11 +9,11 @@
 - **语言规范保证**：`[语言规范保证]` 一切变量皆为对象引用；赋值仅绑定名字与对象，传参为“对象引用按值传递”；对象分为不可变（`int`、`float`、`str`、`tuple`、`frozenset`、`bytes`）与可变（`list`、`dict`、`set`、`bytearray`）。
 - **实现相关 / 运行时优化行为**：`[指定运行时的实现相关事实]` CPython 采用小整数与短字符串驻留（Interning），属于解释器优化细节，非跨实现语言保证；具体内存由解释器内存池管理。
 - **机械等价禁区与转换约束**：严禁将可变容器（如 `list`）的直接赋值当作独立拷贝（修改会产生隐式别名污染）；**不得把 Python 的假值集合（`None`、`False`、`0`、`""`、`[]`、`{}`）与其他语言的判空互相当作等价**（见下条）。
-- **官方资料依据**：[PY-REF-DATA §3.1](https://docs.python.org/3.12/reference/datamodel.html)
+- **官方资料依据**：PY-REF-DATA §3.1
 
 ### L1-PY-01 假值集合不等于判空
 1. **源码触发条件**：源码用 `if x:` / `if not x` / `if x is None` / `if len(x) == 0` 分流，或对可能为 `None` 的值直接下标、调用方法。
-2. **冻结版本/运行时/API 前提**：CPython 3.12；真值测试与 `__bool__`/`__len__` 语义见 [PY-REF-DATA §3.3](https://docs.python.org/3.12/reference/datamodel.html#object.__bool__)。
+2. **冻结版本/运行时/API 前提**：CPython 3.12；真值测试与 `__bool__`/`__len__` 语义见 PY-REF-DATA §3.3。
 3. **原可观察行为**：
    - `if x:` 在 `x` 为 `None`、`False`、数值 `0`、`""`、`b""`、`[]`、`{}`、`set()` 时**均为假**；自定义类的实例默认恒为真，除非定义 `__bool__`/`__len__`。
    - `x is None` 与 `not x` **不等价**：`""` 与 `0` 使 `not x` 为真但不是 `None`。
@@ -37,12 +37,12 @@
    v = d.get("k")                 # 仅在源确实按“缺键给默认值”时
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的判断表达“无值”还是“空值”时，标为“假值与判空语义待确认”，不得用统一真值判断合并两类。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA §3.3 Truth Value Testing](https://docs.python.org/3.12/reference/datamodel.html#object.__bool__)；[PY-REF-EXPRESSIONS §6.11](https://docs.python.org/3.12/reference/expressions.html#boolean-operations)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA §3.3 Truth Value Testing；PY-REF-EXPRESSIONS §6.11。
 
 ### L1-PY-05 程序实参含程序名，`argparse` 缩写与绑定必须显式重建
 
 1. **源码触发条件**：源码从 `sys.argv` 取用实参、用 `argparse`/`optparse`/`getopt` 解析，或在 `parse_args()` 后读取位置参数。
-2. **冻结版本/运行时/API 前提**：CPython 3.12（[`sys.argv`](https://docs.python.org/3.12/library/sys.html#sys.argv)、[`argparse`](https://docs.python.org/3.12/library/argparse.html)）。
+2. **冻结版本/运行时/API 前提**：CPython 3.12（`sys.argv`、`argparse`）。
 3. **原可观察行为**：
    - **`sys.argv[0]` 是脚本名**，用户实参从 **`sys.argv[1:]`** 开始（与 C# `args`、Ruby `ARGV` **不含**程序名不同）。
    - `argparse` 默认允许**长选项唯一前缀缩写**（`--dep` 可匹配 `--depth`）；`allow_abbrev=False` 才关闭。前缀**有歧义**时报错并以**状态码 2** 退出。
@@ -50,7 +50,7 @@
    - `argparse` 默认会把 `-` 前缀的未知参数当错误处理；是否支持选项与操作数**交错**取决于实现（`argparse` 支持部分交错，与 `flag` 相反）。
 4. **目标可选写法和不适用条件**：
    - *Python 作为源*：目标语言实参序列不含程序名时须去 `sys.argv[0]`；含程序名时（C/C++/Go）须保留偏移。
-   - *Python 作为目标*：源的"未知选项先输出诊断再返回错误码"须保留为**状态码 2 + stderr 用法行**，不得改成抛出未捕获异常导致退出码变成 1。
+   - *Python 作为目标*：按源解析器与应用实际行为保留诊断、通道及退出码。只有源契约确为状态码 2 + stderr 用法行时才对应该行为；getopt 返回 `'?'` 并不决定进程码，不能把任意源错误强行改成 argparse 的默认 2，也不把已知源出口改成未捕获异常。
    - *不适用条件*：源码不使用命令行实参时不适用；源码显式设 `allow_abbrev=False` 时，**禁止缩写**才是要保留的行为。
 5. **错误机械替换反例**：
    ```python
@@ -63,7 +63,7 @@
    path = sys.argv[1]
    ```
 6. **信息不足或实现相关时的处理**：无法确定源是否依赖唯一前缀缩写、或目标语言实参序列是否含程序名时，标为“实参偏移与解析器语义待确认”。
-7. **直接官方 HTTPS 依据链接**：[`sys.argv`](https://docs.python.org/3.12/library/sys.html#sys.argv)；[`argparse`（`allow_abbrev`、退出码 2）](https://docs.python.org/3.12/library/argparse.html)；[`argparse` 退出状态](https://docs.python.org/3.12/library/argparse.html#exiting-methods)。
+7. **资料依据（名称/版本/章节）**：`sys.argv`；`argparse`（`allow_abbrev`、退出码 2）；`argparse` 退出状态。
 
 ## 二、整数宽度、溢出、符号性与转换
 
@@ -71,11 +71,11 @@
 - **有符号溢出行为**：`[语言规范保证]` **无溢出概念**；数值超出 64 位自动扩展内存表示。
 - **无符号溢出行为**：`[语言规范保证]` **无溢出概念**；不支持无符号数原生类型。
 - **隐式提升与转换陷阱**：`[语言规范保证]` 无法原生模拟定宽溢出截断；若需定宽溢出行为，必须显式施加位掩码（`& 0xFFFFFFFF`）。
-- **官方资料依据**：[PY-REF-DATA §3.2 Numbers](https://docs.python.org/3.12/reference/datamodel.html)
+- **官方资料依据**：PY-REF-DATA §3.2 Numbers
 
 ### L1-PY-02 数值切片与格式化不得静默改变长度或有效位数
 1. **源码触发条件**：源码用切片承载长度契约（`buf[:n]`）、把数值转文本（`str(x)`、`f"{x}"`、`format(x, spec)`），或依赖定宽整数的溢出/截断。
-2. **冻结版本/运行时/API 前提**：CPython 3.12；`int` 为任意精度、切片**超出长度不报错而是截断**，见 [PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)、[PY-REF-SEQUENCE](https://docs.python.org/3.12/library/stdtypes.html#common-sequence-operations)。
+2. **冻结版本/运行时/API 前提**：CPython 3.12；`int` 为任意精度、切片**超出长度不报错而是截断**，见 PY-REF-DATA §3.2、PY-REF-SEQUENCE。
 3. **原可观察行为**：
    - `int` **无溢出**：超出机器字长自动扩展，不会按模回绕。
    - `seq[:n]` 在 `n` 大于实际长度时**静默返回较短的结果**（不抛异常），因此用它表达“恰好 n 个字节”的源契约会失真。
@@ -99,7 +99,7 @@
    out = format(value, ".17g")     # 精度按源义务冻结
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的长度契约与有效位数时，标为“长度与数值格式待确认”；不得用 `str()` 的默认输出或切片的静默截断充当依据。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)；[通用序列操作（切片语义）](https://docs.python.org/3.12/library/stdtypes.html#common-sequence-operations)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA §3.2；通用序列操作（切片语义）。
 
 ## 三、字符串、字节、NUL、Unicode 与编码
 
@@ -107,20 +107,23 @@
 - **字节序列数据结构**：`[语言规范保证]` `bytes`：不可变 8 位字节序列；`bytearray`：可变字节序列。
 - **NUL (`\0`) 字符语义与处理**：`[语言规范保证]` `str` 与 `bytes` 均显式记录长度，内容可自由包含 `\0`。
 - **编码假设与转换陷阱**：`[语言规范保证]` **`str` 与 `bytes` 严格隔离**；严禁隐式转换，必须显式通过 `.encode('utf-8')` 与 `.decode('utf-8')` 互转。
-- **官方资料依据**：[PY-REF-DATA §3.2 Strings, Bytes](https://docs.python.org/3.12/reference/datamodel.html)
+- **官方资料依据**：PY-REF-DATA §3.2 Strings, Bytes
 
 ### L1-PY-03 字节路径不得经文本层，且不得用替换策略掩盖编码差异
 1. **源码触发条件**：源码读写二进制（`open(path, 'rb'/'wb')`、`socket.recv`、`hashlib`、`base64`、`zlib`、结构体打包），或在文本与字节之间用 `.encode`/`.decode` 转换。
-2. **冻结版本/运行时/API 前提**：CPython 3.12；`decode` 的 `errors` 参数与 `open` 的 `newline`/`encoding` 语义见 [PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)、[`bytes.decode`](https://docs.python.org/3.12/library/stdtypes.html#bytes.decode)、[`open`](https://docs.python.org/3.12/library/functions.html#open)。
+2. **冻结版本/运行时/API 前提**：CPython 3.12；`decode` 的 `errors` 参数与 `open` 的 `newline`/`encoding` 语义见 PY-REF-DATA §3.2、`bytes.decode`、`open`。
 3. **原可观察行为**：
    - `str`/`bytes` **严格隔离**：`b"a" + "b"` 抛 `TypeError`，不存在隐式编解码。
    - `bytes.decode('utf-8')` 对非法序列**默认抛 `UnicodeDecodeError`**；`errors="replace"`/`"ignore"` 则**静默改变内容与长度**。
    - 文本模式 `open(path, 'r')` 默认 `encoding=None`（取 `locale.getpreferredencoding(False)`），且**默认启用通用换行翻译**（`newline=None` 把 CRLF/LF/CR 统一为 `\n`）；`'rb'` 无此翻译。
    - `len(str)` 是码点数，`len(bytes)` 是字节数；非 ASCII 时两者不等。
+   - 路径/argv 的 OS 字节表示按 filesystem encoding 和 error handler 转换；`os.fsencode` 使用当前 Python 的配置，不是通用 UTF-8 编码。跨 OS 时，当前目标的编码不自动等于源的窄字符 argv 编码。
+   - 文本写入的 `newline=None` 会把 `\n` 翻译为当前系统行分隔符；`newline=''` 或 `'\n'` 不翻译。还须核字符串内部行尾、`print` 的 `end` 与最终 stdout writer，不能以文件 newline 选项代表所有控制台输出。
 4. **目标可选写法和不适用条件**：
    - *Python 作为源*：字节路径映射到目标的字节类型；文本路径须显式声明 `encoding` 与 `newline`，**不得**依赖平台默认编码或默认换行翻译。
    - *Python 作为目标*：源若以字节为单位读写，必须走 `'rb'`/`'wb'` 与 `bytes`，**不得**经 `str` 往返；源若以文本为单位，须显式写出编码与换行策略，并保留源对非法字节的处理方式（抛错或替换）。
    - *不适用条件*：源本身是文本 API 且换行翻译属源的可观察行为时，通用换行是要**保留**的行为，须显式冻结而非消除。
+   - **按字节计的路径长度**：只在所用 filesystem encoding/error handler 与源路径字节契约一致时，才用 `len(os.fsencode(path))` 承接源字节数；源明确 UTF-8 时按该编码计数。不能用 `len(path)`，也不能在编码未知时随意 `.encode()`。UTF-8 文本 `é` 为一个码点、两个字节，ASCII 路径通过不足以核验此映射。
 5. **错误机械替换反例**：
    ```python
    # 错误：二进制内容走了文本模式，字节被改写
@@ -134,7 +137,24 @@
    text = blob.decode('utf-8')                 # 非法序列按源语义抛 UnicodeDecodeError
    ```
 6. **信息不足或实现相关时的处理**：无法确认源数据的编码、换行策略或非法字节处置时，标为“编码与字节长度语义待确认”；**禁止**用 `errors='replace'`/`'ignore'` 或 `scrub` 掩盖差异。也不得用 `len(str)` 承接源按字节计的长度。
-7. **直接官方 HTTPS 依据链接**：[`bytes.decode`（错误处理策略）](https://docs.python.org/3.12/library/stdtypes.html#bytes.decode)；[`open`（encoding/newline）](https://docs.python.org/3.12/library/functions.html#open)；[Python Unicode HOWTO](https://docs.python.org/3.12/howto/unicode.html)。
+7. **资料依据（名称/版本/章节）**：`bytes.decode`（错误处理策略）；`open`（encoding/newline）；`os.fsencode`（filesystem encoding/error handler）；Python Unicode HOWTO。
+
+### L1-PY-06 字节字面量与十六进制数据不得按外观重写
+
+1. **触发/前提**：CPython 3.12；目标采用 bytes 字面量、`bytes.fromhex` 或分段连接来承接源固定字节数据。
+2. **应保留行为**：Python bytes 字面量的 `\x` 后须恰有两个十六进制数字；`bytes.fromhex` 按两个数字构成一字节并允许 ASCII 空白。它们与 C/C++ 可继续消费十六进制数字的 `\x` 转义语法不同，不能照抄字面量源码。
+3. **映射条件**：先对应源求值后的元素序列和有效长度，再选择目标表达式；分段拼接核顺序、重复/遗漏、嵌入 NUL 与是否包含源终止 NUL。不得凭“重构更简洁”重算、替换未知用途的常量。
+4. **反例**：C 的 `"\x0041"` 的转义值为 0x41，Python `b'\x0041'` 则是 0x00、0x34、0x31 三个字节；照抄转义造成差异。只对照字符个数或总长度可能漏掉同长度的替换。
+5. **未知处理**：源转义求值、元素范围或消费者长度不确定时逐点保留待核，不猜数据；静态审阅不运行、解码执行或解释未知数据。
+6. **官方依据**：Python 3.12 字符串/字节字面量、`bytes.fromhex`；源侧结合其语言标准核对。
+
+### L1-PY-07 getopt 的顺序策略由源解析器决定
+
+1. **触发/前提**：源实际使用选项解析，拟映射为 CPython 3.12 `getopt`/`gnu_getopt`；冻结源 libc/解析器版本、选项串、环境及解析后的操作数用途。
+2. **行为与映射**：`getopt.getopt` 在首个非选项处停止；`gnu_getopt` 默认允许选项与操作数交错，但选项串前导 `+` 或 `POSIXLY_CORRECT` 会改变其模式。仅源确需同类扫描策略时选用；还要核长选项缩写、`--`、剩余参数及错误路径，不能只因函数同名当成等价。
+3. **反例**：源允许 `tool operand -a` 继续解析 `-a`，目标改成普通 getopt 而提前停止；反之源应停止而目标继续扫描，同样改变行为。
+4. **未知处理**：源实现未知则记录待确认；Python `GetoptError` 的 message/异常输出不自动复现 BSD/GNU 的诊断、通道、程序名和退出码，不硬编码猜测的 libc 文案。
+5. **官方依据**：Python 3.12 getopt / gnu_getopt。
 
 ## 四、数组、容器、切片、迭代和顺序
 
@@ -142,7 +162,7 @@
 - **键值映射（Map/Dict）实现**：`[语言规范保证]` `dict`：键值映射类型。
 - **Map 遍历迭代顺序保证**：`[语言规范保证]` **语言规范保证保持键值对的插入顺序**（Insertion-order preservation）。
 - **迭代期间修改（Fail-Fast）**：`[语言规范保证]` 迭代中改变 `dict` 大小立即抛出 `RuntimeError: dictionary changed size during iteration`。
-- **官方资料依据**：[PY-REF-DATA §3.2 Dictionaries](https://docs.python.org/3.12/reference/datamodel.html)
+- **官方资料依据**：PY-REF-DATA §3.2 Dictionaries
 
 ## 五、异常、错误、退出码与可观察失败
 
@@ -150,11 +170,11 @@
 - **异常展开与性能模型**：`[语言规范保证]` 异常为一等对象，抛出并回溯展开栈帧。
 - **进程退出码回传机制**：`[语言规范保证]` `sys.exit(int/str)` 抛出 `SystemExit` 异常，若未捕获则解释器退出并设置退出码；未捕获普通异常退出码为 1。
 - **跨语言映射关键风险**：不可将 C 常见负数返回值当成 Python 正常状态；必须明确区分业务状态与真实失败。
-- **官方资料依据**：[PY-REF-DATA §3.2 Exceptions](https://docs.python.org/3.12/reference/datamodel.html)
+- **官方资料依据**：PY-REF-DATA §3.2 Exceptions
 
 ### L1-PY-04 被丢弃的错误不得变成异常终止，主动失败不得被静默吞掉
 1. **源码触发条件**：源码**有意丢弃**可失败操作的结果（未检查返回值、空 `except: pass`、未检查函数返回的 `None`），**或**在失败时 `raise`、`sys.exit(非零)`、返回非零状态。
-2. **冻结版本/运行时/API 前提**：CPython 3.12；未捕获异常退出码为 1、`SystemExit` 携带指定码，见 [PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)、[`sys.exit`](https://docs.python.org/3.12/library/sys.html#sys.exit)。
+2. **冻结版本/运行时/API 前提**：CPython 3.12；未捕获异常退出码为 1、`SystemExit` 携带指定码，见 PY-REF-DATA、`sys.exit`。
 3. **原可观察行为**：
    - 忽略错误的路径：Python 不会自动终止，但**多数内置操作以异常而非错误码报告失败**（如 `open` 抛 `FileNotFoundError`）。因此“源丢弃错误”在 Python 里通常表现为**显式 `try/except` 后继续**，而非“不检查返回值”。
    - 主动失败的路径：未捕获异常 → 解释器以退出码 **1** 结束（不是源可能指定的其他码）；`sys.exit(n)` → 退出码 `n`。
@@ -181,7 +201,7 @@
        write_empty_result()             # 源的“空结果继续”路径
    ```
 6. **信息不足或实现相关时的处理**：无法确认源是否检查、是否输出诊断、失败后是否继续时，把该错误路径单列为待验证 oracle；不得以“异常更安全”为由改变控制流。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)；[`sys.exit`](https://docs.python.org/3.12/library/sys.html#sys.exit)；[内置异常层次](https://docs.python.org/3.12/library/exceptions.html#exception-hierarchy)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA；`sys.exit`；内置异常层次。
 
 ## 六、内存、资源所有权、析构、GC 与终结
 
@@ -189,7 +209,7 @@
 - **资源确定性释放机制**：`[语言规范保证]` 上下文管理器 `with` 语句确保退出时触发 `__exit__()` 释放非内存资源；`__del__` 时机不可靠。
 - **垃圾收集（GC）停顿与机制**：`[指定运行时的实现相关事实]` 循环垃圾检测器分为 3 代，定期遍历检测孤立循环引用；无法保证跨实现确定性析构。
 - **悬垂与泄漏防范**：循环引用在仅靠引用计数时无法立即回收，依赖 Cyclic GC 扫描；非内存资源严禁依赖 `__del__`。
-- **官方资料依据**：[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)<br>[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)
+- **官方资料依据**：CPY-DEV-GC<br>PY-REF-DATA
 
 ## 七、异步、并发、取消与阻塞
 
@@ -197,7 +217,29 @@
 - **线程/调度实体映射关系**：`[指定运行时的实现相关事实]` CPython 全局解释器锁（GIL）确保同一时刻仅一个线程执行字节码；多线程无法利用多核进行 CPU 密集计算。
 - **级联取消与超时机制**：`[语言规范保证]` `asyncio.Task.cancel()` 抛出 `CancelledError`；`asyncio.wait_for` 设定超时。
 - **内存模型与数据竞争**：`[指定运行时的实现相关事实]` 虽受 GIL 保护基础操作原子性，但复合状态操作仍存在竞态，必须使用 `threading.Lock`。
-- **官方资料依据**：[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)<br>[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)
+- **官方资料依据**：CPY-DEV-GC<br>PY-REF-DATA
+
+## 八、枚举与终端输入
+
+### L1-PY-08 Enum、IntEnum 与普通常量的身份不同
+
+1. **触发**：枚举成员、值构造、类型测试、整数比较、Flags、输出或序列化。
+2. **前提**：CPython 3.12，冻结成员显式值、别名、类型及消费者；不要以 auto 代替已给定数值。
+3. **事实**：Enum 成员具有枚举类型、name/value；重复值可为别名，迭代会跳过别名。IntEnum 可作整数使用，整数运算结果丢枚举身份；3.12 的 str(IntEnum) 是整数文本。普通 Enum 默认显示类型与成员名。Flag/IntFlag 的未知位还受 boundary 策略影响。
+4. **映射条件**：按源类型、整数互操作、位组合、未知值、名称输出逐项选 Enum/IntEnum/Flag/IntFlag 或其他明确表示；默认 Enum 值构造拒绝未定义值，源允许该值时须保持源路径。
+5. **反例**：普通 class 数值属性不提供成员身份；C# 枚举值显示名称时改成 IntEnum 的默认 str 会输出数字。
+6. **未知**：仅常量消费者可在确认观察范围后用常量表示；反射/未知值/别名显示未明时不宣布标准库类型完全等价。
+7. **依据**：Python 3.12 enum；Enum HOWTO：别名和值构造。
+
+### L1-PY-09 流读取一个字符不等于读取一个终端键事件
+
+1. **触发**：单键等待、回显、特殊键、输入重定向或终端模式。
+2. **前提**：CPython 3.12，冻结 OS、TTY、编码、终端模式与实际输入设备。
+3. **事实**：input 读一行；sys.stdin.read(1) 读一个文本字符，终端 canonical 模式仍可能等行提交。Unix tty/termios 与 Windows msvcrt 是不同平台 API，getwch 不自动给出 .NET 完整键/修饰键对象；终端模式变化还须恢复。
+4. **映射条件**：按源键/字符单位、回显、阻塞、特殊键序列与失败选平台映射；只有已确认只读流字符时才直接用 read(1)。
+5. **反例**：用 input 替代 ReadKey 增加 Enter 要求；只用 read(1) 而未确认设备/模式也不能声称“任意键继续”。
+6. **未知**：源返回键/修饰键映射未知或无合法 TTY 驱动时记缺口；Agent 不生成辅助驱动，不用伪造异常代源观察。
+7. **依据**：input；TextIOBase.read；tty；msvcrt。
 
 ## 使用边界
 

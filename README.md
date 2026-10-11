@@ -8,7 +8,7 @@
 - [42 个语言方向](skills/directions/)与[共享语义导航](skills/references/seven-language-common-semantics.md)：静态规则，不是逐方向转换成功承诺。
 - [场景](skills/scenes/)与[系统方向](skills/systems/)：只按源码实际行为和条目前提加载，不预生成维度组合。
 - [长文件工作流](skills/workflows/long-file-conversion/SKILL.md)、[批次工作流](skills/workflows/batch-conversion/SKILL.md)与[评估闭环](references/workflow/conversion-evaluation-loop.md)：过程约束，不证明规模、队列或行为已验收。
-- [交付契约](references/framework/delivery-handoff-contract.md)与[安全边界](references/framework/safety-boundary.md)：字段来源、报告分层和执行红线。
+- [参考总索引](references/README.md)：知识、工作流、契约和适配的职责与加载条件；[任务状态](references/framework/task-state-contract.md)、[评估准备](references/framework/evaluation-readiness-contract.md)、[交付契约](references/framework/delivery-handoff-contract.md)和[安全边界](references/framework/safety-boundary.md)分别维护真源。
 
 Codex 发现入口 `.agents/skills/code-convert/SKILL.md` 只链接根入口；其他 Agent 按自身机制接入。项目知识内联索引可以保留，**不把一次性测试数据集、case/batch、历史 job 或回归位写进 Skill 索引**。
 
@@ -22,4 +22,4 @@ Codex 发现入口 `.agents/skills/code-convert/SKILL.md` 只链接根入口；�
 
 ## 工程规划
 
-[Stage 1 评估平台升级包](docs/stages/stage1/README.md)是开发期 PLANNING_ONLY 方案，不表示外部 Controller/VM 已实现 Profile、Attestation、Permit 或 fixture runtime。工程工作包编号与产品阶段不同，产品状态只认开发规范。
+[Stage 1](docs/stages/stage1/README.md)包含开发期规格与部分部署记录，各功能状态须逐项核对；[Stage 3 平台能力补强](docs/stages/stage3/README.md)承接精确部署及能力验收；[Stage 4 转换 Skill 架构与评估证据修订](docs/stages/stage4/README.md)维护文本方案、实施清单与静态验收，本轮新增[证据与规则修订任务](docs/stages/stage4/tasks/evidence-quality-checklist.md)。这些是工程工作包，不改变产品阶段；产品状态只认开发规范，工程文档不是转换任务必读依赖。

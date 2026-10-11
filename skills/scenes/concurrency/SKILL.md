@@ -55,12 +55,12 @@ description: Preserve observable concurrency, shared state, ordering, and resour
 
 **信息不足时的处理**：无法确认源的取消是“唤醒阻塞调用”还是“置标志位等下一轮检查”时，标为“取消唤醒语义待确认”，并在终止协议中写明该分歧点；不得假定目标平台的关闭调用与源同义。
 
-**官方依据**：[POSIX `close`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/close.html)、[POSIX `shutdown`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/shutdown.html)、[POSIX `accept`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/accept.html)；[Microsoft `closesocket`](https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-closesocket)、[`GetLastError`](https://learn.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-getlasterror)；[Go `net.Listener`](https://pkg.go.dev/net#Listener)；[PowerShell `Runspace.DefaultRunspace`](https://learn.microsoft.com/en-us/dotnet/api/system.management.automation.runspaces.runspace.defaultrunspace)。
+**官方依据**：POSIX `close`、POSIX `shutdown`、POSIX `accept`；Microsoft `closesocket`、`GetLastError`；Go `net.Listener`；PowerShell `Runspace.DefaultRunspace`。
 
 
 ### L2-CONC-02 资源所有权必须唯一化，关闭后立即失效
 
-**触发条件**：源码创建句柄/fd/锁/线程/进程对象，并在多个分支、多个持有者之间传递或关闭。
+**触发条件**：源码在并发执行者之间移交或共同使用句柄/fd/锁/线程/进程对象。单线程语言资源事实由语言页维护，文件作用域释放见[文件场景](../file-io/SKILL.md)；本节只补并发移交与终止责任。
 
 
 **义务**：
@@ -68,35 +68,21 @@ description: Preserve observable concurrency, shared state, ordering, and resour
 1. **所有者唯一化**：每个资源在任一时刻应有**唯一**的关闭责任者。移交所有权（如把 fd 交给子进程、把句柄交给另一线程）必须在交付记录中写明移交后由谁关闭；移交后原持有者不得再关闭。
 2. **关闭后立即失效**：目标语言若把关闭做成幂等（第二次 `close` 无操作或返回错误），**不得**因此认为源里“重复关闭是错误”的行为可以丢弃；反之，源若允许重复关闭，目标也必须能安全重复关闭。两者必须按源语义选择，不能按目标的便利性决定。
 3. **重复关闭与 `use-after-free`**：关闭后再次使用或再次关闭，在源语言里可能是 UB、可能是安全的 no-op、也可能报错——须按源实际行为重建，不得静默归一。
-4. **一次性执行结构不得被改写成循环**：`do { ... } while (0)`、`if (0) {}`、`begin ... end` 等用于**一次执行 + 统一清理**的结构，若被机械改写成无限/条件循环，会重复执行副作用并可能永不进入清理块。这是**结构改写引入的新控制流缺陷**，不是资源语义问题。
+4. **并发退出不能重复副作用**：worker 完成、取消与清理的调用次数保持源契约。普通一次性块的控制流归入[C 语言事实](../../references/languages/c.md#普通控制流一次性块与清理路径)与[C→Ruby 方向](../../directions/c-to-ruby/SKILL.md#一次性控制流与清理)，不由并发触发。
 5. **清理条件不得被改动**：源里“满足条件才关闭”的判定（如 `if (h != INVALID_HANDLE_VALUE) close(h)`）在目标中必须逐条对应；把条件放宽或收紧都会造成泄漏或误关。
 
 **错误机械替换反例**：
 
-```ruby
-# 错误：C 的一次性 do { ... } while(0) 被改写成无限循环
-loop do
-  inject                    # 成功路径上会重复整个注入流程
-  # 缺少 break —— 且永远不进入清理块
-end
-cleanup
-
-# 错误之二：关闭条件被改动
-close_handle(h) if h != 0   # 源是 h != 0 && h != INVALID_HANDLE_VALUE
-
-# 正确：保留一次执行与原有清理条件
-begin
-  inject
-ensure
-  close_handle(h) if h != 0 && h != INVALID_HANDLE_VALUE
-end
+```text
+错误：worker 已取得关闭责任，主线程退出时仍重复关闭相同 fd；编号复用后误关另一资源。
+应核对：移交点、失效点、取消唤醒与 worker 回收的先后，清理条件不扩大或收窄。
 ```
 
 **不适用条件**：源使用语言级确定性释放（C++ RAII、Python `with`、C# `using`、Ruby 块式 `File.open`）且所有权本就由语言机制唯一化时，不需要额外的手工所有者登记；但仍须核对**移交**场景（如把 fd 交给子进程）是否被语言机制覆盖。
 
 **信息不足时的处理**：所有权链在源码中跨函数/跨线程不清晰时，标为“所有权移交点待确认”，并在终止协议中列出每个资源的候选关闭者；不得默认“谁创建谁关闭”。
 
-**官方依据**：[POSIX `close`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/close.html)；[Microsoft `CloseHandle`](https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle)、[`INVALID_HANDLE_VALUE`](https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle)；[Go `os.File.Close`](https://pkg.go.dev/os#File.Close)；[Ruby `File.open`（块式）](https://docs.ruby-lang.org/en/3.4/File.html#method-c-open)。
+**官方依据**：POSIX `close`；Microsoft `CloseHandle`、`INVALID_HANDLE_VALUE`；Go `os.File.Close`；Ruby `File.open`（块式）。
 
 
 ## 跨线程状态观察
@@ -105,4 +91,4 @@ end
 
 ---
 
-> 以上为并发场景的**语义与风险规则**，不是特定编译器、SDK 或转换结果的验证记录。并发类的行为结论须由获批隔离环境中**匹配的驱动**（含按契约的取消/唤醒/超时观察点）经第三方平台实际运行后回填；**本机不编译或运行源码及转换产物**。执行顺序受根入口三道硬门禁约束（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。
+> 以上为并发场景的**语义与风险规则**，不是特定编译器、SDK 或转换结果的验证记录。并发类的行为结论须由获批隔离环境中**匹配的驱动**（含按契约的取消/唤醒/超时观察点）经第三方平台实际运行后回填；**本机不编译或运行源码及转换产物**。执行顺序受根入口三道硬门禁约束（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。

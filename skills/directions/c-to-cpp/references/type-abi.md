@@ -48,7 +48,7 @@ C 源在 C++ 与目标平台头下常因**名字冲突**而阻断，属高频机
 
 ## 依据与适用边界
 
-- [S1：WG21 N4950，C++23 最终工作草案](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf)：`[dcl.link]`、`[class.prop]`、`[class.mem]`、`[support.types.layout]`、`[basic.fundamental]`、`[conv.ptr]`、`[expr.static.cast]`、`[dcl.init.list]`。文中指出的是 C++23 草案依据；目标是其他版本时须核对相应标准与实现文档。
-- [S2：WG14 N1570，C11 委员会草案](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)：§6.3.2.3 指针转换。它不是所有 C 方言或 C23 行为的通用替身；遇到版本相关语法应重新核对源标准。
+- S1：WG21 N4950，C++23 最终工作草案：`[dcl.link]`、`[class.prop]`、`[class.mem]`、`[support.types.layout]`、`[basic.fundamental]`、`[conv.ptr]`、`[expr.static.cast]`、`[dcl.init.list]`。文中指出的是 C++23 草案依据；目标是其他版本时须核对相应标准与实现文档。
+- S2：WG14 N1570，C11 委员会草案：§6.3.2.3 指针转换。它不是所有 C 方言或 C23 行为的通用替身；遇到版本相关语法应重新核对源标准。
 
 这两份是语言规则的依据，不是特定编译器、平台 ABI 或转换结果的验证记录。

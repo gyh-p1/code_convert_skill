@@ -1,4 +1,4 @@
-﻿---
+---
 name: ruby-to-python
 description: Use when converting Ruby source to Python; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Ruby source to Python; apply this direction's l
 
 ### 规则 RB-PY-01：Ruby 与 Python 真值模型 (0, "" 真假异同) 冲突防反转映射
 1. **源码触发条件**：Ruby 源码中使用 `if obj`，且 `obj` 可能为 `0` 或空字符串 `""`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）；目标语言 CPython 3.12（[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 CPython 3.12（PY-REF-DATA §3.2）。
 3. **原可观察行为**：**在 Ruby 中 `0` 与 `""` 均为真（Truthy）**，分支必然执行。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：**在 Python 中 `0` 与 `""` 均为假（Falsy）**！若原 Ruby 意图是判断对象是否存在（即非 `nil`），在 Python 中必须显式写为 `if obj is not None:`！
@@ -34,11 +34,11 @@ description: Use when converting Ruby source to Python; apply this direction's l
        do_action()
    ```
 6. **信息不足或实现相关时的处理**：对每个无显式操作符的条件表达式，结合上下文标注真值映射依据。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)；[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；PY-REF-DATA §3.2。
 
 ### 规则 RB-PY-02：Ruby 代码块 (Block/yield) 向 Python 回调函数与生成器映射
 1. **源码触发条件**：Ruby 源码中使用 `def my_each; yield item; end` 或传递代码块。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4；目标语言 CPython 3.12（[PY-REF-YIELD](https://docs.python.org/3.12/reference/expressions.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4；目标语言 CPython 3.12（PY-REF-YIELD）。
 3. **原可观察行为**：隐式代码块接收并调用 `yield`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：若用于迭代，改写为 Python 的 `yield` 生成器函数；若用于回调处理，定义显式函数参数 `callback: Callable` 并显式调用 `callback(item)`。
@@ -52,11 +52,11 @@ description: Use when converting Ruby source to Python; apply this direction's l
            callback(item)
    ```
 6. **信息不足或实现相关时的处理**：若代码块包含 `break` 提前退出且向外层返回值，改写为显式循环。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-YIELD](https://docs.python.org/3.12/reference/expressions.html)。
+7. **资料依据（名称/版本/章节）**：PY-REF-YIELD。
 
 ### 规则 RB-PY-03：Ruby 字符串内建 Encoding 向 Python str/bytes 隔离映射
 1. **源码触发条件**：Ruby 源码中调用 `str.encoding`、`str.force_encoding` 或处理二进制 `ASCII-8BIT` 字符串。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）；目标语言 CPython 3.12（[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 CPython 3.12（PY-REF-DATA §3.2）。
 3. **原可观察行为**：Ruby 中 `String` 是字节序列并附带编码标签。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：若编码为 `ASCII-8BIT` / `BINARY`，映射为 Python 原生 `bytes`；若为文本（如 `UTF-8`），映射为 Python `str`；互转必须显式 `.encode()` / `.decode()`。
@@ -71,11 +71,11 @@ description: Use when converting Ruby source to Python; apply this direction's l
    msg = b + s.encode('utf-8')
    ```
 6. **信息不足或实现相关时的处理**：若字符串来源不可信，使用 `errors='replace'` 或在报告中标记转码风险。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)；[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；PY-REF-DATA §3.2。
 
 ### 规则 RB-PY-04：Ruby Symbol 向 Python str / enum.Enum 的选择与相等性映射
 1. **源码触发条件**：Ruby 源码用 `Symbol` 作状态标记、选项或散列键，例如 `origin_type: :session`、`private_type: :ssh_key`、`update: :unique_data`、`data: { :company => company }`、`credentials = { origin_type: :session, ... }`、`values[:starttype]`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-SYMBOL](https://docs.ruby-lang.org/en/3.4/Symbol.html)）；目标语言 CPython 3.12（[PY-LIB-ENUM](https://docs.python.org/3.12/library/enum.html)、[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-SYMBOL）；目标语言 CPython 3.12（PY-LIB-ENUM、PY-REF-DATA §3.2）。
 3. **原可观察行为**：`Symbol` 是不可变、可哈希、全局唯一且可驻留的标识符，相等按身份；同一个 `:session` 无论出现在何处都是同一对象；`Symbol#to_s` 才是文本，`:'a b'` 这类含空格/非标识符字符的符号在 Ruby 中合法；符号可作 `Hash` 键，且 `Hash` 保留键的插入顺序。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：取值封闭且只在本程序内比较的状态量优先用 `enum.Enum`（成员用 `auto()` 或显式值），比较一律在成员之间进行；需要与外部交换（JSON、日志、配置）或键来自运行期时用 `str`（含非标识符字符时必须是 `str`）；Python 3.11 起若既要字符串可比性又要枚举成员身份，可用 `enum.StrEnum`——采用前必须先声明目标解释器版本不低于 3.11。
@@ -96,11 +96,11 @@ description: Use when converting Ruby source to Python; apply this direction's l
    t = CredType("session")                   # 正确：按成员值构造
    ```
 6. **信息不足或实现相关时的处理**：符号的取值集合是否封闭（是否来自 `datastore`、JSON、网络或用户输入）必须从源码确认；无法确认时标注"键集合开放"并询问，不得用 `enum.Enum` 收窄取值域；符号是否含非标识符字符必须逐个核对（`:'a b'` 无法变成枚举成员名）；若选择 `StrEnum`，必须确认目标解释器版本，不得假定 3.11 及以上。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-SYMBOL](https://docs.ruby-lang.org/en/3.4/Symbol.html)；[PY-LIB-ENUM](https://docs.python.org/3.12/library/enum.html)；[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-SYMBOL；PY-LIB-ENUM；PY-REF-DATA §3.2。
 
 ### 规则 RB-PY-05：Ruby 块/`yield` 向 Python 生成器或显式回调的选择（`break`/`next` 与惰性）
 1. **源码触发条件**：Ruby 源码用块驱动迭代或把块当过程传递，例如 `::File.open(resource_file).each_line(chomp: true) do |cmd| next if cmd.strip.empty? ... end`、`commands.each do |cmd| ... next if cmd.strip.empty? ... end`、`path.scan(...).flatten[0]`、`creds.each do |cred| ... end`、`files.map { |f| ... }`、`&:join` 简写。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-PROC](https://docs.ruby-lang.org/en/3.4/Proc.html)）；目标语言 CPython 3.12（[PY-REF-EXPR-YIELD](https://docs.python.org/3.12/reference/expressions.html)、[PY-LIB-TYPING](https://docs.python.org/3.12/library/typing.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-PROC）；目标语言 CPython 3.12（PY-REF-EXPR-YIELD、PY-LIB-TYPING）。
 3. **原可观察行为**：`yield` 把控制权交给块并取其返回值（`each` 等返回原集合，而非块结果）；块内 `next v` 让 `yield` 求值为 `v` 并继续；块内 `break v` **终止调用方方法的迭代**且该方法的返回值为 `v`；不含 `yield` 的普通方法返回 `Enumerator` 时迭代是惰性的。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：源码中方法本身用 `yield` 逐项产出、调用方只做遍历时，写成生成器函数（在循环里 `yield item`）；源码只做"逐项消费"、不产出序列时，写成显式回调参数（`def for_each(items, callback: Callable[[T], None]) -> None`）并显式 `callback(item)`；`next` → `continue`。
@@ -117,16 +117,16 @@ description: Use when converting Ruby source to Python; apply this direction's l
    # 正确：不需要产出序列时用显式回调，副作用在调用点发生
    def for_each_command(commands, callback):
        for cmd in commands:
-           if not cmd.strip():
+           if not cmd.strip('\x00\t\n\v\f\r '):  # 源为 Ruby String#strip；不套 Python 默认集合
                continue
            callback(cmd)
    ```
 6. **信息不足或实现相关时的处理**：源码块内出现 `break`/`return` 时必须确认其返回值的接收者与期望的控制流落点，无法确认时停下询问；块是否可能因惰性求值而"永不执行"（例如结果被丢弃、只取前若干项）必须从调用点确认；块内异常是否应传播到调用方也要显式写明，不能默认吞掉。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-PROC](https://docs.ruby-lang.org/en/3.4/Proc.html)；[PY-REF-EXPR-YIELD](https://docs.python.org/3.12/reference/expressions.html)；[PY-LIB-TYPING](https://docs.python.org/3.12/library/typing.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-PROC；PY-REF-EXPR-YIELD；PY-LIB-TYPING。涉及 strip 同读[Ruby 空白集合](../../references/languages/ruby.md#l1-rb-08-strip-不是通用-unicode-空白删除)与Python str.strip 的 chars 参数；本例只处理源固定集合，不泛化到正则。
 
 ### 规则 RB-PY-06：Ruby 哈希/数组容器与可变默认值陷阱向 Python dict/list 映射
 1. **源码触发条件**：Ruby 源码构造并就地修改容器，或把容器当可选参数传递，例如 `com_opts = {}` 后 `com_opts[:net_clr] = 4.0`、`dirs = []` 后 `dirs << ENV['HOME']`、`data[:data] = { :token => token }`、`credential_data.merge!(service_data)`、`dirs.uniq.compact`、`sessions.flatten!`、`ret[s.gsub(...)] = drive`、`avs[avn] = av_note`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)、[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)）；目标语言 CPython 3.12（[PY-REF-DATA §3.1, §3.3](https://docs.python.org/3.12/reference/datamodel.html)、[PY-LIB-COLLECTIONS](https://docs.python.org/3.12/library/collections.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-HASH、RB-DOC-ARRAY）；目标语言 CPython 3.12（PY-REF-DATA §3.1, §3.3、PY-LIB-COLLECTIONS）。
 3. **原可观察行为**：Ruby `Hash` 保留插入顺序、键可以缺失（`h[k]` 返回 `nil` 而不建键）、允许 `nil` 作为值；`Array#<<`/`merge!`/`flatten!`/`compact!` **就地**修改接收者，因此所有持有同一对象的别名都看到变化；把 Hash/Array 作为方法默认参数时，Ruby 每次调用都重新求值默认表达式，得到新对象。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：有序键值对用 `dict`（3.7 起保留插入顺序），缺键读取用 `d.get(k, default)` 或 `if k in d`；就地合并用 `d.update(other)`（对应 `merge!`）；追加用 `list.append(x)`；去重保序用 `dict.fromkeys(seq)`；**默认参数一律写成 `None` 再在函数体内初始化**（`def f(opts=None): opts = {} if opts is None else opts`）。
@@ -147,7 +147,7 @@ description: Use when converting Ruby source to Python; apply this direction's l
    value = parsed.get('auths', {}).get('auth')
    ```
 6. **信息不足或实现相关时的处理**：源码未明确调用方是否依赖"就地修改可见于别名"时，必须标注"别名可观察性待确认"并询问（Python 侧选择就地 `update`/`append` 还是返回新对象取决于这一点）；`uniq`/`compact`/`flatten` 是否承担剔除 `nil` 语义要逐点确认，Python 侧不会自动剔除 `None`；源码里 `Hash` 的插入顺序若被外部观察（输出、文件名），需在报告中写明 Python 侧依赖 3.7+ 的保序保证。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)；[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)；[PY-REF-DATA §3.1, §3.3](https://docs.python.org/3.12/reference/datamodel.html)；[PY-LIB-COLLECTIONS](https://docs.python.org/3.12/library/collections.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-HASH；RB-DOC-ARRAY；PY-REF-DATA §3.1, §3.3；PY-LIB-COLLECTIONS。
 
 ## 转换与验证边界
 

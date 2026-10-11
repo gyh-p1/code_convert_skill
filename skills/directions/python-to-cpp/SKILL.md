@@ -1,4 +1,4 @@
-﻿---
+---
 name: python-to-cpp
 description: Use when converting Python source to C++; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Python source to C++; apply this direction's la
 
 ### 规则 PY-CPP-01：Python 生成器 (yield) 向 C++17 状态机迭代器类重构映射
 1. **源码触发条件**：Python 源码中包含 `def gen(): yield x` 生成器函数。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-YIELD](https://docs.python.org/3.12/reference/expressions.html)）；目标语言 ISO C++17（[WG21-N4659 Clause 27](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-YIELD）；目标语言 ISO C++17（WG21-N4659 Clause 27）。
 3. **原可观察行为**：调用生成器返回迭代器对象，通过 `next()` 逐步执行并在退出时触发清理。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C++17 中手动编写一个包含状态枚举、局部变量和 `next()` 或满足迭代器协议 `operator++`/`operator*` 的类；或者重构为一次性批量生成 `std::vector`。
@@ -38,11 +38,11 @@ description: Use when converting Python source to C++; apply this direction's la
    };
    ```
 6. **信息不足或实现相关时的处理**：若生成器包含复杂的异常双向传递（`gen.throw()`），必须在报告中声明该复杂控制流降级。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-YIELD](https://docs.python.org/3.12/reference/expressions.html)；[WG21-N4659 Clause 27](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：PY-REF-YIELD；WG21-N4659 Clause 27。
 
 ### 规则 PY-CPP-02：Python 函数返回 None 作为可选值向 C++17 std::optional 映射
 1. **源码触发条件**：Python 源码中函数在查找到数据时返回对象，未查找到时返回 `None`。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 ISO C++17（[WG21-N4659 Clause 23.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 ISO C++17（WG21-N4659 Clause 23.6）。
 3. **原可观察行为**：调用方使用 `if res is None` 判定缺失。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：方法返回值定义为 `std::optional<T>`；缺失时返回 `std::nullopt`；调用点使用 `has_value()` 或布尔上下文检查。
@@ -61,11 +61,11 @@ description: Use when converting Python source to C++; apply this direction's la
    }
    ```
 6. **信息不足或实现相关时的处理**：若需要表达具体错误原因而不只是简单缺失，使用自定义 Result 结构体。
-7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 23.6](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 23.6。
 
 ### 规则 PY-CPP-03：Python with 上下文管理器向 C++17 RAII 作用域析构映射
 1. **源码触发条件**：Python 源码中使用 `with lock:` 或 `with open(...) as f:` 管理作用域生命周期。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 ISO C++17（[WG21-N4659 Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 ISO C++17（WG21-N4659 Clause 6.7）。
 3. **原可观察行为**：离开代码块时触发 `__exit__`，无论是否抛出异常均保证清理。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：互斥锁使用 `std::lock_guard` 或 `std::unique_lock`；文件使用 `std::ifstream`/`std::ofstream` 栈对象。
@@ -86,11 +86,11 @@ description: Use when converting Python source to C++; apply this direction's la
    }
    ```
 6. **信息不足或实现相关时的处理**：若涉及文件 I/O，加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[WG21-N4659 Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 6.7。
 
 ### 规则 PY-CPP-04：Python struct 格式与任意精度 int 向 C++17 定宽整数与显式字节序映射
 1. **源码触发条件**：Python 源码用 `struct.unpack('<i', f.read(4))[0]`、`struct.unpack('!B', ...)`、`struct.pack("<I", value)` 读取或写入定宽字段，或在二进制偏移计算中使用可能超出 64 位的整数。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-LIB-STRUCT](https://docs.python.org/3.12/library/struct.html)）；目标语言 ISO C++17（[WG21-N4659 Clause 6.9.1, Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-LIB-STRUCT）；目标语言 ISO C++17（WG21-N4659 Clause 6.9.1, Clause 24.3）。
 3. **原可观察行为**：`struct` 格式字符锁定"宽度 + 字节序"：`<i` 为 4 字节小端有符号、`<H` 为 2 字节小端无符号、`!` 为网络序；`pack` 写入超出该格式表示范围的值抛 `struct.error`；解包结果是 Python 任意精度 `int`，不会溢出。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：按格式字符选定宽类型（`<i`→`std::int32_t`，`<H`→`std::uint16_t`，`<Q`→`std::uint64_t`，`!B`→`std::uint8_t`），读取与写回统一用定宽类型配合 `std::memcpy`，字节序按格式字符**显式重组**（小端用 `std::uint32_t` 逐字节移位累加后 `static_cast`，不使用依赖宿主的类型双关），无符号写回再施加宽度掩码；确实需要任意精度时声明改用大数库。
@@ -108,11 +108,11 @@ description: Use when converting Python source to C++; apply this direction's la
    const std::uint32_t cert_len = static_cast<std::uint32_t>(cert.size()); // 超范围时静默截断
    ```
 6. **信息不足或实现相关时的处理**：若源字段宽度来自运行期读取（例如按 `Magic` 值选择 4 字节或 8 字节分支），必须保留该分支结构而不能先固定宽度；字节序、目标平台 `int` 宽度或是否需要大数语义未冻结时标注为待确认。
-7. **直接官方 HTTPS 依据链接**：[PY-LIB-STRUCT](https://docs.python.org/3.12/library/struct.html)；[WG21-N4659 Clause 24.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：PY-LIB-STRUCT；WG21-N4659 Clause 24.3。
 
 ### 规则 PY-CPP-05：Python 负索引与裁剪切片向 C++17 显式边界检查映射
 1. **源码触发条件**：Python 源码使用 `lst[-1]`、`buf[-n:]`、`seq[a:b]`、`f.seek(-size, io.SEEK_END)` 或 `sys.exit(-1)` 这类负值/裁剪式访问。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-SUBSCRIPTIONS](https://docs.python.org/3.12/reference/expressions.html)）；目标语言 ISO C++17（[WG21-N4659 Clause 26.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-SUBSCRIPTIONS）；目标语言 ISO C++17（WG21-N4659 Clause 26.3）。
 3. **原可观察行为**：Python 负索引等价于 `len + i`；切片超界被静默裁剪（`b > len` 取到末尾，负边界从末尾折算），不抛异常；`seek` 的负偏移是相对文件末尾的有符号偏移；进程退出码语义受平台约束（POSIX 只有低 8 位可观察）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：切片改写为 `start`/`count` 两个显式变量并先做 `start >= 0 && count >= 0 && start + count <= v.size()` 校验；负索引先换算（`i += static_cast<std::ptrdiff_t>(v.size())`）再校验 `i >= 0`；越界访问使用 `v.at(i)` 以保留"抛异常"的可观察失败；文件定位用 `tellg()/seekg()` 配合有符号 `std::streamoff`。
@@ -130,11 +130,11 @@ description: Use when converting Python source to C++; apply this direction's la
    f.seekg(-static_cast<std::streamoff>(cert_size), std::ios::end); // 正确：有符号偏移 + 末尾基准
    ```
 6. **信息不足或实现相关时的处理**：若源切片的边界依赖运行期数据且源码未做宽度假设，须把"哪个变量可能为负、哪个切片可能超界"逐条列出；进程退出码需要跨平台一致时先冻结平台与退出码宽度语义。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-SUBSCRIPTIONS](https://docs.python.org/3.12/reference/expressions.html)；[WG21-N4659 Clause 26.3](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：PY-REF-SUBSCRIPTIONS；WG21-N4659 Clause 26.3。
 
 ### 规则 PY-CPP-06：Python 异常层次向 C++17 异常类型与 RAII 清理映射
 1. **源码触发条件**：Python 源码使用 `try`/`except` 分派不同失败（`except KeyError`、`except IndexError`、`except OSError`、`except ValueError`、`except Exception`），并在 `finally` 中执行文件关闭或缓冲清理。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-EXCEPT](https://docs.python.org/3.12/reference/executionmodel.html)）；目标语言 ISO C++17（[WG21-N4659 Clause 18, Clause 15.4](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-EXCEPT）；目标语言 ISO C++17（WG21-N4659 Clause 18, Clause 15.4）。
 3. **原可观察行为**：Python 按异常类层次匹配 `except` 子句，`finally` 在所有出口执行；异常对象携带消息与回溯，未被捕获时解释器打印回溯并设置退出码。C++ 异常沿栈逆序析构已构造对象，未捕获异常调用 `std::terminate()`；C++ 没有 `finally` 语句。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：失败类型映射到标准异常类（缺键/越界→`std::out_of_range`，非法取值→`std::invalid_argument`，运行期失败→`std::runtime_error`，内存不足→`std::bad_alloc`），并按"派生类在前"的 `catch` 顺序排列；`finally` 清理改写为 RAII 包装（`std::ifstream`/`std::lock_guard`/自定义析构函数），需要 `catch` 后重抛时用裸 `throw;`。
@@ -152,7 +152,7 @@ description: Use when converting Python source to C++; apply this direction's la
    parse(buf);                 // 异常向上传播，f 的析构函数保证关闭
    ```
 6. **信息不足或实现相关时的处理**：若该函数会被 C 代码或回调调用（ABI 边界不明确），先把调用方语言与调用约定标为待确认；若 Python 侧依赖异常消息文本做分支，需说明 C++ 侧无同构消息契约。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-EXCEPT](https://docs.python.org/3.12/reference/executionmodel.html)；[WG21-N4659 Clause 18](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：PY-REF-EXCEPT；WG21-N4659 Clause 18。
 
 ## 转换与验证边界
 

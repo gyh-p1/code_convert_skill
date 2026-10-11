@@ -5,7 +5,7 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
 
 # Go → C 语言转换规则
 
-> **适用基线**：源语言 Go 1.27 ([GO-SPEC](https://go.dev/ref/spec), [GO-RT-DOC](https://go.dev/doc/gc-guide)) → 目标语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf))
+> **适用基线**：源语言 Go 1.27 (GO-SPEC, GO-RT-DOC) → 目标语言 ISO C11 (WG14-N1570)
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Go](../../references/languages/go.md)与[目标语言 C](../../references/languages/c.md)。
 > **规范硬约束**：严格遵循 Go 1.27 语言规范与 ISO C11 标准；C 语言无内建并发等价物，语言级并发契约丢失，需根据调用语义选择单线程顺序化、事件循环或工作池；若需系统级线程库则委托 B 类 Skill。
 
@@ -47,7 +47,7 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    }
    ```
 6. **不确定性处理**：若 Go 源码依赖复杂的信道通信与 Context 级联取消，因 C 语言层缺少等价通信原语，必须在转换报告中明确标注语言级并发模型缺失，提请架构审阅并由 B 类并发 Skill 处理系统级线程与同步细节。
-7. **官方依据**：[GO-SPEC #Go_statements, #Channel_types](https://go.dev/ref/spec)；[GO-MEM](https://go.dev/ref/mem)；[WG14-N1570 §7.17, §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Go_statements, #Channel_types；GO-MEM；WG14-N1570 §7.17, §7.26。
 
 ---
 
@@ -76,7 +76,7 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    // 若调用方之前缓存了 int* p = &s->data[0]; 此时 p 已成为悬空野指针！
    ```
 6. **不确定性处理**：若源 Go 源码依赖子切片与原切片共享底层数组的联动修改特性（在未扩容前生效，扩容后分离），降级至 C 时必须在注释中显式说明该共享契约，或在调用点严格审查是否产生意外的别名副作用。
-7. **官方依据**：[GO-SPEC #Slice_types, #Appending_and_copying_slices](https://go.dev/ref/spec)；[WG14-N1570 §7.22.3.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Slice_types, #Appending_and_copying_slices；WG14-N1570 §7.22.3.5。
 
 ---
 
@@ -98,7 +98,7 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    }
    ```
 6. **不确定性处理**：若源 Go 代码在复杂闭包或并发任务之间共享对象（缺乏单一清晰的所有权归宿），在 C 中必须引入显式引用计数控制，标注多所有权对象生命周期复杂度。
-7. **官方依据**：[GO-SPEC #Variables](https://go.dev/ref/spec)；[GO-RT-DOC](https://go.dev/doc/gc-guide)；[WG14-N1570 §6.2.4](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Variables；GO-RT-DOC；WG14-N1570 §6.2.4。
 
 ---
 
@@ -124,14 +124,14 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    }
    ```
 6. **不确定性处理**：若 Go 源码在 `defer` 中修改了具名返回值（如 `defer func() { err = fmt.Errorf(...) }()`），在 C 中必须在 `cleanup` 标签之后提供显式的状态重写逻辑，并标明具名返回值副作用依赖。
-7. **官方依据**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec)；[WG14-N1570 §6.8.6.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Defer_statements；WG14-N1570 §6.8.6.1。
 
 ---
 
 ### 规则 5：Go 多返回值 `(T, error)` 向 C 返回码加出参指针映射
 
 1. **触发条件**：Go 源码中函数以 `(T, error)`、`([]byte, error)` 或 `(T, bool)` 返回（如 `obfuscateData(data []byte, key []byte) ([]byte, error)`、`parsePorts(portStr string) ([]int, error)`），调用方以 `if err != nil` 分流。
-2. **适用前提**：源语言 Go 1.27（[GO-SPEC #Errors](https://go.dev/ref/spec)）；目标语言 ISO C11（[WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **适用前提**：源语言 Go 1.27（GO-SPEC #Errors）；目标语言 ISO C11（WG14-N1570）。
 3. **应保留行为**：失败时调用方能观察到“无结果”这一事实，且失败原因可区分；成功时调用方能取到完整结果与真实长度；失败路径不得让调用方读到未初始化的出参。
 4. **可选映射与不适用条件**：
    - *可选映射*：以 `int`（或自定义 `enum`）返回码表示错误类别，结果与长度通过出参指针回传，例如 `int obfuscate_data(const uint8_t* in, size_t in_len, const uint8_t* key, uint8_t** out, size_t* out_len);`；错误详情用线程局部的错误信息缓冲区或错误结构体另行回传；不可恢复的致命故障才用 `abort()`，不把 `panic` 机械写成 `exit`。
@@ -154,14 +154,14 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    }
    ```
 6. **不确定性处理**：若 Go 源码用 `errors.Is`/类型断言/`%w` 包装区分错误类别，而 C 侧尚未冻结错误码到类别的对应表，必须停下标注“错误分类映射待确认”，不得自行编造错误码取值。
-7. **官方依据**：[GO-SPEC #Errors](https://go.dev/ref/spec)；[WG14-N1570 §6.8.4.1, §7.22.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Errors；WG14-N1570 §6.8.4.1, §7.22.3。
 
 ---
 
 ### 规则 6：Go 切片向 C 指针加长度对映射与“禁止以 NUL 终止符推断长度”
 
 1. **触发条件**：Go 源码在字节/字符序列上使用切片、子切片与 `append`，例如 `data[k:blockSize]`、`ciphertext[aes.BlockSize:]`、`append(data, padText...)`、`hex.EncodeToString(sum[:])`，以及 `string(output)` 与 `[]byte(text)` 互转。
-2. **适用前提**：源语言 Go 1.27（[GO-SPEC #Slice_types](https://go.dev/ref/spec)）；目标语言 ISO C11（[WG14-N1570 §7.24](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **适用前提**：源语言 Go 1.27（GO-SPEC #Slice_types）；目标语言 ISO C11（WG14-N1570 §7.24）。
 3. **应保留行为**：元素总数（`len`）是内容的一部分；字节切片允许在任意位置包含 `0x00`（如 AES-IV 前缀与分组密文）；子切片在未扩容前与原切片共享底层数组，写入可通过两条路径被观察到。
 4. **可选映射与不适用条件**：
    - *可选映射*：用“指针 + 显式长度”表示连续序列，例如 `typedef struct { uint8_t* data; size_t len; } Bytes;`，或以 `(const uint8_t* buf, size_t buf_len)` 成对传参；每次取子切片都重新计算指针偏移与长度，并把长度来源（容器元数据还是调用方实参）写在注释与接口文档中。
@@ -183,14 +183,14 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    }
    ```
 6. **不确定性处理**：若无法确定某缓冲区当前长度是来自容器元数据还是调用方实参，或该缓冲区是否被推断为 NUL 结尾，必须标注“长度来源与终止符约定待确认”而不得默认补 `'\0'`。
-7. **官方依据**：[GO-SPEC #Slice_types, #String_types](https://go.dev/ref/spec)；[WG14-N1570 §6.4.5, §7.24.6.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Slice_types, #String_types；WG14-N1570 §6.4.5, §7.24.6.3。
 
 ---
 
 ### 规则 7：Go 并发结果汇聚向 C11 `_Atomic`/`<threads.h>` 同步基元的委托边界
 
 1. **触发条件**：Go 源码用多个 `go worker(...)` 处理任务队列并把结果写入共享可变状态（如全局 `openPorts` 上的 `mu.Lock()`/`openPorts = append(openPorts, port)`、`var wg sync.WaitGroup` 配 `defer wg.Done()` 的汇聚、`atomic` 计数），再在主流程 `wg.Wait()` 后汇总。
-2. **适用前提**：源语言 Go 1.27（[GO-SPEC #Go_statements](https://go.dev/ref/spec)、[GO-MEM](https://go.dev/ref/mem)）；目标语言 ISO C11（[WG14-N1570 §7.17, §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **适用前提**：源语言 Go 1.27（GO-SPEC #Go_statements、GO-MEM）；目标语言 ISO C11（WG14-N1570 §7.17, §7.26）。
 3. **应保留行为**：任一时刻对同一共享对象的读写都被同步；汇聚点之后的汇总结果包含全部已完成任务的结果，且不含撕裂读写入的半成品元素；任务计数与完成计数不丢失。
 4. **可选映射与不适用条件**：
    - *可选映射*：先用 `_Atomic size_t` 表达完成计数与无锁标志（注意 C11 不保证每个 `_Atomic` 类型无锁，必要时回退为“互斥量保护普通变量”）；需要“保护共享容器 + 阻塞等待任务 + 汇聚”时，用 `mtx_t`/`cnd_t` 实现带条件的队列并由一个汇聚线程取结果；线程创建与取消等系统级细节委托 B 类并发 Skill（[`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)、[`skills/systems/posix-windows-threads/SKILL.md`](../../systems/posix-windows-threads/SKILL.md)）。若 `<threads.h>` 在目标工具链缺失，则整个并发方案需重新选型而不在本 A 类规则内决定。
@@ -220,7 +220,7 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
    }
    ```
 6. **不确定性处理**：若源码依赖 `select` 多路复用、`context.Context` 级联取消或 channel 关闭的可观察语义，必须标注“语言级通信与取消语义在 C 中缺失”，交由 B 类 Skill 与架构审阅决定等价方案，不得声称行为等价。
-7. **官方依据**：[GO-SPEC #Go_statements](https://go.dev/ref/spec)；[GO-MEM](https://go.dev/ref/mem)；[WG14-N1570 §7.17.7, §7.26.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Go_statements；GO-MEM；WG14-N1570 §7.17.7, §7.26.1。
 
 ---
 
@@ -247,4 +247,4 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。构建前提与工具链规则见上文第三节末的引用。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。

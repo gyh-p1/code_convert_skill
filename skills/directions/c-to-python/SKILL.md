@@ -5,7 +5,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 # C → Python 语言转换规则
 
-> **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 Python 3.12 / CPython 3.12 ([PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html), [CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/))
+> **适用基线**：源语言 ISO C11 (WG14-N1570) → 目标语言 Python 3.12 / CPython 3.12 (PY-REF-DATA, CPY-DEV-GC)
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 Python](../../references/languages/python.md)。
 > **规范硬约束**：严格遵循 Python 3.12 标准，排除 Python 3.13+ 特性；严格区分 Python 语言规范与 CPython 解释器专有实现（如 GIL、引用计数）。
 
@@ -45,7 +45,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
        return h
    ```
 6. **不确定性处理**：若源码中为 C 有符号整数溢出（规范属于 UB，但在特定编译器下表现为补码回绕），应标明该行为依赖实现定义，并提示确认是否按 32 位有符号补码（`ctypes.c_int32`）严格建模。
-7. **官方依据**：[PY-REF-DATA §3.2 Numbers](https://docs.python.org/3.12/reference/datamodel.html)；[WG14-N1570 §6.2.5, §6.3.1.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：PY-REF-DATA §3.2 Numbers；WG14-N1570 §6.2.5, §6.3.1.3。
 
 ---
 
@@ -64,8 +64,8 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
        text = str(raw_data)       # 错误：生成的是 "b'\\x01\\x00...'" 字符串字面表示，非解码内容！
        header = raw_data.decode() # 错误：若 raw_data 包含非 UTF-8 字节，直接抛出 UnicodeDecodeError 崩溃！
    ```
-6. **不确定性处理**：若源码中字符串来自本地操作系统的文件名或环境参数（可能受平台代码页影响），应使用 `os.fsencode()` / `os.fsdecode()` 处理，并在报告中标记字符编码依赖不确定性。
-7. **官方依据**：[PY-REF-DATA §3.2 Strings, Bytes](https://docs.python.org/3.12/reference/datamodel.html)；[WG14-N1570 §7.1.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+6. **不确定性处理**：源码字符串来自 OS 文件名或 argv/环境参数时，先核源编码与目标 filesystem encoding/error handler。只有它们与源字节契约一致时才用 `os.fsencode()` / `os.fsdecode()`；跨 OS 不默认一致，源明确编码时按该编码处理。长度不得换成 `len(str)`，详见 [Python L1-PY-03](../../references/languages/python.md#三字符串字节nulunicode-与编码)；信息不足记录待核。
+7. **官方依据**：PY-REF-DATA §3.2 Strings, Bytes；WG14-N1570 §7.1.1。
 
 ---
 
@@ -85,7 +85,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
        handle_error()
    ```
 6. **不确定性处理**：若 C 源码定义了专有的私有枚举错误码，应在 Python 中定义专属的派生异常基类（继承自 `Exception`），并在未识别错误码出现时抛出通用运行时异常，标明错误码映射字典未穷尽。
-7. **官方依据**：[PY-REF-DATA §3.2 Exceptions](https://docs.python.org/3.12/reference/datamodel.html)；[WG14-N1570 §7.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：PY-REF-DATA §3.2 Exceptions；WG14-N1570 §7.5。
 
 ---
 
@@ -107,7 +107,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
            self.f.close() # 极度危险：__del__ 执行时机不可控，循环引用下甚至永远不执行！
    ```
 6. **不确定性处理**：若源 C 代码中的资源所有权跨越多个函数且生命周期长于调用栈（例如缓存在全局哈希表中），无法使用局部 `with` 语句包裹时，必须显式提供 `close()` 方法，并在外层建立生命周期守卫，标注资源生命周期非结构化风险。
-7. **官方依据**：[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)；[PY-REF-DATA §3.3.9](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **官方依据**：CPY-DEV-GC；PY-REF-DATA §3.3.9。
 
 ---
 
@@ -133,7 +133,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
    # 调用方：val = increment(val)
    ```
 6. **不确定性处理**：若 C 函数既通过指针修改参数，又有返回值表示成功/失败，在 Python 中应返回 `(success, modified_values)` 元组，并在文档注释中说明返回值结构。
-7. **官方依据**：[PY-REF-DATA §3.1 Objects, values and types](https://docs.python.org/3.12/reference/datamodel.html)；[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：PY-REF-DATA §3.1 Objects, values and types；WG14-N1570 §6.2.5。
 
 ---
 
@@ -161,7 +161,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
    # 正确：CPU 密集任务应使用 multiprocessing.Pool
    ```
 6. **不确定性处理**：若 C 源码涉及复杂的线程属性、信号掩码、线程取消或线程局部存储（TLS），Python `threading` 模块不完全对等，必须加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md) 并标注语义差异。
-7. **官方依据**：[PY-THREADING](https://docs.python.org/3.12/library/threading.html)；[CPY-DEV-GC](https://devguide.python.org/internals/garbage-collector/)；[WG14-N1570 §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：PY-THREADING；CPY-DEV-GC；WG14-N1570 §7.26。
 
 ---
 
@@ -191,4 +191,8 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+
+## 网络 API 映射
+
+迁入网络场景的本方向细节，仅在原始 socket I/O 触发时使用；通用部分 I/O、协议与生命周期仍读[网络场景](../../scenes/network-io/SKILL.md)。C recv 缓冲按显式长度映射为 Python bytes，不转 str；只有源文本契约明确时才显式解码并保留解码失败。完整消息须按源帧/长度循环，不能一次 recv 读满。POSIX 的 -1/errno 与 Python OSError 子类按错误路径对应；Winsock 源另读系统错误模型，不把 errno 泛化到全部 C。版本/错误类别不明时待确认，静态规则不证明运行等价。

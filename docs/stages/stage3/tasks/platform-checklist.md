@@ -1,7 +1,7 @@
 # Stage 3 任务清单（平台侧）
 
 > 状态：**ACTIVE** ｜ 建立 2026-10-10 ｜ 依据：dataset-2 实测
-> 本清单只列**平台侧**工作。转换系统侧由另一智能体负责，见 README §6。
+> 本清单只列**平台侧**工作。转换系统规则/证据任务见 [Stage 4](../../stage4/tasks/evidence-quality-checklist.md)。2026-10-11 更新：已勾选的历史实现/测试记录不等于已部署或样本验收；本轮只做文本修订，不执行平台测试、部署或 job。
 
 ## 优先级总览
 
@@ -14,11 +14,13 @@
 | T5 | 网络隔离 Attestation / Permit | P1 | 能力扩充 | 解封硬编码外联类 | 中（安全相关） |
 | T6 | `network` 维度采集器 | P2 | 能力扩充 | 见 C2 §2：本批非主要瓶颈 | 高 |
 | T7 | `registry` 维度采集器 | P3 | 能力扩充 | **本批无消费方** | 中 |
+| T8 | 精确部署身份与能力验收 | **P0** | 验收 | 区分已实现、已部署和可消费 | 中 |
 
 ## T1 —— C# evidence-bundle schema
 
-- [ ] 选择修法：放宽 schema（推荐，保留 `detail`）或停写 `detail`
-- [ ] 用 D2-007 原始 capsule 重提，`targetLang=csharp`
+- [x] 规格已记录 schema 接受 `detail`，producer 与 fallback 均补 `dimension:null`（C0 §5.1）；不再仅按“放宽 schema”验收
+- [x] 2026-10-11 静态核对独立平台仓库实际 producer/fallback；在原 Agent 测试中补 source/target 两侧实际产出路径的 schema 回归**文本**，未执行测试。维护资料定位为独立仓库 `third-party-evaluation-system/docs/observation-quality.md`，不随转换仓库交付
+- [ ] 取得精确部署身份、实际 schema/producer/fallback 对应版本后，用 D2-007 原始 capsule 在获批隔离环境重提，`targetLang=csharp`；保留原失败与新 job 关联
 - [ ] 验收：不再 `INFRA_ERROR / AGENT_UNAVAILABLE / $.collectorDiagnostics.0`
 - [ ] 验收：目标侧 preflight 不得为 `SKIPPED`
 - [ ] 回归：非 C# 目标仍 `COMPLETED`
@@ -27,11 +29,14 @@
 
 ## T2 —— 观测充分性（**最高价值**）
 
-- [ ] 定义不足情形：双侧观察均为空；或双侧 exit 相同且非 0 且输出均空；或观察与驱动失败标记同形
-- [ ] 不足以支撑结论时**不得**输出 `matched`（新增 `inconclusive` 或等价标注）
-- [ ] `coverage` 增加 `sufficientDimensions` / `insufficiencyReasons`
+- [x] 规格已记录全空观察退化判定及 `sufficientDimensions` / `insufficiencyReasons` 实现；这两个字段不证明冻结路径已经执行
+- [x] 2026-10-11 平台本地代码文本补双侧构建/执行、维度采集与内容缺口核对；明确文件范围及真实完整 digest 可补充静默输出比较；报告显示不足原因和统计边界。已有 schema 保持，**未测试、未部署**；维护资料定位为独立仓库 `third-party-evaluation-system/docs/observation-quality.md`，不随转换仓库交付
+- [ ] 在获批外部验收环境执行该交接的现有套件及单变量正反例，保留精确版本和完整输出；未取得证据不把本地实现记为功能通过
+- [ ] 扩充验收：核冻结输入实际送达、预期状态到达、程序输出与合法来源驱动诊断区分；不足以支撑结论时不得把原始字节相同采信为业务一致
 - [ ] 验收正例：D2-029（job-01 **+** job-04-probe-dash-arg）、D2-024 job-04 **不得**再判 matched
-- [ ] 验收反向回归：两侧有实质且相同输出时**仍**判 matched（锚点 D2-177 `which.c` job-01：stderr 同为 `usage: which …`）
+- [ ] 反向回归须限定冻结路径：usage 错误路径明确为观察目标且输入确已送达时可比较；有业务 argv 却只取得 usage 的任务覆盖不足。D2-177 原 job 保留，不在本清单倒改历史 verdict
+- [ ] 负例：纯驱动失败标记不作程序观察；服务只有端口就绪、没有约定响应/日志时不能满足更强观察义务；合法静默程序有符合 oracle 的实际退出/副作用时不因 stdout/stderr 空一律判未工作
+- [ ] 验收不能只看 coverage 字段；逐项保留双侧原始观察、驱动来源/精确版本、冻结路径与项目采信结论
 
 规格：[specs/C3-observation-sufficiency.md](../specs/C3-observation-sufficiency.md)
 
@@ -44,6 +49,9 @@
 - [x] 回归用例已补入 `test_safety_classifier_v2.py`，**50/50 通过**（本机仅跑分类器自测，非转换样本）
 
 > v2.4 落地：classifier SHA `441b4d50…6524`（v2.3）→ `009a6f31…f3a4`（v2.4，33840 B）；回归 SHA `02bbee96…`→`45faa8e4…b372`（20311 B，47→50 用例）。
+
+- [ ] 核登记分类器、回归套件与实际消费版本的完整 SHA，不以 v2.4 标签或上述缩略值代替
+- [ ] 增补纯分隔符/标点字符串的假阳性验收，并与真实 hostname、IP、端口和网络 API 上下文反例成对核对；只改变字面值或上下文一个变量，不为解封真实外联放宽安全准入
 
 规格：[specs/C5-classifier-false-positive.md](../specs/C5-classifier-false-positive.md)
 
@@ -98,4 +106,15 @@
 2. **filesystem 保护范围**：按业务需要写 `comparisonPolicy.filesystem.include`，
    避免 `**/*` 这类全范围模式把编译产物也纳入比较。
 3. **oracle 可冻结性前置检查**：含活动计数器／随机数／并发顺序的可观察量，
-   应改由驱动固定输入后再冻结，而不是指望消噪 token 覆盖。
+   先核是否有合法来源、精确版本的入口可固定输入/初始状态；缺来源记准备缺口，不让 Agent 新写或委托模型生成驱动。需改变条件时记录关联变体，不覆盖原冻结，不指望消噪 token 覆盖。
+
+## T8 精确部署身份与能力验收
+
+- [x] 已定位平台仓库 `E:\桌面文档\Agents System\third-party-evaluation-system`，记录本地修订与待验收边界；沿用本阶段，不新增 Stage 5。已有 build-only 仍待部署，source-only 接口仍缺；维护资料定位同上，平台维护者另取该仓库精确版本，不以同级目录存在作为转换知识依赖
+- [ ] 保存平台已提供的精确发布/部署标识，以及 Controller、VM Agent、比较器、报告 schema 和分类器的对应关系；不读取 Controller 安装目录或 jobs 取巧
+- [ ] 分别核 C0/C3/C4/C1 的真实回传是否能消费；实现代码、单元测试记录和报告字段存在不替代真实 job 验收
+- [ ] 核现役平台的源侧预检（构建及适用运行基线）、真正无安全入口时双侧仅编译不运行的已支持接口；未知记准备缺口，不造请求或目标来凑包
+- [ ] C7 须有运行时隔离实证和实际提交门禁，C2 须有真实采集能力；采集与隔离分别验收，`READY`、快照或同机共处不替代隔离
+- [ ] 每个验收项先核授权/逐例隔离与合法来源输入，再按原生工具手工单项推进，回收精确版本原始证据及清理记录；未通过不解除原 WAITING，不以旧 schema 拒收当作新转换失败
+
+此任务是 Stage 3 的验收补充，不新增发布权限或平台能力。完成信号为相关能力在精确部署/合法输入下取得适用原始证据；版本未知、准备缺件或隔离不足即停止该项。历史测试数字不在本轮重验。

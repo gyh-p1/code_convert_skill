@@ -1,4 +1,4 @@
-﻿---
+---
 name: csharp-to-cpp
 description: Use when converting C# source to C++; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting C# source to C++; apply this direction's langua
 
 ### 规则 CS-CPP-01：C# using 资源管理向 C++17 RAII 作用域守护类映射
 1. **源码触发条件**：C# 源码中使用 `using (var resource = ...)` 或 `using var` 语句。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-DISPOSE](https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose)）；目标语言 ISO C++17（[WG21-N4659 Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-DISPOSE）；目标语言 ISO C++17（WG21-N4659 Clause 6.7）。
 3. **原可观察行为**：退出作用域时无论正常分支还是异常，均立即同步调用 `Dispose()`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：转换为 C++ 具备确定性析构函数的局部栈对象（RAII 类），或使用包含自定义 Deleter 的 `std::unique_ptr`。
@@ -37,11 +37,11 @@ description: Use when converting C# source to C++; apply this direction's langua
    }
    ```
 6. **信息不足或实现相关时的处理**：若资源类型为系统文件或套接字，加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-DISPOSE](https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-dispose)；[WG21-N4659 Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：MS-CS-DISPOSE；WG21-N4659 Clause 6.7。
 
 ### 规则 CS-CPP-02：C# event/delegate 多播事件向 C++ std::function 与观察者容器映射
 1. **源码触发条件**：C# 源码中使用 `event Action<T>` 并通过 `+=`/`-=` 进行订阅和注销。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-EVENT](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/delegates-events)）；目标语言 ISO C++17（[WG21-N4659 Clause 23.14](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-EVENT）；目标语言 ISO C++17（WG21-N4659 Clause 23.14）。
 3. **原可观察行为**：外部调用者无法直接覆写委托链，触发事件时按顺序依次调用所有注册回调。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C++ 中实现一个简易观察者类，内部维护包含 `std::function<void(T)>` 的容器，提供 `subscribe()` 和 `unsubscribe()` 方法，注意捕获对象生命周期避免野指针。
@@ -59,11 +59,11 @@ description: Use when converting C# source to C++; apply this direction's langua
    };
    ```
 6. **信息不足或实现相关时的处理**：若涉及多线程触发事件，给观察者容器增加 `std::mutex` 保护。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-EVENT](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/events/delegates-events)；[WG21-N4659 Clause 23.14](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：MS-CS-EVENT；WG21-N4659 Clause 23.14。
 
 ### 规则 CS-CPP-03：C# CancellationToken 协同取消向 C++17 原子标志或条件变量映射
 1. **源码触发条件**：C# 源码中使用 `CancellationToken` 并在循环或 I/O 中轮询 `IsCancellationRequested`。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（[MS-CS-CANCEL](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads)）；目标语言 ISO C++17（[WG21-N4659 Clause 32](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-CANCEL）；目标语言 ISO C++17（WG21-N4659 Clause 32）。
 3. **原可观察行为**：调用方请求取消后，工作线程检测到信号抛出 `OperationCanceledException` 退出。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C++17 中使用 `std::shared_ptr<std::atomic<bool>>` 作为停止标志；在条件变量阻塞时配合带谓词的 `wait_for`。
@@ -78,12 +78,12 @@ description: Use when converting C# source to C++; apply this direction's langua
    void Worker() { while (!cancel_requested.load(std::memory_order_relaxed)) { ... } }
    ```
 6. **信息不足或实现相关时的处理**：若取消涉及网络连接中断，需显式关闭底层套接字。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-CANCEL](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads)；[WG21-N4659 Clause 32](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)。
+7. **资料依据（名称/版本/章节）**：MS-CS-CANCEL；WG21-N4659 Clause 32。
 
 ### 规则 CS-CPP-04：COM 接口指针的取址与类型双关必须用 SDK 官方访问器
 
 1. **源码触发条件**：C# 源码通过 COM 互操作（`[ComImport]`、`Marshal.GetIUnknownForObject`、`Marshal.QueryInterface`、`IntPtr` 转换）获取或传递接口指针，或在 P/Invoke 里把 `ref IntPtr`/`out IntPtr` 交给需要 `void**` 的原生 API。
-2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8；目标语言 ISO C++17 + WRL/ATL（[Microsoft `ComPtr`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class)）。
+2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8；目标语言 ISO C++17 + WRL/ATL（Microsoft `ComPtr`）。
 3. **原可观察行为**：C# 侧由封送器完成接口指针的获取与引用计数管理；C++ 侧的 `void**` 形参约定是“由被调方**回填**一个已加引用的接口指针”。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：必须使用 WRL 提供的官方访问器——**取址回填**用 `GetAddressOf()`（不释放已有指针，可能泄漏），**替换现有值**用 `ReleaseAndGetAddressOf()`（先释放再取址）。二者不可互替。
@@ -100,7 +100,7 @@ description: Use when converting C# source to C++; apply this direction's langua
    hr = pUnk->QueryInterface(__uuidof(IFoo), sp.ReleaseAndGetAddressOf()); // 替换已有值时
    ```
 6. **信息不足或实现相关时的处理**：无法确定目标侧 `sp` 在调用点是否已持有引用时，**默认使用 `ReleaseAndGetAddressOf()`**（用错它只多一次释放，用错 `GetAddressOf()` 会泄漏）；并在交付中标注该决策。
-7. **直接官方 HTTPS 依据链接**：[`Microsoft::WRL::ComPtr`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class)、[`ComPtr::GetAddressOf`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class#getaddressof)、[`ComPtr::ReleaseAndGetAddressOf`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class#releaseandgetaddressof)；[Microsoft `QueryInterface`](https://learn.microsoft.com/en-us/windows/win32/api/unknwn/nf-unknwn-iunknown-queryinterface(refiid_void))。
+7. **资料依据（名称/版本/章节）**：`Microsoft::WRL::ComPtr`、`ComPtr::GetAddressOf`、`ComPtr::ReleaseAndGetAddressOf`；Microsoft `QueryInterface`)。
 
 ## 转换与验证边界
 

@@ -5,7 +5,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 # C → Go 语言转换规则
 
-> **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 Go 1.27 ([GO-SPEC](https://go.dev/ref/spec), [GO-RT-DOC](https://go.dev/doc/gc-guide))
+> **适用基线**：源语言 ISO C11 (WG14-N1570) → 目标语言 Go 1.27 (GO-SPEC, GO-RT-DOC)
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 Go](../../references/languages/go.md)。
 > **规范硬约束**：严格遵循 Go 1.27 语言规范；Go 规范未规定 map 迭代顺序；清除无官方逐条出处的具体实现假设；禁用跨实现的无保证推断。
 
@@ -49,7 +49,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
    }
    ```
 6. **不确定性处理**：若 C 源码通过指针算术故意访问结构体私有成员偏移或进行非常规内存对齐 hack，必须将该逻辑提取为独立的数据包解析函数，并标记内存布局与 ABI 转换不确定性。
-7. **官方依据**：[GO-SPEC #Slice_types, #Index_expressions, #Slice_expressions, #Package_unsafe](https://go.dev/ref/spec)；[WG14-N1570 §6.5.6](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Slice_types, #Index_expressions, #Slice_expressions, #Package_unsafe；WG14-N1570 §6.5.6。
 
 ---
 
@@ -73,7 +73,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
    }
    ```
 6. **不确定性处理**：若源 C 函数混合了业务状态与错误码（例如 `-1` 表示无数据，`-2` 表示超时，`-3` 表示鉴权失败），应在 Go 中定义哨兵错误（`var ErrNotFound = errors.New(...)`）或自定义错误类型，方便上层通过 `errors.Is` 进行断言。
-7. **官方依据**：[GO-SPEC #Errors, #Calls](https://go.dev/ref/spec)；[WG14-N1570 §7.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Errors, #Calls；WG14-N1570 §7.5。
 
 ---
 
@@ -99,7 +99,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
    }
    ```
 6. **不确定性处理**：若在循环内部需要即时释放资源，应将单次循环体提取为独立的辅助函数，使 `defer` 在每次子调用返回时即刻执行；或者显式调用 `f.Close()` 并辅以清理逻辑。
-7. **官方依据**：[GO-SPEC #Defer_statements](https://go.dev/ref/spec)；[WG14-N1570 §7.22.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Defer_statements；WG14-N1570 §7.22.3。
 
 ---
 
@@ -121,7 +121,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
    }
    ```
 6. **不确定性处理**：若 C 源码混用文本字符串与二进制缓冲区，且类型标注不明确，必须通过上下文判断是否需要 NUL 终止语义，标记待确认字符编码与二进制边界。
-7. **官方依据**：[GO-SPEC #String_types](https://go.dev/ref/spec)；[WG14-N1570 §7.1.1, §7.24](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #String_types；WG14-N1570 §7.1.1, §7.24。
 
 ---
 
@@ -144,7 +144,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
    }
    ```
 6. **不确定性处理**：若 C 源码中包含用于代码生成的极度复杂宏展开（如 X-Macros 生成多组结构体），无法直接用 Go 常量表达时，应手工将其展开为显式的 Go 结构体定义，并在转换报告中详细记录结构展开依据。
-7. **官方依据**：[GO-SPEC #Constants, #Iota](https://go.dev/ref/spec)；[WG14-N1570 §6.10](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Constants, #Iota；WG14-N1570 §6.10。
 
 ---
 
@@ -172,7 +172,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
    }
    ```
 6. **不确定性处理**：若 C 源码的可变参数依赖格式字符串（如 `printf` 的 `%d`、`%s`）动态推断类型，在 Go 中必须解析格式字符串并按顺序匹配 `args` 中的类型，标注格式解析复杂度与类型不匹配的错误处理策略。
-7. **官方依据**：[GO-SPEC #Passing_arguments_to_..._parameters](https://go.dev/ref/spec)；[WG14-N1570 §7.16](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：GO-SPEC #Passing_arguments_to_..._parameters；WG14-N1570 §7.16。
 
 ---
 
@@ -203,4 +203,8 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+
+## 网络 API 映射
+
+迁入网络场景，仅在 send/recv 映射 net.Conn 时使用。Go Read/Write 的 (n,err) 两部分都消费，n>0 与 err 非空可并存，不丢已收数据；EOF 与失败分开，不能把任何 err 当同一故障。源部分 I/O 循环、超时范围与重试条件保留，源相对超时与目标绝对 Deadline 须显式转换；不猜错误类型。源 POSIX/Winsock 错误按[系统页](../../systems/posix-winsock/SKILL.md)区分，通用行为读[网络场景](../../scenes/network-io/SKILL.md)。

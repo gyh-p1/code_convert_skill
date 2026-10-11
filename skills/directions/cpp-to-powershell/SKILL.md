@@ -1,4 +1,4 @@
-﻿---
+---
 name: cpp-to-powershell
 description: Use when converting C++ source to PowerShell; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -15,29 +15,26 @@ description: Use when converting C++ source to PowerShell; apply this direction'
 
 ## 方向专向规则
 
-### 规则 CPP-PS-01：C++ 结构化数据打印向 PowerShell PSObject 管道对象流映射
+### 规则 CPP-PS-01：C++ 格式化文本输出须保持源通道与格式
 1. **源码触发条件**：C++ 源码中遍历结构体列表并通过 `std::cout` 格式化打印制表符分隔文本。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)）。
-3. **原可观察行为**：控制台输出无结构信息的字符流。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6；冻结宿主、输出通道、编码、locale 和换行义务。通道事实见[PowerShell 语言页 §八](../../references/languages/powershell.md#八宿主输出)。
+3. **原可观察行为**：源向 stdout 输出按约定字段、顺序、分隔符与换行组织的文本；源内部结构体不等于外部对象管道接口。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 PowerShell 中实例化 `[PSCustomObject]` 并直接推入管道，保留属性名与强类型属性值。
-   - *不适用条件*：严禁将 C++ 数据拼接为长字符串通过 `Write-Host` 输出，这会破坏后续命令对属性的过滤（如 `Where-Object`）。
+   - *可选映射*：按源格式显式构造文本，使用符合冻结宿主/通道的输出 API；例如 .NET Console 写文本时另核编码与换行，不能以屏幕显示相似证明原始字节相同。
+   - *不适用条件*：任务未允许改变输出接口时，不把源文本改成 `[PSCustomObject]` 或依赖默认表格格式化。只有调用方明确要求对象接口且已冻结该变化时才对象化；`Write-Host` 的宿主/information 通道也不能直接当作源 stdout。
 5. **错误机械替换反例**：
    ```powershell
-   # 错误：将结构体字符串化输出，下游无法按属性处理
-   Write-Host "ID:$id Name:$name" # 丢失对象元数据
-   # 正确：输出 PSCustomObject
-   [PSCustomObject]@{
-       Id   = $id
-       Name = $name
-   }
+   # 错误：源为 id + TAB + name + LF；对象格式化改变外部输出
+   [PSCustomObject]@{ Id = $id; Name = $name } | Out-String
+   # 候选：显式保持上述文本格式；编码/数值格式仍按冻结契约核对
+   [Console]::Write("{0}`t{1}`n", $id, $name)
    ```
-6. **信息不足或实现相关时的处理**：若调用方要求纯文本输出，在管道末尾追加 `Out-String`。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-PIPE](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_pipelines)。
+6. **信息不足或实现相关时的处理**：未知编码、数值/日期格式或宿主捕获方式时逐项标注待确认；`Out-String` 可带格式化空白、标题、尾部换行并受宽度影响，不是源字节保持保证。保持源行为优先于新增下游属性过滤方式。
+7. **资料依据（名称/版本/章节）**：about_Pipelines；Out-String；Console.Write（实际 .NET 宿主版本按任务核验，API 示例不是宿主效果证据）。
 
 ### 规则 CPP-PS-02：C++ 异常分类捕获向 PowerShell 终止错误提升与 catch 分流映射
 1. **源码触发条件**：C++ 源码中包含多个派生异常的 `catch (const SpecificException& e)`。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（[MS-PS-ERROR](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（MS-PS-ERROR）。
 3. **原可观察行为**：根据抛出异常的运行时类型精准命中对应的 `catch` 块。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 PowerShell 中使用 `try { ... } catch [System.IO.IOException] { ... } catch { ... }` 精确捕获对应 .NET 异常类型。
@@ -58,11 +55,11 @@ description: Use when converting C++ source to PowerShell; apply this direction'
    }
    ```
 6. **信息不足或实现相关时的处理**：若源异常为自定义非标准类，在 PS 中捕获基类 `[Exception]` 并检查消息。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-ERROR](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_try_catch_finally)。
+7. **资料依据（名称/版本/章节）**：MS-PS-ERROR。
 
 ### 规则 CPP-PS-03：C++ 互斥锁与临界区向 PowerShell Monitor 同步包装映射
 1. **源码触发条件**：C++ 源码中使用 `std::mutex` 保护多线程共享的全局状态。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（[MS-PS-THREADJOB](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（MS-PS-THREADJOB）。
 3. **原可观察行为**：确保同一时刻仅一个线程进入临界区执行。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：使用 `[System.Threading.Monitor]::Enter($syncObj)` 与 `[System.Threading.Monitor]::Exit($syncObj)`，或使用 `[System.Collections.Concurrent]` 线程安全集合。
@@ -78,14 +75,14 @@ description: Use when converting C++ source to PowerShell; apply this direction'
    try { Do-Work } finally { [System.Threading.Monitor]::Exit($lock) }
    ```
 6. **信息不足或实现相关时的处理**：若涉及跨进程同步，加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[MS-PS-THREADJOB](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_jobs)。
+7. **资料依据（名称/版本/章节）**：MS-PS-THREADJOB。
 
 ### 规则 CPP-PS-04：原始 argv 文本解析不得被强类型参数绑定提前终止
 
 > **归属说明**：实参绑定的**共享事实**（位置/命名/默认值/缩写）归语言层，见 [C++ 语言页 §五](../../references/languages/cpp.md)、[PowerShell 语言页 §一](../../references/languages/powershell.md)。本规则**只写 C++→PowerShell 方向特有**的绑定差异。
 
 1. **源码触发条件**：C++ 源码从 argv 接收文本并在函数体内解析、允许数字前缀或捕获解析失败后兜底；目标拟用 `param([int]...)`。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（[about_Functions_Advanced_Parameters](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_functions_advanced_parameters)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C++17；目标语言 PowerShell 7.6（about_Functions_Advanced_Parameters）。
 3. **原可观察行为**：
    - `std::stoi` 可消费数字前缀，是否拒绝尾部字符取决于源码是否检查 pos；invalid/out-of-range 抛异常，源码可能捕获并继续。
    - `[int]` 参数转换发生在脚本体之前；绑定失败时函数体里的 catch/兜底没有执行机会。忽略输入差异会改变文件输出、stdout 和退出码。
@@ -101,7 +98,25 @@ description: Use when converting C++ source to PowerShell; apply this direction'
    param([Parameter(Position=0)][string]$DepthArg)
    ```
 6. **信息不足或实现相关时的处理**：核对源码是否检查 pos、实际整数范围/locale 和异常分支；未知时标为待确认。源码不区分显式默认值时不引入新的业务分支。
-7. **直接官方 HTTPS 依据链接**：[C++17 N4659 §21.3.5 stoi](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[about_Parameter_Binding](https://learn.microsoft.com/en-us/powershell/scripting/learn/experts/parameter-binding)。
+7. **资料依据（名称/版本/章节）**：C++17 N4659 §21.3.5 stoi；about_Parameter_Binding。
+
+### 规则 CPP-PS-05：C++ 语句标签不能残留为 PowerShell 命令
+
+1. **触发/前提**：C++17 → PowerShell 7.6；源码含语句标签/goto。共享目标事实见 [PowerShell §九](../../references/languages/powershell.md#九普通控制流)。
+2. **应保留行为**：标签的到达条件、跳转目的地、后续执行与清理顺序，合法目标循环标签与未知源引用分开。
+3. **映射条件**：未引用的 C++ 标签确认只是同一语句的名称时可去掉；有引用时结构化重建，不能残留为 PS 命令，也不能直接改为 `:name` 就宣称支持源 goto。
+4. **反例**：保留 `report_ready:` 导致调用不存在的命令；删标签却漏掉 goto 出口；删除目标合法的 `:outer while (...)` 改变嵌套退出。
+5. **未知处理**：未定位全部引用与清理范围时记录待核；不为本规则反复自审、运行语法探测或新增驱动。
+6. **官方依据**：C++17 N4659（stmt.label、stmt.jump）、about_Break。
+
+### 规则 CPP-PS-06：文件流未抛错且继续的路径不能变成目标异常终止
+
+1. **触发/前提**：C++17 → PowerShell 7.6；源码忽略文件流失败并继续。共享事实见 [C++ §五](../../references/languages/cpp.md#五异常错误退出码与可观察失败)、[PowerShell §五](../../references/languages/powershell.md#五异常错误退出码与可观察失败)；实际文件行为加载文件场景。
+2. **应保留行为**：失败后是否继续、诊断通道、退出码、部分文件与清理顺序。
+3. **映射条件**：先核源 API/重载、异常掩码及后续状态使用；确认源无异常且继续时，目标以状态或仅处理对应 I/O 失败重建。不能全局 Stop，也不能让对应 .NET I/O 异常逃逸。源本会抛错/失败退出时按 CPP-PS-02 保留捕获/传播。
+4. **反例**：源打开失败仍输出既有提示，目标未经处理异常就提前终止；反过来宽泛 catch 所有异常、伪造写入成功。
+5. **未知处理**：未检查返回值不等于不抛错；正常 fixture 不足以证明失败路径一致。缺定位/原证据时只登记待核，不修历史目标或改原 verdict。
+6. **官方依据**：Microsoft basic_ios（异常掩码与状态）、about_Try_Catch_Finally。
 
 ## 转换与验证边界
 

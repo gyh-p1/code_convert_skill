@@ -1,4 +1,4 @@
-﻿---
+---
 name: c-to-ruby
 description: Use when converting C source to Ruby; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -11,13 +11,17 @@ description: Use when converting C source to Ruby; apply this direction's langua
 
 ## 适用范围与前提
 
+### 一次性控制流与清理
+
+触发：源 do { ... } while (0) 和其 break/return/清理出口。源形态见[C 语言事实](../../references/languages/c.md#普通控制流一次性块与清理路径)。不能机械替换为 loop do 而无退出。目标块式结构须保持源出口和条件；ensure 会覆盖异常/提前返回，只有源要求相同清理路径时才映射，不能只因便于清理就扩大行为。普通单线程也适用，不加载并发场景来取得本规则；出口未知时逐条记待确认。
+
 仅用于 C → Ruby 的语言层语义映射。先从实际源码确认触发条件、接口、错误路径、资源生命周期与外部可见副作用；只有适用的规则才加载和使用。涉及文件、网络、并发或跨 OS API 时，另读相应场景/系统 Skill，不以语言层相似性推定系统行为等价。
 
 ## 方向专向规则
 
 ### 规则 C-RB-01：C 整数溢出截断与布尔真假向 Ruby 任意精度 Integer 与真值模型映射
 1. **源码触发条件**：C 源码中以 `0` 作为假进行条件判断，或利用定宽整数溢出回绕实现循环哈希算法。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 CRuby 3.4（RB-DOC-CORE）。
 3. **原可观察行为**：C 中 `0` 为假；数值到达上限后按模截断。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：条件判断显式写为 `if val != 0`；数值回绕显式施加位掩码 `& 0xFFFFFFFF`。
@@ -35,11 +39,11 @@ description: Use when converting C source to Ruby; apply this direction's langua
    end
    ```
 6. **信息不足或实现相关时的处理**：扫描所有源判断表达式，标明隐式非零假定。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-CORE。
 
 ### 规则 C-RB-02：C 手动资源释放向 Ruby 块模式 (Block/Yield) 与 ensure 映射
 1. **源码触发条件**：C 源码中使用 `fopen`/`fclose`、`malloc`/`free` 配对管理生命周期。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/), [RB-DEV-GC](https://docs.ruby-lang.org/en/3.4/extension_rdoc.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 CRuby 3.4（RB-DOC-CORE, RB-DEV-GC）。
 3. **原可观察行为**：函数退出或提前返回时显式调用释放函数。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：重构为接收代码块的作用域模式（如 `File.open(...) do |f| ... end`），或使用 `begin ... ensure close end` 结构。
@@ -57,14 +61,14 @@ description: Use when converting C source to Ruby; apply this direction's langua
    end
    ```
 6. **信息不足或实现相关时的处理**：若涉及文件 I/O，加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)；[RB-DEV-GC](https://docs.ruby-lang.org/en/3.4/extension_rdoc.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；RB-DEV-GC。
 
 ### 规则 C-RB-03：C 细粒度并发向 Ruby Thread/Mutex 与 MRI GVL 约束映射
 1. **源码触发条件**：C 源码中通过多线程加速纯 CPU 计算密集任务。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 CRuby 3.4（[RB-DOC-THREAD](https://docs.ruby-lang.org/en/3.4/Thread.html), [RB-DEV-GC](https://docs.ruby-lang.org/en/3.4/extension_rdoc.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11；目标语言 CRuby 3.4（RB-DOC-THREAD, RB-DEV-GC）。
 3. **原可观察行为**：C 线程在多个物理 CPU 核心上实现真正的并行执行。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：I/O 密集型并发使用 `Thread` 与 `Mutex`；CPU 密集型必须重构为 `Ractor` 或多进程（`Process.fork`），并在报告中声明并发模型转变。
+   - *可选映射*：I/O 密集型可考虑 Thread/Mutex；CPU 密集型可考虑 Ractor 或多进程，但须先核共享状态、进程/线程身份、返回/失败、资源与平台支持。不能仅为性能必须改用 fork，也不能只在报告中声明就默认获得语义变更授权；全部义务不能保持时记缺口，按明确允许差异处理。
    - *不适用条件*：严禁假设 Ruby `Thread` 能直接并行计算；MRI 全局 VM 锁（GVL）限制同一时刻仅一个线程执行 Ruby 字节码。
 5. **错误机械替换反例**：
    ```ruby
@@ -75,11 +79,11 @@ description: Use when converting C source to Ruby; apply this direction's langua
    threads.each(&:join) # 无法利用多核！
    ```
 6. **信息不足或实现相关时的处理**：若需要系统原生线程同步，加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-THREAD](https://docs.ruby-lang.org/en/3.4/Thread.html)；[RB-DEV-GC](https://docs.ruby-lang.org/en/3.4/extension_rdoc.html)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-THREAD；RB-DEV-GC。
 
 ### 规则 C-RB-04：C 字节缓冲的整数下标访问向 Ruby 二进制 String 与 getbyte/bytesize 映射
 1. **源码触发条件**：C 源码用 `unsigned char payload[] = {0xfc, 0x48, ...}`、`char incominginstructions[2000]` 等缓冲承载字节，并以下标读取整数（`in[len-1-i] != pad`、`printf("%02x ", payload[i])`、`payload[4*i+1] << 8`），或数据中可能含中间 `0x00`、`0x80` 以上字节。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)，`char` 的符号性由实现定义）；目标语言 CRuby 3.4（[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html), [RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.2.5，`char` 的符号性由实现定义）；目标语言 CRuby 3.4（RB-DOC-STRING, RB-DOC-CORE）。
 3. **原可观察行为**：`buf[i]` 在 C 中产生整数值（`unsigned char` 恒为 0..255，`char` 可能为负）；长度是字节数；`\0` 可出现在中间且不影响按长度遍历的结果。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：字节缓冲用带 `Encoding::BINARY`（`ASCII-8BIT`）标签的 `String`（字面量后接 `#b`，或 `force_encoding(Encoding::BINARY)`）；长度用 `#bytesize`；逐字节取值用 `#getbyte(i)`/`#bytes`，写回用 `#setbyte` 或构造后再 `#b`；需要宽度与端序时改用 `#unpack1`/`Array#pack`。
@@ -96,11 +100,11 @@ description: Use when converting C source to Ruby; apply this direction's langua
    return data.bytesize if pad.nil? || pad > 16
    ```
 6. **信息不足或实现相关时的处理**：若无法确认该缓冲是"文本"还是"任意字节"（尤其载荷、密钥、加密块、网络帧），必须停下确认编码意图，不得默认按 UTF-8 处理；`char` 符号性与源字节序未给出时必须标注为待确认。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)；[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.2.5；RB-DOC-STRING；RB-DOC-CORE。
 
 ### 规则 C-RB-05：C memcpy/指针强转的字节↔定宽整数重解释向 Ruby unpack1/pack 显式端序映射
 1. **源码触发条件**：C 源码用 `memcpy(&a, in, 4)`/`*(uint32_t *)p` 在 4 字节与 `uint32_t` 间重解释，用手工位移拼装小端序整数（`((uint32_t)userkey[4*i+1] << 8) | ...`），用 `#define ROTL32(x,n)`/`ROTR32` 做 32 位旋转，或用 `(x & 0xFFFF)`/`>> 16` 处理序号与位域。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §6.2.6, §6.5.7](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）；目标语言 CRuby 3.4（[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html), [RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.2.6, §6.5.7）；目标语言 CRuby 3.4（RB-DOC-STRING, RB-DOC-ARRAY）。
 3. **原可观察行为**：`memcpy` 按主机字节序逐字节复制，结果依赖字节序；`uint32_t` 的移位与旋转严格按 32 位宽回绕；对负值右移由实现定义（通常为算术移位）；`(x & 0xFFFF)` 把高位清零。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：用显式端序指令做字节↔整数转换（`str.unpack1('V')` 小端 32 位无符号、`'N'` 大端、`'Q<'` 小端 64 位；写回用 `[v].pack('V')`）；32 位旋转先掩码再运算：`x = (((x << n) | (x >> (32 - n))) & 0xFFFFFFFF)`；`x & 0xFFFF` 直接用 `Integer#&`。
@@ -116,29 +120,38 @@ description: Use when converting C source to Ruby; apply this direction's langua
    rot = ((a << 13) | (a >> 19)) & 0xFFFFFFFF
    ```
 6. **信息不足或实现相关时的处理**：源文件未声明目标字节序、整数宽度或 `char` 符号性时，必须停标为待确认；涉及的加密/校验算法若依赖具体位宽，必须同时记录该位宽假设，不得凭本机实现假定小端序。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.2.6, §6.5.7](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)；[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.2.6, §6.5.7；RB-DOC-STRING；RB-DOC-ARRAY。
 
-### 规则 C-RB-06：C 返回计数/EOF 与文本模式 I/O 向 Ruby IO 的 nil-EOF 与二进制模式映射
+### 规则 C-RB-06：C 返回计数/EOF 向 Ruby IO 映射须保留源打开模式
 1. **源码触发条件**：C 源码用 `while ((c = fgetc(f1)) != EOF)`、`while (fgets(outgoingoutp + total, ..., stdoutp) != NULL)`、`recv`/`read`/`write`/`splice` 的返回值控制循环，用 `if (nbytes < 0)`/`(size_t)nbytes < data_size` 判失败或短写，用 `fopen(path, "r")`/`"w"` 文本模式，或读完后用 `strlen(outgoingoutp)` 重算长度。
-2. **冻结版本/运行时/API 前提**：源语言 ISO C11（[WG14-N1570 §7.21](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）与 POSIX 读写返回约定（[POSIX](https://pubs.opengroup.org/onlinepubs/9699919799/)）；目标语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）。
+2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §7.21）与 POSIX 读写返回约定（POSIX）；目标语言 CRuby 3.4（RB-DOC-CORE）。
 3. **原可观察行为**：`fgetc` 在 EOF/错误时返回 `EOF`（负值，与 0..255 的字节值不重叠）；`read`/`recv` 返回实际字节数，可能小于请求量，失败返回 -1；文本模式在 Windows 上会把 `\r\n` 转换成 `\n`，改变字节数与内容。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：显式二进制模式 `File.open(path, 'rb') { |f| ... }`；整块读取用无参 `IO#read`（读到 EOF），分块读取用 `IO#read(n)`（EOF 时返回 `nil`）；流式/套接字读取用 `readpartial`（EOF 抛 `EOFError`）或 `each_byte`/`each_line` 迭代；写入用 `IO#write` 并说明短写由运行时处理，需要时显式比较其返回的字节数。
-   - *不适用条件*：严禁把 `EOF`/`-1` 直译为 `0`：Ruby `IO#read(n)` 在 EOF 返回 `nil`，`File#getc` 在 EOF 也返回 `nil`，与 C 的 `EOF` 判断形状不同，`while (n = f.read(1))` 之类的写法必须按 `nil` 语义重写；严禁省略 `'b'` 模式（Windows 上的换行转换会改变字节流长度与内容）；严禁用按字符截断或搜索 `\0` 的方式重算已读长度，必须使用读取返回值或 `#bytesize`。
+   - *可选映射*：源要求原始字节时显式二进制模式 `File.open(path, 'rb') { |f| ... }`；源文本模式的换行翻译影响行计数/内容时须按冻结 OS、编码与 Ruby IO 配置保持该翻译，不无条件切换到 rb。整块读取用无参 `IO#read`（读到 EOF），分块读取用 `IO#read(n)`（EOF 时返回 `nil`）；流式/套接字读取用 `readpartial`（EOF 抛 `EOFError`）或 `each_byte`/`each_line` 迭代；写入用 `IO#write` 并说明短写由运行时处理，需要时显式比较其返回的字节数。
+   - *不适用条件*：严禁把 `EOF`/`-1` 直译为 `0`：Ruby `IO#read(n)` 在 EOF 返回 `nil`，`File#getc` 在 EOF 也返回 `nil`，与 C 的 `EOF` 判断形状不同，`while (n = f.read(1))` 之类的写法必须按 `nil` 语义重写；源要求字节保持时不能省略 `'b'`，源要求文本翻译时也不能盲目加 `'b'`；长度依源实际消费者确定，显式字节数用返回值/`#bytesize`，源确用 strlen 则须保留首 NUL 截断义务。
 5. **错误机械替换反例**：
    ```ruby
-   # 错误：把 C 的 EOF(-1) 与 strlen 长度语义直译过来
-   f = File.open(path, 'r')             # 文本模式：Windows 上会转换换行
+   # 仅对源要求二进制字节的分支：以下文本模式、EOF/长度映射错误
+   f = File.open(path, 'r')             # Windows 文本翻译可能改写字节
    while (c = f.getc) && c != -1        # EOF 时 getc 返回 nil，不是 -1
      out << c
    end
    total = out.length                   # 字符数，而不是字节数
-   # 正确：二进制模式 + nil-EOF 语义 + 字节计数
+   # 该字节分支的候选：二进制读取 + 字节计数；不替代源文本/strlen 分支
    File.open(path, 'rb') { |f2| out << f2.read }   # 无参 read 读到 EOF
    total = out.bytesize
    ```
 6. **信息不足或实现相关时的处理**：源文件的打开模式（`"r"` 与 `"rb"`）、目标平台是否为 Windows、以及"部分读/短写是否必须显式循环"未确认时，必须停标并说明换行/编码转换与短写语义可能改变；不得假定文本模式与二进制模式等价。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §7.21](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[POSIX](https://pubs.opengroup.org/onlinepubs/9699919799/)；[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §7.21；POSIX；RB-DOC-CORE。
+
+### 规则 C-RB-07：fork 与 exec 的返回分支、环境和失败映射
+
+1. **触发/前提**：C 源实际调用原生 fork/exec；冻结源/目标 OS、Ruby 3.4、具体 API、环境与退出路径；C11 本身不规定 POSIX API。
+2. **源行为**：读[原生事实](../../systems/posix-windows-process-identity/SKILL.md#原生-forkexec-事实)，定位父 PID、子 0、失败 -1 及 exec 后失败续行；目标读[Ruby L1-RB-06/07](../../references/languages/ruby.md#九进程返回替换与环境)。
+3. **条件映射**：无 block fork 的子返回映为 nil，父 PID 保留；创建失败按适用异常对应源出口。exec 环境完整替换/空集合须显式消除默认继承；成功仍是映像替换，失败仅按源实际逻辑恢复续行/退出。
+4. **反例**：直接写 `pid == 0`、以 block 自动结束子分支、传空 hash 假装空环境、用 system 代 exec，均可能丢源义务。
+5. **未知/不适用**：不支持 fork、源依赖不可移植 NULL 参数或诊断未定时写缺口，不改成 spawn 后称等价；不处理没有触发的进程行为。
+6. **依据与观察边界**：上述语言/系统页的官方依据；另加载[进程场景](../../scenes/process-execution/SKILL.md#l2-proc-02-父子分支映像替换与环境契约)。静态映射不代替真实源基线、目标编译/行为或安全证据。
 
 ## 转换与验证边界
 

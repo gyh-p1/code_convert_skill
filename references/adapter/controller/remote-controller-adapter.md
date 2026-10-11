@@ -4,7 +4,7 @@
 
 > 文档类型：外部评估基础设施的连接与提交适配（reference）
 > 状态：ACTIVE（本项目对接已授权隔离第三方 VM Controller 的唯一连接说明）
-> 更新：2026-10-09（对接 `1.0.26` 统一部署；部署/runner 事实见[能力矩阵](runner-capability-matrix.md)，消噪与容忍规则见[比较策略适配](comparison-policy-adapter.md)；新增"批量提交"一节记录批量工作流所需而平台未提供的参数）
+> 更新：2026-10-11（文本收口；最后已知部署 1.0.28，未在本轮连接/复验。部署与 runner 当前登记只见[能力矩阵](runner-capability-matrix.md)，比较字段见[比较策略适配](comparison-policy-adapter.md)）
 > 本页列出已登记的连接坐标和提交契约；实际可用性须在每次评估前核对。
 
 本项目**不建设**运行时或评测平台；编译/运行证据一律由已授权的隔离第三方 VM Controller 返回。本文只记录**如何连接该 Controller、如何组装并提交 comparison capsule、如何回传证据**，供转换 Agent 在评估步骤直接复用。凭据不入库（见“安全边界”）。
@@ -17,15 +17,7 @@
 | 提交端（转换 Agent 工作区） | 与 Controller **同机** | 经回环直达 8443，不设隧道；**同机不代表隔离**（宿主可连公网），样本执行与网络隔离仍只在 VM Agent，见下《同机共处的边界》 |
 | VM Agent（三个现役 runner） | 由 Controller 按 `runnerId` 编排 | 提交方**不直连** Agent |
 
-**现役 runner 速查（2026-10-09 由 `GET /api/runners` 复核；完整说明见 [Runner 能力矩阵](runner-capability-matrix.md)）**：
-
-| runnerId | os/x64 | supportedLanguages | 基线快照 | 快照回滚 | 状态 |
-|---|---|---|---|---|---|
-| `linux-vm-agent-x64` | linux | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Linux-8Lang-1.0.26` | true | READY/clean |
-| `windows-vm-agent-x64` | windows | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Windows-8Lang-1.0.26` | true | READY/clean |
-| `macos-vm-agent-x64` | macos | python、powershell、c、cpp、go、dotnet、**ruby** | `CC-Eval-Mac-7Lang-1.0.26-AutoLogin` | true | READY/clean |
-
-**Ruby runner 实测**：Windows、Linux、macOS 三台均已登记 `ruby`。Ruby 适配当时 Windows/Linux 使用 R11，Linux 后来曾升为 R12；现役基线见上表。无副作用双侧 Ruby job `eval-20261005-055954-f055ab5b` 的两侧语法检查、运行与清理均通过。逐例依赖和具体转换结果仍须单独取证，详见 [Runner 能力矩阵](runner-capability-matrix.md) §1.1–1.2。
+runnerId、语言与当前快照只在 [Runner 能力矩阵](runner-capability-matrix.md)维护，避免本页重复历史清单。已登记 windows/linux/macos × x64 七语言不等于逐例依赖就绪；C# 的平台语言标识按接口使用 dotnet。历史 Ruby job 仅支持其精确版本，不证明本项转换。
 
 > 提交前用 `GET /api/runners` 复核 `supportedLanguages`、`lifecycleState`、`baselineSnapshot`、`contaminated`；不要引用其它文档里的历史 runner 清单。
 
@@ -50,6 +42,12 @@
 | `GET` | `/api/jobs/{jobId}/comparison` | 双侧比较结果 |
 | `GET` | `/api/jobs/{jobId}/logs` | Controller 编排日志 |
 
+### 本地待部署的仅编译机制（2026-10-11）
+
+相邻评估系统源码已加入显式 build-only 本地改动；维护资料定位为独立仓库 `third-party-evaluation-system/docs/build-only.md`，不随本仓库交付，不作为转换 Agent 的必读依赖。本页保留当前需消费的机制与待验收边界：它复用 `POST /api/jobs` 及原 capsule/分类/批次授权；comparison manifest 设 `evaluationMode=build-only`，两侧必须有真实 buildCommand、不得出现 runCommand，InputProfile 显式无行为观察/运行输入。平台内部使用 AgentRunRequest 1.2，报告为 EvaluationReport 3.2：逐侧 buildAssessment、原始 build evidence、执行未进行、功能 UNVERIFIED，不产 comparison。普通 job 保持原路径。
+
+**这是未测试、未部署的源码事实，不是现役支持证明，也不授权现在向现役发送该新形状。** 启用前须确认现役 health 声明 supportedEvaluationModes 含 build-only、参与角色 contractSetHash 一致，并取得合法隔离验收的精确版本双侧编译/未运行/清理证据。未确认前沿用[评估准备 §3](../../framework/evaluation-readiness-contract.md#3-无安全可观察入口)待准备口径，不把普通运行 job 当仅编译。该改动不提供单独源侧预检接口，不能先造目标补预检。仅编译报告没有 comparison，取证按实际发生件，不能伪造比较记录。
+
 ### 提交结果未知时的恢复
 
 当前登记的接口支持凭 `jobId` 查询；**按客户端提交标识/caseId/capsule 哈希查找已接收 job，以及服务端幂等去重的能力尚未在本说明中核实**。不能据此断言平台不支持，也不能假设 `caseId` 天然幂等。本地提交尝试记录用于追溯，不是服务端去重保证；使用额外查询或幂等能力前须取得现役契约及其匹配范围/保留期限依据，不自造端点或请求字段。
@@ -65,6 +63,28 @@
 
 以上是恢复规则，不表示查询、去重或自动恢复能力已部署/验收；本仓库不为此建设服务端实现。
 
+### batchAuthorization 字段与来源
+
+以下摘出已登记提交契约中 Agent 必须消费的字段；开发期 Spec05 仅作来源记录，不是运行时加载依赖。实际服务端 schema/回执优先，本轮未连接验证。授权只能据真实人工授权与现场证据填写，不把布尔占位或字段校验当隔离证明。
+
+| 字段 | 登记的类型/校验 |
+|---|---|
+| batchId | 非空 string，与任务批次身份一致，目录名不替代身份 |
+| authorizedAt / authorizedBy | UTC ISO-8601 时间，不晚于提交；可追责人工身份，非空 |
+| vmIsolation.confirmed / snapshotRollback / cleanupVerified | bool，须为 true；各自须有真实依据 |
+| networkIsolation.configured | bool；公网/hostname 目标的 ALLOWED 项须 true。private/loopback 的接口豁免不免项目逐例隔离 |
+| networkIsolation.publicNetworkBlocked / experimentalNetworkOnly | configured=true 时须 true |
+| networkIsolation.verificationEvidence / verifiedAt | configured=true 时非空可复核证据与 UTC 时间，时间不晚于提交 |
+| dataSource.syntheticDataOnly / noRealCredentials / noProductionData | bool，须 true |
+| dataSource.confirmation | 非空说明真实数据审阅依据 |
+| scope | 登记的唯一字符串为“所有非BLOCKED任务”；不自造 taskId 范围字段。单项以最小单项批次关联覆盖 |
+| validUntil | UTC 时间，晚于 authorizedAt，提交时未过期 |
+| contractHash | 与实际 health 的 contractSetHash 对应，不替代源码/目标哈希 |
+
+任一必填/条件必填缺失、无效或授权过期，覆盖该授权的提交暂停，不逐项降级放行；只阻断独立分类的项则记录该项原因。每次提交单项 classification 对象与授权 JSON，单项也必附。服务端不 lift 旧 BLOCKED，不以 configured=true 改判；条件解除后重新分类取得 ALLOWED。
+
+来源：[Spec05 字段与实现修正](../../../docs/stages/stage1/specs/submission-and-batch-authorization.md)。历史规格中的旧伪代码与允许率不是本项目的执行规则或质量指标。
+
 ## 批量提交（单批 ≥40 项，允许排队）
 
 批量编排规则见[批量转换工作流](../../../skills/workflows/batch-conversion/SKILL.md)；本节只记录**适配层**已知事实，不重复编排语义。批量任务与单项走同一个 `POST /api/jobs`，**没有**批量提交端点。
@@ -75,11 +95,11 @@
 | 并发 | 项目默认串行 1 路；`GET /api/runners` 现役 3 个 READY runner 是**容量事实，不是并发许可** | 平台级并发上限、队列深度、单批是否被限流 |
 | 排队状态 | 提交返回 `202 {jobId, jobStatus:"QUEUED"}`，说明存在排队阶段 | 队列位置/预估等待字段 |
 | 轮询间隔 | 无平台声明值 | **须按契约记录实际轮询间隔**；批量流程 §2 要求"轮询间隔按契约记录"，而平台未提供该值，故由本任务冻结时自定并留证 |
-| 忙碌/未就绪 | 批量流程 §4.4 引用 `409/controller_busy`、`503/controller_not_ready`；其**已审阅实现位于 job 创建前** | 本页未独立核实这两个状态码的现役行为；**不得外推到任意 4xx/5xx、代理错误或超时** |
+| 忙碌/未就绪 | 历史审阅提及 409/controller_busy、503/controller_not_ready，曾记录在创建 job 前拒收 | 当前部署未经本轮复核；只有覆盖该次请求的契约/接收证据证明未创建才可重提，不外推到任意错误/超时 |
 | 幂等 | 无已核实的服务端幂等或按 caseId/capsule 哈希查找能力（见下节） | 重投前须确认前一次未入队 |
 | 隔离 | 三 Runner 均 READY/clean；**READY 与快照回滚都不是网络隔离证明** | 批次级网络隔离证据（`batch-authorization.json`）仍待现场 |
 
-**批量提交的引用核对**：逐项按[分类结果准入](../../workflow/classifier-agent-gate.md)确认该项 `ALLOWED`、提交内容与被分类输入一致、授权/隔离记录齐备，再提交。批次级授权按 [Spec05 §2](../../../docs/stages/stage1/specs/submission-and-batch-authorization.md#2-批次授权记录-batch-authorizationjson) 组织；**分类结果逐项消费，不能只留一个允许总数**。批内某项不满足时跳过该项并继续其他项，不因此停整批，也不把跳过记成转换失败。
+**批量提交的引用核对**：逐项核 ALLOWED、精确输入、独立授权/隔离，再提交。字段只见本页 batchAuthorization 节；分类逐项消费。单项条件不足记原因，可继续独立未受影响项；共享批次授权无效则暂停其全部覆盖项，不把等待记目标失败。
 
 **批量取证**：逐项按"回传证据布局与结论回填规则"落盘到该 run 的 `04-evaluation/<job-dir>/returned-evidence/`；批次汇总按批量流程 §6 分列各维度，**不合成单一"转换成功率"**。
 
@@ -107,10 +127,12 @@ capsule.zip
 - **`input_profile.json`** 通过 `validate_evaluation_contract` 校验：`argv`、`stdin`、`observationPolicy.dimensions`（如 `["output"]`）、`comparisonPolicy`（如 `output.stdoutMode="json-structural"`）、`timeoutSeconds`、`workingDirectory`。
 - **本版比较策略接入**：按[比较策略适配](comparison-policy-adapter.md)分别冻结 stdout/stderr 模式、文件采集与比较范围以及服务器实际 comparison 配置。`normalized-text` 会采用服务器启用的消噪规则，关键值需选择适当的严格模式/文件保护；服务器 preset、token 或容忍开关不是任务输入字段。
 - **`run_case.py`**（若该次契约采用 Python 驱动，两侧各一份）：定位实际构建出的程序，按冻结输入调用并记录输出、退出状态和所需副作用。驱动不得空跑或只输出固定值；`stdoutLen`/`stderrLen` 摘要不能替代行为 oracle。网络、进程和文件权限按安全边界核对。**源侧驱动 `source/run_case.py` 位于 `source/` 树，须随源文件一同提交给分类器并被 `classification.details.files[]` 覆盖**——平台 identity 门禁按 `source/` 文件集合校验（非按扩展名），未覆盖即 `403 identity_mismatch`（见[分类结果准入 §3](../../workflow/classifier-agent-gate.md)）。驱动改名为非源扩展名（如 `.txt`）不绕过门禁；**驱动放 capsule 根不生效**——平台只解压 `source/`、`target/`，根级文件不落盘、执行 `exitCode=2`（2026-10-10 实测）。
-- 源无可运行入口（库翻译单元无 `main`）时，按冻结记录补写最小中性入口/驱动，并在 `frozen-inputs.md` 标注补写内容和哈希。
+- 驱动/中性入口仅引用用户或获批平台已提供版本，保存来源/哈希；不由 Agent 编写或委托模型生成辅助程序。可安全观察但缺入口待准备；无安全入口仅编译按[评估准备 §3](../../framework/evaluation-readiness-contract.md#3-无安全可观察入口)，不以带 runCommand 的普通运行 job 冒充仅编译。现役只编译接口/安全 skip 语义未核实时不得提交。
 - 组装临时目录里**不要**留 `__pycache__`/`*.pyc`；打包前清理，避免污染 zip 与 git。
 
 项目清单 `evaluator_manifest.json` 是移交记录，**不可直接当作**本接口所需的 comparison capsule；以当前 Controller 的实际 schema 组装，原输入与回传证据落于任务输出位置。
+
+**生成前源侧预检**：使用现役平台已支持、获授权的预检提交形态，分类/授权随附规则相同；不提前生成转换目标来补包，也不自造平台字段。需行为评估时，源侧须按冻结条件真实构建、运行、观察与终止/清理，回传源 build、execution 和原始观察供[评估准备 §1.1](../../framework/evaluation-readiness-contract.md#11-生成前源侧预检)判读，不能只读 build 摘要。实际 job 的回执与证据归入 `job-00-source-buildability/`，目录名不禁止源运行；不适用运行的文本/片段/仅编译任务须核对应安全构建形态并记录理由。接口支持未知时待准备；本页的普通双侧 capsule 示例不构成源预检形态或仅编译能力已验收的证明。
 
 ## 提交—轮询—取证流程（本会话实测）
 
@@ -132,7 +154,7 @@ Compress-Archive -Path source,target,comparison_manifest.json,input_profile.json
 #      其 id/dir/case 必须与本 capsule 一致，details.files[].sha256 必须覆盖
 #      **本 capsule source/ 树的每个文件（含源侧驱动 run_case.py）**——
 #      identity 门禁按文件集合校验，缺任一 source/ 文件即 403 identity_mismatch；
-#    - batchAuthorization：本批人工签署的 batch-authorization.json（Spec05 §2）；
+#    - batchAuthorization：本批人工签署的 batch-authorization.json（本页字段节）；
 #      **单文件任务按"批次为一"附一份覆盖该单项的最小 batch-authorization.json**。
 #    curl 的 `=<文件名` 形态把文件内容作为该表单字段的文本值发送。
 #    未准入时返回 403 {detail:{blockingReason,...}}，据原因修复，不手改 JSON 绕过。

@@ -1,9 +1,9 @@
 # Controller 比较策略适配：noise-tolerant-v1
 
 > 文档类型：第三方比较策略的提交与证据适配（reference）
-> 状态：ACTIVE（适用现役 `1.0.26` 统一部署；`noise-tolerant-v1` 比较配置自 `1.0.25-noise.1` 沿用并已在 1.0.26 健康验收中复核一致）
-> 更新：2026-10-09
-> 部署身份、取证范围与实时能力入口：[Runner 能力矩阵](runner-capability-matrix.md)；当前部署身份见[1.0.26 部署记录](../../../docs/stages/stage1/reports/1.0.26部署与快照更新记录-2026-10-09.md)，消噪试用的历史值见[能力矩阵 §1.3](runner-capability-matrix.md#13-controller-消噪部署2026-10-09历史)
+> 状态：ACTIVE。最后已知部署 1.0.28；noise-tolerant-v1 的下述字段依据既有接口/记录，未在本轮动态复验。
+> 更新：2026-10-11（文本收口）
+> 部署身份只见[Runner 能力矩阵](runner-capability-matrix.md)，历史消噪取证见其 §1.3。Stage3 的平台改造/测试记录不自动成为本页已部署、已取证能力；任务仍以实际 health、schema 与回传核验。
 
 本页供 Agent 冻结比较需求、组装现役 capsule、核对回传。比较由第三方 Controller 执行；本项目不新增比较器、运行时、Schema 或独立评分。连接、提交与未知回执恢复沿用[Controller 适配](remote-controller-adapter.md)，执行授权与隔离沿用[安全边界](../../framework/safety-boundary.md)。
 
@@ -15,7 +15,7 @@
 | 任务比较模式与观察范围 | capsule 的 `input_profile.json` | 使用既有 `comparisonPolicy` / `observationPolicy` 字段，不新增请求字段 |
 | 本次实际比较结果 | `GET /api/jobs/{jobId}/comparison` | 正常双侧比较的 `verdictReason` 带 `Comparator=...` 配置记录；diff 带规则与证据引用 |
 
-当前在线配置如下。这是服务器 `comparison` 对象的字段形状，**不是**可放进 `input_profile.json` 的任务字段；其中下划线键按真实接口原样保存。
+既有接口记录中的配置形状如下；本轮未连接确认当前在线值。这是服务器 `comparison` 对象的字段形状，**不是**可放进 `input_profile.json` 的任务字段；其中下划线键按真实接口原样保存。
 
 ```json
 {
@@ -62,17 +62,19 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 
 任务明确要求检查噪声名称文件时，在比较 include 中追加覆盖该路径的非全范围模式。例如业务需要生成 `.pyc`：
 
+采集和比较均须显式列出业务副作用路径；不得用 `**/*`、`**`、`*` 等全工作目录模式把 program.exe、对象文件、工程中间件或解释器背景产物混进业务比较。下例假定业务义务仅为 `out/result.txt` 和 `out/cache/result.pyc`；路径须逐项替换，不能套用为所有任务的范围。
+
 ```json
 {
   "observationPolicy": {
     "dimensions": ["output", "filesystem"],
-    "filesystemInclude": ["**/*"],
+    "filesystemInclude": ["out/result.txt", "out/cache/result.pyc"],
     "filesystemExclude": []
   },
   "comparisonPolicy": {
     "output": {"stdoutMode": "normalized-text", "stderrMode": "exact"},
     "filesystem": {
-      "include": ["**/*", "**/*.pyc"],
+      "include": ["out/result.txt", "out/cache/result.pyc"],
       "exclude": [],
       "contentMode": "digest",
       "ordering": "ignored"
@@ -82,6 +84,8 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 ```
 
 这是 `input_profile.json` 的字段片段，需与既有 schemaVersion/kind/profileId/argv/stdin/environment/workingDirectory/timeoutSeconds/fixtures 等字段合并，不能单独作为完整 capsule。仅业务有此义务时追加 `.pyc` 保护，不让解释器背景产物成为所有跨语言任务的统一要求。
+
+清单里存在动态工作目录/时间字段时，将可确定的其他文件和字段分别核观察与策略支持；不因一处无法比较就省掉全部文件内容。没有对应文件证据，stdout 的 files/total 匹配不能外推为归档或清单内容匹配。
 
 `**/*`、`**`、`*` 三个全范围 include 不会保护噪声路径；其余 include 模式可以保护匹配文件。显式 exclude 仍先排除事件，即使同时 include，也不会被“保护”补回。没有采集或被排除的路径保持未覆盖；Agent 不得将其算作功能通过。
 
@@ -94,6 +98,8 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 | 存在 critical/major，或关闭 minor 容忍后仍有差异 | 保留 mismatched/failed 与 diff，核对责任层后进入现有反馈分流 |
 | 必需维度缺观察、输出截断无法解释、基线不可用 | 保留 partial/inconclusive 或平台其它原结果，不从空 diff 推断通过 |
 | jobStatus=COMPLETED | 只说明作业完成；必须另外读取 report 的 codeVerdict、comparison 的 behaviorVerdict 和清理/环境 |
+
+原 verdict 与 Agent 的观察采信分别记录，按[评估准备 §5](../../framework/evaluation-readiness-contract.md#5-原始观察采信与归因)核输入、状态、观察归属与冻结路径。即使 coverage 给出充分或 stderr 非空，也不免此核对；not-applicable 不证明无副作用。外部新增 coverage 字段只有核实当前 schema/回传后才消费，不在 capsule 中伪造。
 
 当前进程差异仍由平台生成为 major，没有新增“不同语言子进程自动等价”的豁免。network/registry 不因本次升级获得采集能力；Profile、Attestation、Permit 与 fixture runtime 也未在本次实现。
 

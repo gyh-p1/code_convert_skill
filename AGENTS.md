@@ -5,6 +5,7 @@
 - 以 [项目业务文档和能力边界](docs/项目业务文档和能力边界.md) 作为业务能力真源，以 [项目开发规范](docs/项目开发规范.md) 作为项目演进规则，以 [Skill 编写规范](docs/Skill编写规范.md) 作为 Skill 内容规则，以 [安全边界](references/framework/safety-boundary.md) 作为执行红线真源；不要在本文件复制它们。
 - 先核对当前文件和用户要求，不把历史设计、空目录或拟议方向当作已实现能力。
 - 优先增加有实质规则的 Skill 内容；新目录、元数据和机制必须有当前消费者。
+- 知识默认离线使用：正文和随附本地参考须包含必要语义，网页不能替代内容；出处记录与具体写法按[Skill 编写规范 §5.1](docs/Skill编写规范.md#51-本地引用与网页资料)，不以调用者能联网为前提。
 - 本机不编译、不运行源码／目标代码／构建脚本；编译与运行只在获批、与公网及生产网隔离的一次性环境进行，逐例核对隔离与网络/数据边界以[安全边界](references/framework/safety-boundary.md)为准（硬编码外部地址须先阻断/重定向到封闭实验网并验证隔离，`READY`/快照不等于已隔离，绝不触及公网、生产网或真实外部目标）。不运行未经隔离核对的样本，也不将静态审阅说成转换效果验证。
 - 改动后说明文件变化、人工检查范围以及未经验证的部分。
 
@@ -53,17 +54,21 @@
 ### 3. 三道硬门禁，顺序固定，不得颠倒或省略
 
 ```
-冻结 → 分类(ALLOWED) → 源侧构建预检 → 生成 → 自审
+冻结 → 分类(ALLOWED) → 源侧预检（构建 + 适用运行基线）→ 生成 → 自审
   → 评估就绪核对（安全 + 驱动 + oracle）→ 提交 → 取证 → 先归因再分层报告
   → 交付完整性/终态门禁（记 DONE/PARTIAL 前）
 ```
 
 - **分类**：`admissionStatus=ALLOWED` 且 `blockingReason=null` 才可进入下一步。未取得不得预检、不得转换、不得提交。
-- **源侧预检**：源侧 `build.status=completed` 且 `exitCode=0` 才可投入模型转换；不通过记 `SOURCE_NOT_BUILDABLE` / `SOURCE_DEPENDENCY_GAP`，跳过该项且**不消耗模型调用**。**判定只由编译器诊断定案**：读源码只产出候选 `sourceOs`，**不得凭印象**断言某个头/符号在已登记系统上是否存在；本流程**不设**头文件探针。
-- **评估就绪核对**：安全边界 + **驱动四要素** + oracle 状态三者一起核对，全通过才可提交。细节见[行为保持 §4.1](references/workflow/behavior-preservation-contract.md)。
-- **交付完整性/终态门禁**：这是一道**收尾相位**的门禁，与上面三道"提交前"硬门禁**分层**——它回答的不是"能不能提交"，而是"**能不能把该项记 `DONE`/`PARTIAL`**"。记终态前**机械核对交付物齐备**，缺件不得记终态；真源与形制见[交付契约 §2.1.1（单项）/§2.1.2（批次索引）](references/framework/delivery-handoff-contract.md)，批次层并入[§8 增量对账](#8-每-40-项做一次增量对账)。**只约束进入过转换的用例**：全套交付物（根级 `target.<ext>`、带功能结论的 `result.md`、`evaluator_manifest.json`[契约要求时]、`job-01-dual-build` 证据）只对已过分类+源侧预检并产出目标的用例要求；非可转换去向（`SOURCE_NOT_BUILDABLE`/`SOURCE_DEPENDENCY_GAP`/`PREPARATION_GAP`/`EXCLUDED`/`DUPLICATE`/`SAFETY_BLOCKED`/`SKIPPED`）只要求其**适用件**（`frozen-inputs.md` 记去向+原因、分类结果如已取、job-00 证据如已跑），缺 target/result/job-01 对它们**不算缺档**。它只核形制齐备，不合成成功率、不改功能判定、缺证据照记 `UNVERIFIED`。
+- **源侧预检**：先取得源侧 `build.status=completed` 且 `exitCode=0`；需行为评估时还须在获批隔离环境按冻结输入/初始状态运行源，取得满足观察目标的有效基线、终止并核实清理，才可投入模型转换。运行正常不只看退出码 0，也不要求预期错误路径所有 API 成功。源构建失败按真实诊断记 `SOURCE_NOT_BUILDABLE` / `SOURCE_DEPENDENCY_GAP` 等；源运行/观察缺口另记准备原因，不冒充源不可构建；均**不消耗转换模型调用**。**可构建性判定只由编译器诊断定案**：读源码只产出候选 `sourceOs`，**不得凭印象**断言某个头/符号在已登记系统上是否存在；本流程**不设**头文件探针。源运行驱动、观察有效性及文本/片段/真正无安全入口的仅编译例外，只见[评估准备 §1.1](references/framework/evaluation-readiness-contract.md#11-生成前源侧预检)。
+- **评估就绪核对**：安全边界 + 驱动四要素 + oracle 适用状态三者一起核对，全通过才提交；还核合法来源驱动、两侧对称与观察有效性。真源见[评估准备契约](references/framework/evaluation-readiness-contract.md)，仅编译例外见其 §3。
+- **交付完整性/终态门禁**：开始处理每项时必读[交付契约 §1.1](references/framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)，每次正常结束、失败/阻断、非可转换或 WAITING 暂停都走该入口，不能提前返回省掉收尾。每项必须写 result.md 记录原因与覆盖，并按模式/已达阶段/停止原因逐件回读适用产物、版本和指针，将清单及核对结果保存；缺报告或其他应有件不得 DONE/PARTIAL/CLOSED，不等 §8 批次对账才检查。已生成项交完整 target，要求时 manifest；所有去向保留已发生模型/分类/预检/job 原件，未发生件不伪造。未知提交或活动/未确认清理的 job 保持 WAITING，有暂停报告也不解除。DONE 可含真实失败，PARTIAL 与 matched/mismatched 分开，语义只见[任务状态契约](references/framework/task-state-contract.md)。完整性不改功能判定，缺证据 UNVERIFIED，不合成成功率。
 
 **驱动四要素（缺一不可提交）**：① 按冻结 argv/stdin **启动**；② **到达被观察状态**（服务须等就绪，如端口监听，不得启动即判）；③ **采集**真实 stdout/stderr/退出码/副作用；④ **终止**并收尾。"启动后等它自己退出"**不是**通用驱动——常驻服务会必然超时，白白浪费一轮评估并把结果变成 INCONCLUSIVE。
+
+**驱动/中性入口只能引用用户或获批平台已提供的精确版本**，记录来源/哈希；Agent 不新写、生成、保存辅助驱动，也不委托配置模型规避 §1。可安全观察但缺合法来源入口记准备缺口，不为省事降级。无安全观察口才 LIB_UNOBSERVABLE_COMPILE_ONLY：仍按分类/源预检门禁转换，核安全+举证+仅编译命令，在平台支持只编译不运行时提交；PARTIAL，编译据实、功能 UNVERIFIED，不采信空输出 matched。平台支持未知则待准备，停止时按已达阶段交付，不伪造编译 job。它属已转换项，非接入去向；判据和例子只见[评估准备 §3](references/framework/evaluation-readiness-contract.md#3-无安全可观察入口)。
+
+正式模型转换即使明确文本交付/片段也须先过分类和适用源侧预检；不适用行为评估时不强迫源运行，但须记录理由，不能把原需行为评估的任务静默降为文本交付。纯文档审阅/架构优化不触发转换动态步骤。
 
 **自审是正常推进信号，不是防线**：`NO-REPAIR-IDENTIFIED` 表示本轮有限自审没有找到必须改的可定位转换问题，**即可推进**，不要求它在自审阶段预测编译结果，也不得为它加固而反复重审（那会变成在单个用例上死磕）。`REPAIR-RECOMMENDED` 也不自动触发修复：只有**有源/目标定位证据且属转换引入**的条目才修，待确认差异、源已有问题、环境项不修。真正决定成败的是第三方编译/行为证据。
 
@@ -93,6 +98,8 @@
 
 ### 10. 改规则必须按加载路径回查，不只看正文
 
+冻结、请求/知识、响应/目标、自审与 job 的版本关联统一消费[任务状态契约 §2.1](references/framework/task-state-contract.md#21-版本关联与复用边界)；源基线复用/失效消费[评估准备 §1.2](references/framework/evaluation-readiness-contract.md#12-源基线复用与失效)。批次阈值和统计单位由批量工作流 §4.1/§6 维护，恢复/重提不能重复计项；这些读取要求不增加运行授权或辅助工具。
+
 **改了任何执行约束、门禁、口径或产物形制后，必须按新窗口的实际加载路径逐个回查，确认每一条都出现在"会被读到的位置"且各文件互相不矛盾。** 只改"规则正文"不算完成。
 
 **加载路径（按新窗口实际读取顺序）**：
@@ -104,13 +111,16 @@
   → AGENTS.md                          ← 自动加载
     → SKILL.md                         ← 根入口（"按以下顺序执行"的 6 步）
       → skills/workflows/{batch,long-file}-conversion/SKILL.md
-        → references/workflow/{behavior-preservation-contract,
-             conversion-evaluation-loop, classifier-agent-gate, build-prerequisites}.md
-          → references/framework/{delivery-handoff-contract, safety-boundary}.md
+      → references/framework/{task-state-contract,evaluation-readiness-contract}.md
+      → references/workflow/{conversion-evaluation-loop,
+             classifier-agent-gate,build-prerequisites}.md
+          → references/framework/{delivery-handoff-contract,safety-boundary}.md
             → references/adapter/controller/remote-controller-adapter.md
 ```
 
-**分支（按源码事实按需加载，同样必须回查）**——主干之外还有 **52 个** SKILL.md 与 **8 个**语言/共性参考页会被加载（合计 60 个），**不要只查主干**：
+行为保持指导按单文件目标/允许差异需要加载，其旧 §4.1 只转引评估准备契约；必读门禁不依赖可选指导。上述图展示依赖，不授权跳过根入口规定的逐项读取时点。
+
+**分支（按源码事实加载，同样必须回查）**——主干之外有 52 个 SKILL.md（42 方向+9 场景/系统+战术索引），7 语言页+共性索引+跨场景安全专题共 9 个共享参考；方向内专页另按磁盘穷举，不把计数当固定检查清单。不要只查主干：
 
 ```
 skills/directions/<源>-to-<目标>/SKILL.md   42 个方向 skill（按本次语言方向选一个）
@@ -118,6 +128,7 @@ skills/directions/<源>-to-<目标>/SKILL.md   42 个方向 skill（按本次语
 skills/references/languages/{c,cpp,csharp,go,powershell,python,ruby}.md
                                             源与目标语言页各一（按本次两个语言选）
 skills/references/seven-language-common-semantics.md   共性语义导航
+skills/references/security-behavior.md                 跨场景安全行为（按行为触发）
 skills/scenes/{network-io,file-io,process-execution,concurrency}/SKILL.md
                                             4 个场景（按源码实际 I/O/并发行为多选）
 skills/systems/{posix-winsock,posix-windows-filesystem,

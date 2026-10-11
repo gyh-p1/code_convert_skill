@@ -4,6 +4,10 @@
 > 状态：**ACTIVE** ｜ 建立：2026-10-10 ｜ 依据来源：dataset-2 实测（batchId=`batch`）
 > 上游：[Stage 1](../stage1/README.md)（1.0.26 统一部署）｜ 本阶段只处理**评估平台侧**，转换系统侧由另一智能体负责
 
+> **2026-10-11 当前验收补充**：下文实测、实现与单元测试数字保留为历史记录，不代表此刻实际部署版本或新用例已验收；§5.1 的本机测试说明不是本轮执行授权。本轮只修订文本，不运行平台或样本。当前待办见[平台任务清单](tasks/platform-checklist.md)，观察采信更正见 [C3 §8](specs/C3-observation-sufficiency.md#8-冻结路径与部署验收更正2026-10-11)。转换规则与证据对账由 [Stage 4 修订工作包](../stage4/plans/evidence-quality-revision.md)承接，无需新增阶段。
+
+> **平台仓库修订进展**：用户已提供独立 `third-party-evaluation-system` 仓库。本阶段 T1/T2/T8 已推进本地产品代码和既有回归用例的文本修改，维护资料定位为该仓库 `docs/observation-quality.md`（不随转换仓库交付，不作转换加载依赖）。未运行测试、未部署、未进行真实 job 验收；保持本机无运行时约束。
+
 ## 1. 为什么单独立阶段
 
 dataset-2 推进到 46/277 项终态的过程中，**所有真实转换缺陷只有 1 项**（D2-025 的 C++ `case` 跨初始化，已修复并通过），
@@ -58,7 +62,7 @@ dataset-2 中 **105/106 份** `input_profile.json` 只申请了 `dimensions: ["o
 | 顺序 | 项目 | 理由 |
 |---|---|---|
 | **1** | **C3 + C4** 观测充分性 | 直接消除**假阳性**这一类最危险的结果——它会让"什么都没验证"看起来像"验证通过"。dataset-2 已实测 2 例（D2-029 job-01、D2-024 job-04） |
-| **2** | **平台 C# 阻断修复** | 一行 schema 问题，解封 **38 项（13.7%）**；详见 [specs/C0-csharp-evidence-schema.md](specs/C0-csharp-evidence-schema.md) |
+| **2** | **平台 C# 阻断修复** | schema、producer 与 fallback 须一致；§5.1 已记录实现，精确部署及原用例重提待验收。历史影响 **38 项（13.7%）**，详见 [specs/C0-csharp-evidence-schema.md](specs/C0-csharp-evidence-schema.md) |
 | **3** | **C5** 分类器假阳性 | 低成本，避免整项被误阻断（D2-055） |
 | **4** | **C1** `processes` 比较 | 采集已通，只差比较器接入；对进程行为类用例直接增益 |
 | **5** | **C7** 隔离证明 | 解封 D2-083、D2-108 这类硬编码外联用例；**需与安全边界一并设计** |

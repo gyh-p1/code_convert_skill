@@ -1,13 +1,13 @@
 ---
 name: posix-windows-filesystem
-description: Identify POSIX-to-Win32 path, current-directory, canonicalization, directory-traversal, stat/inode, and BSD-portability differences when converting file I/O behavior.
+description: Identify POSIX and Windows path, canonicalization, directory traversal and file-state differences across language directions. Includes limited macOS location conventions; does not promise complete reverse mappings or filesystem portability.
 ---
 
 # POSIX ↔ Windows 文件系统系统方向
 
-适用于确有文件系统行为、且从 POSIX/Linux 转向 Windows 的 C→C++ 源码。聚焦路径、当前目录、规范化、目录遍历、stat/inode 计量与 BSD-base 可移植性边界；不提供完整文件系统移植保证。
+按实际文件系统 API/路径行为触发，不绑定 C→C++。当前细则主要是 POSIX→Windows；反向只在表内语义有明确依据时使用，缺反向映射记缺口，不按双向标题推定全面覆盖。§5 的 macOS↔Linux/Windows 仅覆盖位置/路径约定，不提供专有子系统映射。语言改写由所选方向页维护。
 
-本页是可复用的路径与文件系统映射约束。每次转换须以该任务的源/目标版本、目标工具链诊断和独立行为 oracle 判定结果；历史个例不构成其他任务的编译或等价结论。
+本页是路径与文件系统映射知识。编译结论据精确版本/工具链真实诊断，需功能评估时才据对应 oracle/观察判断；历史个例不构成其他任务的结论。仅编译/文本分支按根入口契约，不能由本页强制补行为入口。
 
 ## 1. 关键 API 差异
 
@@ -40,10 +40,7 @@ FreeBSD 等平台的源码可能使用目标工具链缺少的头、类型或符
 
 ## 3. C→C++ 机械与语义要点
 
-- 自定义 `off_t` 等别名与目标头文件冲突时，先核对是否内部符号；内部名可改，外部 ABI 名不能静默变更。
-- `std::filesystem` 迭代默认的符号链接跟随、错误及目录顺序与源遍历 API 未必相同，须按源路径策略映射。
-- 手工替换 `fnmatch` 时核对字符类、首字符 `]`、转义和范围语义；无独立 oracle 不宣称匹配。
-- 跨 OS 路径文本可能因盘符、分隔符或大小写而不同；是否允许由冻结行为契约决定，不能一概标为“按设计匹配”。
+旧标题保留兼容锚点。语言层头文件/类型改写只见[C→C++ 头文件与宏参考](../../directions/c-to-cpp/references/header-macro.md#文件系统映射的语言层边界)和[类型/ABI 参考](../../directions/c-to-cpp/references/type-abi.md)；本页以下条目只管平台 CRT/SDK 符号、句柄及替代 API 的语义。
 
 ### L2-FS-01 与目标平台 CRT/SDK 同名符号必须消歧
 
@@ -78,9 +75,9 @@ if (h == INVALID_HANDLE_VALUE) { /* 使用平台宏 */ }
 
 **不适用条件**：源码的符号名与目标平台**不冲突**（如自写的 `poc_*` 前缀函数、无同名 typedef）时，不需要改名；位宽常量若源码已通过平台宏获取，也不存在硬编码问题。
 
-**信息不足时的处理**：无法确认目标 CRT/SDK 是否已声明某符号或类型时，标为“符号/类型冲突待按目标 SDK 核对”，并**默认改名以规避**（改名不改变行为），而不是假定不冲突。
+**信息不足时的处理**：目标 CRT/SDK 声明未知时记冲突待核；只有确认内部符号才可消歧改名，公开 ABI/导出名未知时先保持待确认，不假定改名无行为影响，也不假定不冲突。
 
-**官方依据**：[Microsoft `INVALID_HANDLE_VALUE`](https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-closehandle)、[`_access`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess)；[cppreference `off_t`](https://en.cppreference.com/w/cpp/types/off_t)；[The Open Group `realpath`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/realpath.html)。
+**官方依据**：Microsoft `INVALID_HANDLE_VALUE`、`_access`；cppreference `off_t`；The Open Group `realpath`。
 
 
 ### L2-FS-02 替代物语义被削弱时必须列为已知差异
@@ -113,14 +110,14 @@ if (GetFinalPathNameByHandleA(h, resolved, sizeof resolved, 0) == 0) { /* 需要
 
 **信息不足时的处理**：无法确认替代物是否削弱的方面时，标为“替代物语义待按目标 SDK 核对”，并把它列为 oracle 观察点；**不得**默认等价。
 
-**官方依据**：[Microsoft `_fullpath`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fullpath-wfullpath)、[`GetFinalPathNameByHandle`](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlea)；[The Open Group `realpath`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/realpath.html)；[cppreference `recursive_directory_iterator`](https://en.cppreference.com/w/cpp/filesystem/recursive_directory_iterator)、[`directory_options`](https://en.cppreference.com/w/cpp/filesystem/directory_options)；[FreeBSD `fts(3)`](https://man.freebsd.org/cgi/man.cgi?fts)。
+**官方依据**：Microsoft `_fullpath`、`GetFinalPathNameByHandle`；The Open Group `realpath`；cppreference `recursive_directory_iterator`、`directory_options`；FreeBSD `fts(3)`。
 
 
 ## 4. 路径安全与行为保留
 - 记录源是检查词法路径、绝对路径还是解析后的最终文件对象；`realpath` 与 `GetFullPathName` 语义差异会改变符号链接、相对路径、失败路径结果。
 - 字符串前缀比较不自动证明路径在 docroot 内；还需考虑分隔符边界、大小写、卷、UNC、reparse point 与竞态。未经授权不在转换中静默引入或宣称完整修复。
 - 错误来源与 API 对齐：Win32 错误码、CRT `errno`、POSIX `errno` 不能混用或在后续调用后读取。
-- 动态验证只在获批隔离 VM、case 私有临时目录、无敏感 fixture 下进行；只读遍历+汇总，不联网/不 exec/不写删。
+- 动态验证仅在获批隔离 VM、私有临时目录与合成数据下按本项冻结行为/副作用范围进行，见[安全边界](../../../references/framework/safety-boundary.md)。只读样本的“只读遍历”不是所有文件任务的写删禁令；也不能据写删源码扩大授权。
 
 ## 5. macOS 作为源或目标 OS 时的路径与位置约定（有限覆盖）
 
@@ -138,11 +135,11 @@ if (GetFinalPathNameByHandleA(h, resolved, sizeof resolved, 0) == 0) { /* 需要
 
 ## 依据
 
-- The Open Group：[`realpath`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/realpath.html)、[`opendir`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/opendir.html)、[`fnmatch`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/fnmatch.html)、[`access`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/access.html)
-- Microsoft Learn：[`GetFullPathNameA`](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfullpathnamea)、[`FindFirstFileA`](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-findfirstfilea)、[`_access`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess)、[`GetCurrentDirectoryA`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectorya)
-- cppreference：[`std::filesystem::recursive_directory_iterator`](https://en.cppreference.com/w/cpp/filesystem/recursive_directory_iterator)、[`std::filesystem::directory_options`](https://en.cppreference.com/w/cpp/filesystem/directory_options)
-- FreeBSD：[`humanize_number(3)`](https://man.freebsd.org/cgi/man.cgi?humanize_number)、[`fts(3)`](https://man.freebsd.org/cgi/man.cgi?fts)、[`SIGINFO`（signal(3)）](https://man.freebsd.org/cgi/man.cgi?signal)
+- The Open Group：`realpath`、`opendir`、`fnmatch`、`access`
+- Microsoft Learn：`GetFullPathNameA`、`FindFirstFileA`、`_access`、`GetCurrentDirectoryA`
+- cppreference：`std::filesystem::recursive_directory_iterator`、`std::filesystem::directory_options`
+- FreeBSD：`humanize_number(3)`、`fts(3)`、`SIGINFO`（signal(3)）
 
 以上为语言/平台规则依据，不是特定编译器、SDK 或转换结果的验证记录；目标为具体版本/文件系统时须核对对应文档。**路径与文件系统的行为结论须由获批隔离环境中匹配的驱动经第三方平台实际运行后回填**；`READY`/快照不证明隔离，也不证明行为等价。
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

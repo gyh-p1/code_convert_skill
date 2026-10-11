@@ -1,4 +1,4 @@
-﻿---
+---
 name: ruby-to-go
 description: Use when converting Ruby source to Go; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Ruby source to Go; apply this direction's langu
 
 ### 规则 RB-GO-01：Ruby 动态鸭子类型向 Go 显式接口定义与满足映射
 1. **源码触发条件**：Ruby 源码中依赖对象具备某个方法即可调用（鸭子类型），未声明显式继承或接口。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4；目标语言 Go 1.27（[GO-SPEC #Interface_types](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4；目标语言 Go 1.27（GO-SPEC #Interface_types）。
 3. **原可观察行为**：运行期只要响应方法（`respond_to?`）即调用成功，否则抛出 `NoMethodError`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 Go 中显式定义 `type Duck interface { Method() }`，Go 结构体只需拥有对应签名的方法即可自动、隐式满足该接口，完美契合鸭子类型本质。
@@ -33,11 +33,11 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    func Invoke(obj Actioner) { obj.Action() }
    ```
 6. **信息不足或实现相关时的处理**：若对象响应的方法集极度动态，提取公共最小子集接口。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Interface_types](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Interface_types。
 
 ### 规则 RB-GO-02：Ruby 异常控制流向 Go 显式多返回值 (T, error) 映射
 1. **源码触发条件**：Ruby 源码中使用 `raise CustomError.new(...)` 并依赖多层拦截。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)）；目标语言 Go 1.27（[GO-SPEC #Errors](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-EXCEPT）；目标语言 Go 1.27（GO-SPEC #Errors）。
 3. **原可观察行为**：抛出异常后中断当前调用链。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：重写为 Go 的 `(T, error)` 返回值；在调用点逐层处理。
@@ -55,11 +55,11 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    }
    ```
 6. **信息不足或实现相关时的处理**：若原 Ruby 错误存在丰富字段，定义包含相同字段的 Go 结构体。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[GO-SPEC #Errors](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；GO-SPEC #Errors。
 
 ### 规则 RB-GO-03：Ruby 任意精度数值向 Go 定宽整数模截断防溢出映射
 1. **源码触发条件**：Ruby 源码中使用大整数算术或位运算。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）；目标语言 Go 1.27（[GO-SPEC #Arithmetic_operators](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 Go 1.27（GO-SPEC #Arithmetic_operators）。
 3. **原可观察行为**：数值任意精度，无固定溢出边界。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：若数值在 64 位内，使用 `int64`/`uint64`，注意溢出时 Go 是按模截断回绕（不会抛出异常）；若需保持无限精度，使用 `math/big.Int`。
@@ -73,11 +73,11 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    x := new(big.Int).Exp(big.NewInt(2), big.NewInt(100), nil)
    ```
 6. **信息不足或实现相关时的处理**：若无法确定上限，优先使用 `math/big` 并在报告中提示性能开销。
-7. **直接官方 HTTPS 依据链接**：[GO-SPEC #Arithmetic_operators](https://go.dev/ref/spec)；[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Arithmetic_operators；RB-DOC-CORE。
 
 ### 规则 RB-GO-04：Ruby 块与 `&:sym` 迭代向 Go 显式循环、函数值与 zero value 语义映射
 1. **源码触发条件**：Ruby 源码用块做迭代或转换，例如 `keys.each do |k| ... end`、`perm.map { |i| scrambled[i] }.join`、`files.each do |file| ... end`、`a.map(&:join)`、`next if cls.nil?`、`next unless k == 'auth'`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-PROC](https://docs.ruby-lang.org/en/3.4/Proc.html)）；目标语言 Go 1.27（[GO-SPEC #For_statements, #Function_types](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-PROC）；目标语言 Go 1.27（GO-SPEC #For_statements, #Function_types）。
 3. **原可观察行为**：块可能一次都不执行（空集合）、可能被短路（`next` 跳过本次、`break` 终止整个迭代并让调用方方法返回该值）、可能在中途抛异常终止循环；块内 `next` 之后的语句不执行，`break` 之后的迭代不再发生。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`each` → `for _, item := range items`；`map { }.join` 这类"逐元素变换再拼接"用 `strings.Builder`/`strings.Join` + 显式循环，或把变换写成具名函数再以函数值传入；`next` → `continue`；`break` → `break`（并让外层用返回值/labeled break 表达"从调用方法返回"）；需要把块当数据传递时用 `func(T) R` 或 `func(T) (R, error)` 类型的参数，块内错误用 error 返回值传出而**不是** panic。
@@ -101,11 +101,11 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    }
    ```
 6. **信息不足或实现相关时的处理**：块内出现 `break` 且其返回值被调用方使用、或块被存进变量后延迟调用（生命周期跨出当前函数）时，必须标注"控制流与存活期未定"并询问；块是否可能为空集合必须从源码确认（决定零次执行是否合法），不得默认至少执行一次。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-PROC](https://docs.ruby-lang.org/en/3.4/Proc.html)；[GO-SPEC #For_statements, #Function_types](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-PROC；GO-SPEC #For_statements, #Function_types。
 
 ### 规则 RB-GO-05：Ruby Hash/Array 向 Go map/切片映射（nil map 写入 panic、零值与键存在性、切片别名）
 1. **源码触发条件**：Ruby 源码构造并逐项写入映射或数组，例如 `avs = {}` 后 `avs[avn] = av_note`、`ret = {}` 后 `ret[s.gsub(...)] = drive`、`values = {}` 后 `values[name] = data.to_s`、`hex = ''` 后 `hex << ...`、`sessions << net_session_enum(...)` 后 `sessions.flatten!`、`unsigned = sorted.map { |b| (b - first) & 0xff }`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)、[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)）；目标语言 Go 1.27（[GO-SPEC #Map_types, #Slice_types, #Append](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-HASH、RB-DOC-ARRAY）；目标语言 Go 1.27（GO-SPEC #Map_types, #Slice_types, #Append）。
 3. **原可观察行为**：Ruby `Hash` 保留插入顺序、允许值为 `nil` 且"键存在"与"值为 nil"可分别观察（`key?` / `[]` 返回 `nil` 无法区分二者）；`Array` 无固定容量，`<<`/`+` 就地改变或合并元素，负数下标与范围切片（`-1`、`[1..]`）合法。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：映射关系用 `map[K]V` 并**必须**用 `make(map[K]V)` 或字面量初始化后再写入；需要"键是否存在"语义时用二值取值 `v, ok := m[k]`（不要用零值判断）；需要保留插入顺序以匹配 Ruby 遍历时，额外维护 `[]K` 键序列，遍历它而不是 `range` map；动态序列用 `[]T` + `append`，切片/取尾用切片表达式（`items[1:]`）并显式处理空切片边界。
@@ -125,11 +125,11 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    for _, name := range keys { out += name + "=" + values[name] + "\n" }
    ```
 6. **信息不足或实现相关时的处理**：Ruby `Hash` 的遍历顺序是否被外部观察（输出、文件名、报告内容）必须从源码判断——被观察时需保留顺序并写入报告，未确认时标注"顺序是否可观察待确认"；`Array#flatten!`/`compact` 这类方法是否在源码里承担"去空值"职责要逐点确认，Go 的切片不会自动剔除零值元素。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-HASH](https://docs.ruby-lang.org/en/3.4/Hash.html)；[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)；[GO-SPEC #Map_types, #Slice_types](https://go.dev/ref/spec)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-HASH；RB-DOC-ARRAY；GO-SPEC #Map_types, #Slice_types。
 
 ### 规则 RB-GO-06：Ruby 二进制打包与字节处理（pack/unpack、整数取字节）向 Go 定宽类型与 encoding/binary 映射
 1. **源码触发条件**：Ruby 源码做二进制编解码或逐字节处理，例如 `[encoded_payload.length].pack('I<') + encoded_payload`、`scrambled = [hex].pack('H*')`、`h['pMacAddr'].unpack('C*').map { |e| '%02x' % e }.join(':')`、`data.unpack('V')`、`perm.map { |i| scrambled[i] }.join`、`gsub("\x00", '')`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-ARRAY](https://docs.ruby-lang.org/en/3.4/Array.html)、[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)）；目标语言 Go 1.27（[GO-PKG-BINARY](https://pkg.go.dev/encoding/binary)、[GO-PKG-HEX](https://pkg.go.dev/encoding/hex)、[GO-SPEC #String_types](https://go.dev/ref/spec)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-ARRAY、RB-DOC-STRING）；目标语言 Go 1.27（GO-PKG-BINARY、GO-PKG-HEX、GO-SPEC #String_types）。
 3. **原可观察行为**：Ruby `String` 是字节序列（可含 `\0`，显式长度），`Integer#[n]` 与 `unpack('C*')` 都给出 **0–255 的整数**；`pack('I<')` 按小端写出 4 字节，`pack('H*')` 按十六进制把字符串解成字节，`unpack('V')` 按小端读 32 位；这些格式字符把宽度与字节序写在源码里，与运行平台无关。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：字节序列统一用 `[]byte`（`string` 是不可变只读字节头部，二者互转要显式拷贝）；定宽小端编解码用 `encoding/binary` 的 `binary.LittleEndian.PutUint32`/`Uint32` 并配 `[4]byte` 缓冲区；十六进制用 `hex.DecodeString`/`hex.EncodeToString`；逐字节十六进制展示用 `fmt.Sprintf("%02x", b)`；单字节取值为整数时用 `b := data[i]`（类型已是 `byte`），参与算术前显式转 `int`。
@@ -148,7 +148,23 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    for i := 0; i < len(macBytes); i++ { fmt.Printf("%02x", macBytes[i]) }
    ```
 6. **信息不足或实现相关时的处理**：Ruby 格式字符串的宽度/字节序（`'I<'` 与 `'I'`、`'V'` 与 `'N'`）必须逐个确认后才选 Go 侧 API；源数据是文本还是二进制无法从局部源码判定（来自 socket、注册表、子进程输出）时必须标注并询问，不得默认按文本处理；`RubySMB`/`Rex`/`Win32::Registry` 等框架 API 返回值的字节布局属框架契约，本地源码不足以确认时应把该点列为缺口。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-STRING](https://docs.ruby-lang.org/en/3.4/String.html)；[GO-PKG-BINARY](https://pkg.go.dev/encoding/binary)；[GO-PKG-HEX](https://pkg.go.dev/encoding/hex)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-STRING；GO-PKG-BINARY；GO-PKG-HEX。
+
+### 规则 RB-GO-07：去空白按源集合映射
+
+1. **触发/前提**：Ruby strip/lstrip/rstrip 或 strip! 的结果参与分支；冻结 Ruby/Go 版本、编码及具体方法。
+2. **源/目标事实**：读[Ruby L1-RB-08](../../references/languages/ruby.md#l1-rb-08-strip-不是通用-unicode-空白删除)与[Go L1-GO-06](../../references/languages/go.md#l1-go-06-unicode-空白不等于其他语言的-strip-集合)。
+3. **条件映射**：源为 Ruby String 的固定集合时选择相应 cutset/谓词；源确用 Unicode 谓词才按其表核 TrimSpace。strip! 的原地更新与 nil 返回不能消成普通字符串结果。
+4. **反例**：不核集合即 TrimSpace，在 U+00A0 与 NUL 上改变边界；ASCII 匹配不能覆盖该差异。
+5. **未知/依据**：自定义正则、编码或 Unicode 表不明写待核；官方依据见两事实页，不把条件反例当历史个案已坐实。
+
+### 规则 RB-GO-08：临时目录按候选与校验义务映射
+
+1. **触发/前提**：Dir.tmpdir/临时文件默认落点；冻结 tmpdir 库版本、Go/GOOS、环境和初始目录状态。
+2. **源/目标事实**：读[Ruby L1-RB-09](../../references/languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)与[Go L1-GO-07](../../references/languages/go.md#l1-go-07-ostempdir-选路径不检查目录可用性)。
+3. **条件映射**：保留源候选优先级、路径展开、拒绝/回退及诊断；仅在这些义务已一致时可直接用 os.TempDir，不能为匹配改环境或预建目录。
+4. **反例**：只设置 TMP、或 TMPDIR 指向不可用目录时，两库不能假定返回相同可用路径。
+5. **未知/依据**：准确库版本/权限未明时记条件差异；依据见两事实页。语义任务文本可完成，历史归因和效果仍须精确证据。
 
 ## 转换与验证边界
 

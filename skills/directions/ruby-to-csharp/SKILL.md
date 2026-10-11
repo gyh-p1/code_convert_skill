@@ -1,4 +1,4 @@
-﻿---
+---
 name: ruby-to-csharp
 description: Use when converting Ruby source to C#; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Ruby source to C#; apply this direction's langu
 
 ### 规则 RB-CS-01：Ruby Module/Mixin 多继承向 C# 接口多继承与扩展方法映射
 1. **源码触发条件**：Ruby 源码中通过 `include MyModule` 将模块的方法混入类继承链中。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-MODULE](https://docs.ruby-lang.org/en/3.4/Module.html)）；目标语言 C# 12 / .NET 8（[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-MODULE）；目标语言 C# 12 / .NET 8（MS-CS-SPEC）。
 3. **原可观察行为**：模块内的方法动态插入到宿主类的祖先继承链（`ancestors`）中。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：将 Module 转换为 C# 的 `interface`，配合 C# 8+ 接口默认实现（Default Interface Methods）或静态扩展方法（Extension Methods）；若包含实例状态，必须在宿主类中维护字段。
@@ -33,11 +33,11 @@ description: Use when converting Ruby source to C#; apply this direction's langu
    public class User : BaseEntity, ILogModule { }
    ```
 6. **信息不足或实现相关时的处理**：若模块内通过 `prepend` 劫持了父类方法，转换为显式装饰器模式。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-MODULE](https://docs.ruby-lang.org/en/3.4/Module.html)；[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-MODULE；MS-CS-SPEC。
 
 ### 规则 RB-CS-02：Ruby 符号 (:symbol) 对象向 C# 枚举或常量字符串映射
 1. **源码触发条件**：Ruby 源码中大量使用 `:active`、`:pending` 等不可变 Symbol 对象作为状态标记或散列键。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）；目标语言 C# 12 / .NET 8（[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 C# 12 / .NET 8（MS-CS-SPEC）。
 3. **原可观察行为**：全局唯一的不可变标识符，整数比对速度，不被常规垃圾回收频繁重复分配。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：若属于离散状态值，映射为 C# 强类型 `enum`；若属于动态字符串键，映射为 `const string` 或普通 `string`。
@@ -51,11 +51,11 @@ description: Use when converting Ruby source to C#; apply this direction's langu
    if (status == Status.Pending) { ... }
    ```
 6. **信息不足或实现相关时的处理**：若 Symbol 来自外部输入动态生成，映射为 `string`。
-7. **直接官方 HTTPS 依据链接**：[MS-CS-SPEC](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/value-types)；[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)。
+7. **资料依据（名称/版本/章节）**：MS-CS-SPEC；RB-DOC-CORE。
 
 ### 规则 RB-CS-03：Ruby rescue StandardError 捕获向 C# catch (Exception) 映射
 1. **源码触发条件**：Ruby 源码中使用 `rescue => e` 处理业务异常。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)）；目标语言 C# 12 / .NET 8（[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-EXCEPT）；目标语言 C# 12 / .NET 8（MS-CS-EXCEPT）。
 3. **原可观察行为**：默认只捕获 `StandardError` 及其子类，系统级致命错误自动放行。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C# 中捕获 `catch (Exception ex)`（C# 的 `System.Exception` 对应常规托管异常）。
@@ -68,11 +68,11 @@ description: Use when converting Ruby source to C#; apply this direction's langu
    try { Action(); } catch (Exception ex) { Logger.LogError(ex); }
    ```
 6. **信息不足或实现相关时的处理**：若 Ruby 抛出特定异常，映射至对应的 .NET 异常类型。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；MS-CS-EXCEPT。
 
 ### 规则 RB-CS-04：Ruby 真值模型与 `||` 默认值向 C# 显式 null/空值判定映射
 1. **源码触发条件**：Ruby 源码用对象的真值直接当布尔使用，或用 `||` 提供默认值，例如 `hostname = sysinfo.nil? ? cmd_exec('hostname') : sysinfo['Computer']`、`com_opts[:target] = datastore['OUTPUT_TARGET'] || session.sys.config.getenv('TEMP') + ...`、`mounted = y if tmp == ...`、`if @record_data and not @record_data.empty?`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)）；目标语言 C# 12 / .NET 8（[MS-CS-BOOL](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/bool)、[MS-CS-NULL](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/null-coalescing-operator)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 C# 12 / .NET 8（MS-CS-BOOL、MS-CS-NULL）。
 3. **原可观察行为**：**Ruby 中只有 `nil` 与 `false` 为假**：`0`、`""`、空数组、空 Hash 都是真；`a || b` 在 `a` 为真时返回 `a` 本身（不是 `true`），因此 `'' || 'x'` 得到 `''`，`0 || 5` 得到 `0`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`x.nil?` → `x is null`；`x || default`（x 可能是 null）→ `x ?? default`；`x` 用作条件且 x 是字符串/数值时，显式写出业务判据（`!string.IsNullOrEmpty(x)`、`x != 0`）并把判据来源写进报告；`if v` / `unless v` 中的 v 若本身已是 `bool`，直接保留。
@@ -89,11 +89,11 @@ description: Use when converting Ruby source to C#; apply this direction's langu
        : datastore["OUTPUT_TARGET"];
    ```
 6. **信息不足或实现相关时的处理**：源码中的条件表达式没有显式比较运算符（`if v`、`while v`）而 v 的类型无法从局部源码确定时，必须标注"真值判据待确认"并询问；Ruby 的 `0`、`""`、空集合为真这一事实不能靠 C# 的运行期隐式转换兜底，判据必须由转换者显式写出。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)；[MS-CS-BOOL](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/bool)；[MS-CS-NULL](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/null-coalescing-operator)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；MS-CS-BOOL；MS-CS-NULL。
 
 ### 规则 RB-CS-05：Ruby 动态能力探测（respond_to?/send/&.）向 C# 静态类型、接口与安全调用映射
 1. **源码触发条件**：Ruby 源码按"对象是否响应某方法"决定流程或按名字调用方法，例如 `return unless client.respond_to?(:net)`、`session.core.use('priv') if !session.priv`、`enum_subkeys(x)&.each do |y| ... end`、`vals.nil?` 分支后按类型取不同方法。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-OBJECT](https://docs.ruby-lang.org/en/3.4/Object.html)）；目标语言 C# 12 / .NET 8（[MS-CS-IFACE](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/interface)、[MS-CS-OPERATORS](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/member-access-operators)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-OBJECT）；目标语言 C# 12 / .NET 8（MS-CS-IFACE、MS-CS-OPERATORS）。
 3. **原可观察行为**：`respond_to?(:m)` 在运行期回答"该对象现在是否响应 m"，据此可以走不同分支；`send(:m, ...)` 按名字分派（名字错误在运行期抛 `NoMethodError`）；`x&.m` 只在 `x` 不为 `nil` 时调用，否则整个表达式求值为 `nil` 且**不求值参数**；`method_missing` 把未知方法变成一次可拦截的调用。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：能力探测改写为"目标类型实现接口"这一编译期事实：抽出能力接口（如 `interface INetResolver { ... }`），用 `x is INetResolver r` 或 `x as INetResolver` 判定；`x&.m` → `x?.m`（C# 的 null 条件成员访问，同样短路不求值参数）；确需按名字调用时用显式委托字典 `Dictionary<string, Func<...>>` 或 `nameof` 常量表，让拼写在编译期受检查。
@@ -109,11 +109,11 @@ description: Use when converting Ruby source to C#; apply this direction's langu
    string uid = subkeys?.FirstOrDefault();
    ```
 6. **信息不足或实现相关时的处理**：`respond_to?` 的目标方法若来自框架或第三方（该类型定义不在本地源码内），必须先把"该能力在 C# 侧由哪个接口/类型承载"标注为缺口并询问；`send` 的目标名字若只在运行期拼出（来自配置、网络或用户输入），必须停下来标注并询问，不得猜一个具体重载。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-OBJECT](https://docs.ruby-lang.org/en/3.4/Object.html)；[RB-DOC-CORE](https://docs.ruby-lang.org/en/3.4/)；[MS-CS-IFACE](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/interface)；[MS-CS-OPERATORS](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/member-access-operators)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-OBJECT；RB-DOC-CORE；MS-CS-IFACE；MS-CS-OPERATORS。
 
 ### 规则 RB-CS-06：Ruby 异常类层次与 rescue 分派向 .NET 异常类型与 when 过滤器映射
 1. **源码触发条件**：Ruby 源码带异常的 `rescue` 子句并区分类型或按消息分派，例如 `rescue StandardError`、`rescue Zip::Error`、`rescue OpenSSL::OpenSSLError => e` 后 `print_error("Could not load SSH Key: #{e.message}")`、`rescue => e` 后 `puts "[!] Error: #{e.message}"`。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)）；目标语言 C# 12 / .NET 8（[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)、[MS-CS-WHEN](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/when)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-EXCEPT）；目标语言 C# 12 / .NET 8（MS-CS-EXCEPT、MS-CS-WHEN）。
 3. **原可观察行为**：裸 `rescue`/`rescue => e` 只匹配 `StandardError` 及其子类，`Exception` 的其他分支（`NoMemoryError`、`SignalException`、`SystemExit` 等）继续向上传播；多个 `rescue` 按书写顺序取第一个匹配；`ensure` 在正常与异常路径都执行；`fail_with(Failure::X, msg)` 不是普通异常抛出，而是以既定失败类别终止当前模块流程。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：每个带类的 `rescue` 映射为 `catch (对应异常类型 ex)`，`rescue => e` 的重载语义（只抓 StandardError 家族）用"捕获对应的自定义异常基类"表达，而**不是** `catch (Exception)`；`e.message =~ /.../` 的分派改写成异常过滤器 `catch (IOException ex) when (ex.Message.Contains(...))`；`ensure` → `finally`（或 `using`/`IDisposable`，当清理对象是本轮新建的）；`fail_with` 译成一个显式的失败结果或专门的失败异常类型，而不是通用 `Exception`。
@@ -133,12 +133,12 @@ description: Use when converting Ruby source to C#; apply this direction's langu
    catch (StandardErrorFamily ex) { log(ex.Message); }
    ```
 6. **信息不足或实现相关时的处理**：Ruby 的 `fail_with(Failure::...)` 在源框架里既有失败类别也有消息，转换前必须确认 C# 侧的失败表示方式（返回值、专门异常还是结果类型）——缺该信息时停下询问，不得默认翻译成抛 `Exception`；Ruby 异常类若来自框架或第三方（`Zip::Error`、`OpenSSL::OpenSSLError`、`Rex`/`Msf` 命名空间下的类型），必须把"对应 .NET 类型是否已知"标为缺口并询问。
-7. **直接官方 HTTPS 依据链接**：[RB-DOC-EXCEPT](https://docs.ruby-lang.org/en/3.4/Exception.html)；[MS-CS-EXCEPT](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/exceptions/)；[MS-CS-WHEN](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/when)。
+7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；MS-CS-EXCEPT；MS-CS-WHEN。
 
 ### 规则 RB-CS-07：框架元数据字段的赋值目标与字面量空白必须逐字保真
 
 1. **源码触发条件**：Ruby 源码把**框架/宿主元数据**作为字段赋值——`Info = ...`、`Description = %q{...}`、`Name = ...`，尤其该字段在**基类**中声明、而派生类又引入了**同名成员**时；或元数据文本使用 `%q{}`/heredoc 等**保留空白**的字面量。
-2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（[RB-DOC-LITERALS](https://docs.ruby-lang.org/en/3.4/syntax/literals_rdoc.html)）；目标语言 C# 12 / .NET 8（[MS-CS-HIDING](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/how-to-know-when-to-use-override-and-new-keyword)、[CS0108](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/cs0108)）。
+2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-LITERALS）；目标语言 C# 12 / .NET 8（MS-CS-HIDING、CS0108）。
 3. **原可观察行为**：
    - 元数据字段（如继承来的 `Info`）由框架在**实例构造时**读取；Ruby 侧没有“名称隐藏”概念，方法名与实例变量处于不同命名空间，因此同名方法**不会**遮挡字段赋值。
    - Ruby `%q{ ... }` **逐字符保留**：包含起始换行、每行的前导空格、结尾换行与 `}` 之前的缩进。
@@ -165,7 +165,7 @@ description: Use when converting Ruby source to C#; apply this direction's langu
    // 或：base.Info = UpdateInfo(info, CreateInfo());
    ```
 6. **信息不足或实现相关时的处理**：无法确定元数据字段是**框架强制要求**还是**纯信息字段**时，仍须先保证**赋值成功且字段可读**（改名或 `base.` 二选一），再核对空白保真度；**不得**因为“该字段不影响 check/exploit”就默许空白差异而不登记。若某项确实无法恢复（框架常量被替换、辅助方法已成无用的身份函数），登记为差异而非静默删除。
-7. **直接官方 HTTPS 依据链接**：[C# 名称隐藏与 `new`/`override`](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/how-to-know-when-to-use-override-and-new-keyword)、[CS0108](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/cs0108)；[C# 原始字符串字面量](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/reference-types)；[Ruby 字面量（`%q`）](https://docs.ruby-lang.org/en/3.4/syntax/literals_rdoc.html)。
+7. **资料依据（名称/版本/章节）**：C# 名称隐藏与 `new`/`override`、CS0108；C# 原始字符串字面量；Ruby 字面量（`%q`）。
 
 ## 转换与验证边界
 

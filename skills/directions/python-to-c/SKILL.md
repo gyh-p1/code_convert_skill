@@ -1,4 +1,4 @@
-﻿---
+---
 name: python-to-c
 description: Use when converting Python source to C; apply this direction's language-semantic mapping and preserve observable behavior. This skill does not establish compilation or functional correctness.
 ---
@@ -17,7 +17,7 @@ description: Use when converting Python source to C; apply this direction's lang
 
 ### 规则 PY-C-01：Python 动态鸭子类型向 C 静态强类型与标量/联合体具化映射
 1. **源码触发条件**：Python 源码中变量动态赋值不同类型（如先赋数字后赋字典），或函数接受异构参数。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）；目标语言 ISO C11（[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-DATA）；目标语言 ISO C11（WG14-N1570 §6.2.5）。
 3. **原可观察行为**：Python 变量纯粹是指向堆对象的指针，动态分派方法。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：推导变量的真实业务类型，具化为 C 静态类型；若必须支持有限几种变体，定义带类型标签的结构体（Tagged Union）。
@@ -34,7 +34,7 @@ description: Use when converting Python source to C; apply this direction's lang
    } Variant;
    ```
 6. **信息不足或实现相关时的处理**：若动态类型在源码中无法静态推导，向用户报告阻断并请求类型标注。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.5 ¶7](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.5 ¶7；PY-REF-DATA。
 
 ### 规则 PY-C-02：Python 异构容器与负索引向 C 定长数组与显式长度换算映射
 1. **源码触发条件**：Python 源码中使用 `list[-1]` 访问末尾元素，或使用 `list.append()` 动态追加。
@@ -58,11 +58,11 @@ description: Use when converting Python source to C; apply this direction's lang
    }
    ```
 6. **信息不足或实现相关时的处理**：若容器大小动态变化，实现带 `capacity` 和 `size` 的动态数组结构体。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.5.2.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.5.2.1；PY-REF-DATA §3.2。
 
 ### 规则 PY-C-03：Python 任意精度 int 向 C 定宽整数防截断失真映射
 1. **源码触发条件**：Python 源码中使用大整数进行乘方、大素数或密集移位计算。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)）；目标语言 ISO C11（[WG14-N1570 §6.2.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)）。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-DATA §3.2）；目标语言 ISO C11（WG14-N1570 §6.2.5）。
 3. **原可观察行为**：Python 自动扩展位宽，永不发生算术截断溢出。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：确认数值范围在 64 位内时，选用 `int64_t` 或 `uint64_t`；若确认属于密码学大整数，必须在报告中声明依赖第三方大数库（如 GMP）或重构算法。
@@ -76,14 +76,14 @@ description: Use when converting Python source to C; apply this direction's lang
    int64_t x = ((int64_t)1) << 40;
    ```
 6. **信息不足或实现相关时的处理**：若无法确认数值是否超过 64 位，向用户标记潜在溢出截断风险。
-7. **直接官方 HTTPS 依据链接**：[WG14-N1570 §6.5.7](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)；[PY-REF-DATA §3.2](https://docs.python.org/3.12/reference/datamodel.html)。
+7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.5.7；PY-REF-DATA §3.2。
 
 ---
 
 ### 规则 PY-C-04：Python 列表推导式与生成器表达式向 C 显式循环映射
 
 1. **源码触发条件**：Python 源码中使用列表推导式（`[x*2 for x in items if x > 0]`）或生成器表达式（`(x*2 for x in items)`）。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-DATA](https://docs.python.org/3.12/reference/datamodel.html)）；目标语言 ISO C11。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-DATA）；目标语言 ISO C11。
 3. **原可观察行为**：列表推导式立即求值并返回完整列表；生成器表达式惰性求值，每次迭代按需计算下一个元素。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：列表推导式展开为 C 显式循环，预分配数组或使用动态扩容结构体；生成器表达式需实现状态机结构体记录迭代位置，或降级为一次性预计算并缓存结果数组；
@@ -101,14 +101,14 @@ description: Use when converting Python source to C; apply this direction's lang
    }
    ```
 6. **信息不足或实现相关时的处理**：若生成器表达式涉及复杂的嵌套作用域捕获或依赖外部可变状态，必须设计显式上下文结构体并说明状态生命周期。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-DATA §6.2.4 List displays](https://docs.python.org/3.12/reference/expressions.html#list-displays)；[WG14-N1570 §6.5.2.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA §6.2.4 List displays；WG14-N1570 §6.5.2.1。
 
 ---
 
 ### 规则 PY-C-05：Python `with` 上下文管理器向 C 显式资源获取释放模式映射
 
 1. **源码触发条件**：Python 源码中使用 `with open(...) as f:` 或自定义 `__enter__` / `__exit__` 的上下文管理器。
-2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（[PY-REF-CTX](https://docs.python.org/3.12/reference/datamodel.html#context-managers)）；目标语言 ISO C11。
+2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-CTX）；目标语言 ISO C11。
 3. **原可观察行为**：进入 `with` 块时调用 `__enter__`，退出块（无论正常返回还是异常）时确定性调用 `__exit__` 清理资源。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：展开为 C 显式的资源获取、使用、释放模式；使用 `goto cleanup` 标签确保所有退出路径均执行清理；若涉及文件，映射为 `fopen` / `fclose`；若涉及锁，映射为 `lock` / `unlock`；
@@ -145,7 +145,7 @@ description: Use when converting Python source to C; apply this direction's lang
    }
    ```
 6. **信息不足或实现相关时的处理**：若 Python `__exit__` 方法包含异常抑制逻辑（返回 `True` 抑制异常），在 C 中必须使用特定错误码表示该语义，并在文档中说明。
-7. **直接官方 HTTPS 依据链接**：[PY-REF-CTX](https://docs.python.org/3.12/reference/datamodel.html#context-managers)；[WG14-N1570 §7.21.5](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **资料依据（名称/版本/章节）**：PY-REF-CTX；WG14-N1570 §7.21.5。
 
 ---
 
@@ -154,3 +154,7 @@ description: Use when converting Python source to C; apply this direction's lang
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
+
+## 网络 API 映射
+
+迁入网络场景，仅在 Python socket 到 C 实现时使用。bytes 可含 NUL，C 始终传显式长度，不用 strlen。独立 C 目标用实际 socket 返回值/平台错误重建 Python 的异常路径，不能照抄带 try/catch 的 C++ 伪代码，也不引入 Python 运行时。仅在任务明确保留 CPython 扩展/嵌入时才另核 C API、GIL 与阻塞调用规则；此边界待匹配官方版本专题核验，不把释放 GIL 包在任意 Python API 调用外。通用部分 I/O 读[网络场景](../../scenes/network-io/SKILL.md)，平台错误读[系统页](../../systems/posix-winsock/SKILL.md)。

@@ -45,7 +45,11 @@
 
 ## 依据与适用边界
 
-- [S1：WG21 N4950，C++23 最终工作草案](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf)：`[algorithm.syn]`、`[alg.min.max]`（`std::min` / `std::max` 在 `<algorithm>`）。目标是其他 C++ 版本时须核对相应标准。
+- S1：WG21 N4950，C++23 最终工作草案：`[algorithm.syn]`、`[alg.min.max]`（`std::min` / `std::max` 在 `<algorithm>`）。目标是其他 C++ 版本时须核对相应标准。
 - **S2：Windows SDK 头 `minwindef.h`（`<windows.h>` 经 `windef.h` 间接包含）** 定义 `min` / `max` 宏与 `NOMINMAX` 开关——以本机 SDK 头实际内容为准逐例核对，不同 SDK 版本可能不同；社区问答仅作发现线索，不作权威依据。
 
 `<sys/param.h>` 的 `min` / `max` 属平台/实现扩展，非 ISO C；来源与是否为宏须按源实际 C 库与平台文档逐例核对。以上是语言与平台规则依据，不是特定编译结果的验证记录。
+
+## 文件系统映射的语言层边界
+
+迁入系统页原 C→C++ 小节：自定义 off_t 等别名与目标头冲突时先确认内部名/外部 ABI，内部消歧不改变公开契约。C 遍历改用 std::filesystem 时核对链接跟随、错误与顺序；替换 fnmatch 核字符类、首字符 ]、转义与范围，不因目标更惯用就改变源行为。平台 API/路径/CRT 的差异只见[文件系统系统页](../../../systems/posix-windows-filesystem/SKILL.md)，可接受路径文本差异须任务有依据。缺 SDK/行为证据写待确认，静态参考不证明编译或等价。

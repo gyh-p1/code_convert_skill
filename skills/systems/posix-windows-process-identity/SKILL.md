@@ -27,15 +27,26 @@ description: Use as the source-OS -> target-OS layer when source code starts chi
 - **错误分类与来源**：POSIX `errno`、CRT `errno`、Win32 `GetLastError()`、`LONG`/`BOOL` 返回是不同来源，不能混读或在后续调用后读取。
 - **资源清理顺序**：句柄/文件描述符、作业对象、临时文件的关闭与删除顺序，以及失败路径上的清理。
 
+## 原生 fork/exec 事实
+
+同 OS 的语言转换也按实际 fork/exec API 读取本节；下面跨系统映射表仅在对应 OS 分支适用。C11/C++17 本身不定义这些 API，不能把 POSIX/Linux 事实归为语言标准保证。
+
+- **fork**：成功在父进程返回子 PID、在子进程返回 0；失败在父返回 -1 并设 errno，不产生子进程。目标语言返回形态另读其语言页；保留父、子、失败三个出口，不能以通用真值判断替代。
+- **exec**：通常成功替换当前映像而不返回，PID 保持；失败返回 -1 并设 errno，后续续行/退出依源代码。准确 API 的极端失败、继承资源与多线程限制依冻结 OS 核，不把异常退出一概判为目标转换差异。
+- **环境**：execve 显式 envp 描述新环境，不是增量覆盖；execv/execvp 等无 envp 形式依其 API 继承环境。Linux 接受 NULL envp 并按空环境处理，这是非标准、不可移植行为；其他 OS 不得默认空环境或继承。完整替换、空环境、继承、合并覆盖是不同契约。
+- **条件映射与反例**：仅在实际源 API、平台及调用参数确定后选择目标；Ruby 空环境 hash 默认仍继承，spawn/system 也不等于 exec 的替换模型。失败返回改成异常时须保持源可观察续行，不盲目补 exit 或吞掉整个函数的错误。
+- **未知处理**：OS、envp 形态、失败出口或映像替换义务不明则记缺口；不从“子程序同样运行”推断进程身份与生命周期等价。
+- **官方依据**：POSIX fork、exec；Linux fork(2)、execve(2)、exec(3)。
+
 ## 核心差异映射表
 
 每行给出必须动手改的点，而不是"名字相近即可"。
 
 | 主题 | POSIX/Linux | Windows | 转换必须处理的点 |
 |---|---|---|---|
-| 创建进程 | `fork` + `exec*`；`posix_spawn` | `CreateProcessA/W`（可同时创建挂起进程） | `fork` 不是 Windows 模型；`CreateProcess` 无 fork 语义，父进程不能靠它得到"子进程的内存副本状态"；`fork` 在 create-process 目标上须整体重写为"一步创建" |
-| 不替换映像的创建 | `fork` 后不 `exec` | 无直接等价；`CreateProcess` 会加载新映像 | 源码若依赖"先 fork 再在子进程内改状态再 exec"，须改为在 `CreateProcess` 的启动参数/环境块里一次性给定 |
-| 替换自身映像 | `execv`/`execvp`/`execve`（成功不返回） | 无等价 | 不能把 `exec*` 换成 `CreateProcess` 后继续执行原函数剩余代码——"成功不返回"这一可观察事实会丢失，须改成创建子进程或返回 |
+| 创建进程 | `fork` + `exec*`；`posix_spawn` | `CreateProcessA/W`（可同时创建挂起进程） | CreateProcess 无内存副本/双返回语义；只有源子分支的全部义务可由启动配置保持时才考虑整体映射，否则明确缺口 |
+| 不替换映像的创建 | `fork` 后不 `exec` | 无直接等价；`CreateProcess` 会加载新映像 | 子分支继续执行源状态不等于加载新映像；仅能表达在启动参数/环境中的配置不能代表整个子分支 |
+| 替换自身映像 | `execv`/`execvp`/`execve`（成功不返回） | Win32 CreateProcess 无此语义；CRT `_exec*` 另核其具体契约 | 创建子进程、等待或返回不能保持原 PID/映像生命周期；无法保持时报告映射缺口，仅在任务明确允许对应差异时采用替代设计 |
 | 多线程进程内 fork | `fork` 只允许在子进程内调用 async-signal-safe 函数，直到 `exec` | 不适用 | 源程序若有工作线程，`fork` 目标侧的等价语义须显式评估；不要假设 C 运行时锁状态在子进程内可用 |
 | shell 调用 | `system`/`popen` 走 `/bin/sh -c` | `system`/`_popen` 走 `cmd.exe /C`；`ShellExecute*` 走 shell 关联 | 解释器不同（引用、展开、内建命令、退出码）；`ShellExecute` 是返回值语义完全不同的 shell 关联 API，不能当 `system` 用 |
 | 直接可执行 + argv | `execvp`/`posix_spawn` | `CreateProcess` 的 `lpApplicationName` + `lpCommandLine` | Windows 命令行是**单个字符串**且由被调方自行解析；参数必须按目标程序的解析规则引用，不能直接把 argv 数组拼空格 |
@@ -58,7 +69,7 @@ description: Use as the source-OS -> target-OS layer when source code starts chi
 
 ## 方向不对称的陷阱
 
-- **POSIX → Windows**：`fork` 必须整体重写（见上表），不能保留"子进程继承父进程内存状态"的隐含假设；`exec*` 的"成功不返回"须显式改写；`kill` 的进程组语义须补作业对象；`errno` 改 `GetLastError()`；`setuid`/`seteuid` 的降权不可用令牌机械替代。
+- **POSIX → Windows**：fork 的内存副本/双返回与 exec 的自身替换义务先按上表核可表达性；不能通过整体改写、创建子进程或新增 exit 自动宣称等价，无法保持则记缺口/明确允许差异。kill 的进程组语义另核作业对象；错误来源按实际 CRT/Win32 API 区分 errno 与 GetLastError，不全局替换；setuid/seteuid 的降权不可用令牌机械替代。
 - **Windows → POSIX**：`CreateProcess` 的"命令行单字符串"在 POSIX 侧是 argv 数组，**参数边界必须重新切分**（直接拼串会改变参数语义，也是命令注入面）；`TerminateProcess` 改信号后，目标进程可能捕获信号并继续运行——源的"立即终止"义务可能无法保持，须显式标注；`SECURITY_ATTRIBUTES` 式继承在 POSIX 侧默认继承，**须主动考虑 `O_CLOEXEC`/`FD_CLOEXEC`**，否则子进程会多拿到源程序没有的 fd；Windows 令牌特权在 POSIX 侧无对应，须按实际能力（uid 切换、`capset`）逐项评估并标缺口。
 - **提权路径不对称**：Windows 上"以管理员启动"通常由父进程/Shell 决定（`ShellExecute` 的 `runas` 动词、清单文件），不是进程内 API；POSIX 上 `setuid` 位或 sudo 由文件权限与调用方决定。两边都不能靠进程内一次调用改变启动身份。
 - **退出码可观察性不对称**：源码若把退出码当"业务状态码"传递，Windows 侧完整、POSIX 侧低 8 位——跨 OS 时源里大于 255 的状态码语义会丢失，属应显式登记的差异。
@@ -80,11 +91,11 @@ description: Use as the source-OS -> target-OS layer when source code starts chi
 
 ## 依据
 
-- The Open Group Base Specifications Issue 7 / IEEE Std 1003.1（POSIX）：[`fork`](https://pubs.opengroup.org/onlinepubs/9699919799/functions/fork.html)、[`exec`](https://pubs.opengroup.org/onlinepubs/9699919799/functions/exec.html)、[`posix_spawn`](https://pubs.opengroup.org/onlinepubs/9699919799/functions/posix_spawn.html)、[`waitpid`](https://pubs.opengroup.org/onlinepubs/9699919799/functions/waitpid.html)、[`setuid`](https://pubs.opengroup.org/onlinepubs/9699919799/functions/setuid.html)、[`kill`](https://pubs.opengroup.org/onlinepubs/9699919799/functions/kill.html)：创建、替换、等待状态编码、身份切换与信号发送语义。
-- Microsoft Learn：[`CreateProcessW`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw)、[`WaitForSingleObject`](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject)、[`GetExitCodeProcess`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getexitcodeprocess)、[`TerminateProcess`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-terminateprocess)：创建、命令行、等待与终止语义。
-- Microsoft Learn：[Job Objects](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects)、[`TerminateJobObject`](https://learn.microsoft.com/en-us/windows/win32/api/jobapi2/nf-jobapi2-terminatejobobject)：进程树回收边界。
-- Microsoft Learn：[`OpenProcessToken`](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocesstoken)、[`AdjustTokenPrivileges`](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-adjusttokenprivileges)、[`LookupPrivilegeValueW`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-lookupprivilegevaluew)、[`GetTokenInformation`](https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-gettokeninformation)：令牌、特权启用与身份查询语义。
-- Microsoft Learn：[`ShellExecuteW`](https://learn.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew) 与 [`_popen`](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/popen-wpopen)：shell 关联与 CRT 管道语义（与 POSIX `system`/`popen` 不同）。
-- Microsoft Learn：[`SetConsoleCtrlHandler`](https://learn.microsoft.com/en-us/windows/console/setconsolectrlhandler)、[`GenerateConsoleCtrlEvent`](https://learn.microsoft.com/en-us/windows/console/generateconsolectrlevent)：控制台信号处理与进程组限制。
+- The Open Group Base Specifications Issue 7 / IEEE Std 1003.1（POSIX）：`fork`、`exec`、`posix_spawn`、`waitpid`、`setuid`、`kill`：创建、替换、等待状态编码、身份切换与信号发送语义。
+- Microsoft Learn：`CreateProcessW`、`WaitForSingleObject`、`GetExitCodeProcess`、`TerminateProcess`：创建、命令行、等待与终止语义。
+- Microsoft Learn：Job Objects、`TerminateJobObject`：进程树回收边界。
+- Microsoft Learn：`OpenProcessToken`、`AdjustTokenPrivileges`、`LookupPrivilegeValueW`、`GetTokenInformation`：令牌、特权启用与身份查询语义。
+- Microsoft Learn：`ShellExecuteW` 与 `_popen`：shell 关联与 CRT 管道语义（与 POSIX `system`/`popen` 不同）。
+- Microsoft Learn：`SetConsoleCtrlHandler`、`GenerateConsoleCtrlEvent`：控制台信号处理与进程组限制。
 
-以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。本 Skill 未经本项目转换样例验证。同时遵守根入口和[安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。
+以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。本 Skill 未经本项目转换样例验证。同时遵守根入口和[安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

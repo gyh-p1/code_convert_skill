@@ -5,7 +5,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 # C → C++ 语言转换规则
 
-> **适用基线**：源语言 ISO C11 ([WG14-N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)) → 目标语言 ISO C++17 ([WG21-N4659](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf))
+> **适用基线**：源语言 ISO C11 (WG14-N1570) → 目标语言 ISO C++17 (WG21-N4659)
 > **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 C++](../../references/languages/cpp.md)。
 > **规范硬约束**：严格排除 C++20 Concepts、协程及 C++23 `std::expected` 等超出 C++17 基线的特性。
 
@@ -45,7 +45,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    }
    ```
 6. **不确定性处理**：若源码中指针所有权不明确（例如由外部全局或未知库生命周期管理），保持 `const char*` 原型并标注待确认所有权契约，禁止盲目封装为 `std::string`。
-7. **官方依据**：[WG21-N4659 Clause 24.3, Clause 24.4](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §7.1.1, §7.24](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 24.3, Clause 24.4；WG14-N1570 §7.1.1, §7.24。
 
 ---
 
@@ -66,7 +66,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    }
    ```
 6. **不确定性处理**：若源码中存在复杂的跨函数部分成功/部分失败所有权转移（如部分释放、部分缓存在全局表），禁止机械替换为单作用域 `std::unique_ptr`，应保持原清理结构并标明未验证所有权流向。
-7. **官方依据**：[WG21-N4659 Clause 18, Clause 15.4](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §7.22.4.4](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 18, Clause 15.4；WG14-N1570 §7.22.4.4。
 
 ---
 
@@ -87,7 +87,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    *ptr = 10;        // 未定义行为（UB）！
    ```
 6. **不确定性处理**：若静态分析无法证明所有内部元素指针的生命周期短于下一次重分配，保持 C 风格动态数组分配模式，或使用下标索引代替裸指针，并标注别名生命周期不确定性。
-7. **官方依据**：[WG21-N4659 Clause 26.3.11, Clause 6.7](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §6.2.5, §7.22.3](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 26.3.11, Clause 6.7；WG14-N1570 §6.2.5, §7.22.3。
 
 ---
 
@@ -108,7 +108,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    }
    ```
 6. **不确定性处理**：若 C 源码涉及操作系统专有线程属性、信号掩码或取消机制（`pthread_cancel`），A 类规则仅说明语言层原子性与同步契约，具体 OS 调度与线程 API 必须委托对应 B 类规则。
-7. **官方依据**：[WG21-N4659 Clause 32 Atomics, Clause 33 Threads](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[WG14-N1570 §7.17, §7.26](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：WG21-N4659 Clause 32 Atomics, Clause 33 Threads；WG14-N1570 §7.17, §7.26。
 
 ---
 
@@ -136,7 +136,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    // 多选项实现必须另做精确匹配优先/歧义检测，不用“字符串相等”冒充前缀
    ```
 6. **不确定性处理**：无法确认源 `getopt` 实现（glibc/BSD/musl）或是否设置 `POSIXLY_CORRECT` 时，标为“参数置换与前缀语义待确认”，不得默认 glibc 行为。
-7. **官方依据**：[glibc `getopt_long`（含参数置换与唯一前缀）](https://www.gnu.org/software/libc/manual/html_node/Getopt-Long-Options.html)、[glibc `getopt`（`POSIXLY_CORRECT`）](https://www.gnu.org/software/libc/manual/html_node/Using-Getopt.html)；[POSIX `getopt`](https://pubs.opengroup.org/onlinepubs/9799919799/functions/getopt.html)。
+7. **官方依据**：glibc `getopt_long`（含参数置换与唯一前缀）、glibc `getopt`（`POSIXLY_CORRECT`）；POSIX `getopt`。
 
 ### 规则 6：`argc`/`argv` 指针推进式消费必须完整重建
 
@@ -163,7 +163,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    if (argc - consumed > 0) target = argv[consumed];
    ```
 6. **不确定性处理**：无法确定 `optind` 类变量的定义位置与生命周期时，标为“参数消费边界待确认”；**不得**假定单次解析。
-7. **官方依据**：[POSIX `getopt`（`optind` 语义）](https://pubs.opengroup.org/onlinepubs/9799919799/functions/getopt.html)；[WG14-N1570 §5.1.2.2.1](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)。
+7. **官方依据**：POSIX `getopt`（`optind` 语义）；WG14-N1570 §5.1.2.2.1。
 
 ### 规则 7：C→C++ 语法合法性预检（字面量 `const`、存储类、类型双关）
 
@@ -191,7 +191,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    int i = 0;
    ```
  6. **不确定性处理**：若字面量在源中确实被写入（源已存在 UB），如实登记为“源已存在缺陷，转换不得顺手修复”，**不**把它转成本方向的修复规则。
-7. **官方依据**：[WG21-N4659 Clause 5.13.5（字符串字面量类型）](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)、[Clause A.2（`register` 的移除）](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4659.pdf)；[Microsoft `ComPtr::GetAddressOf`](https://learn.microsoft.com/en-us/cpp/cppcx/wrl/comptr-class)。
+7. **官方依据**：WG21-N4659 Clause 5.13.5（字符串字面量类型）、Clause A.2（`register` 的移除）；Microsoft `ComPtr::GetAddressOf`。
 
 ### 规则 8：`fnmatch` 等字符类边角语义：修复本身不得引入新偏差
 
@@ -212,11 +212,20 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
    //   []-a]        → 范围 ']'..'a'
    ```
 6. **不确定性处理**：无法取得源 `fnmatch` 的准确语义（glibc/FreeBSD/musl 细节有差异）时，标为“字符类边角语义待确认”，并把每个边角形态列为 oracle 观察点；**不得**以“已修过一次”为由宣称收敛。
-7. **官方依据**：[POSIX `fnmatch`（模式与字符类语义）](https://pubs.opengroup.org/onlinepubs/9799919799/functions/fnmatch.html)；[Microsoft `PathMatchSpec`](https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspeca)。
+7. **官方依据**：POSIX `fnmatch`（模式与字符类语义）；Microsoft `PathMatchSpec`。
 
 ---
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
+
+### 规则 9：case/goto 进入作用域不得绕过目标初始化
+
+1. **触发/前提**：C11 → C++17；switch 的不同 case 或 goto 可能跨越局部声明/初始化，尤其目标新增 std::string 等对象时。源能构建不代表目标相同布局合法。
+2. **应保留行为**：分支入口、fallthrough、变量使用范围、初始化时机、资源生存期及清理出口。C++ 对跳转进入局部变量作用域有约束，具体合法性以目标编译器真实诊断定案，静态审阅不自行宣告构建通过/失败。
+3. **映射条件**：变量仅由一个分支使用时可将分支体置于独立块，明确保留该分支的 break 或 fallthrough；跨分支共享状态时不能盲目加块使其不可见，应按源初始化/消费路径安排声明和赋值，并核目标构造/析构是否新增副作用。共享 goto 清理路径也须一起核。
+4. **反例**：case 内新增有初始化的局部对象却保留后面的跳入入口；一律加 break 改掉源 fallthrough；声明一律提升到函数头使构造提前、清理延后。
+5. **未知处理**：分支间使用、跳转目标或对象生命周期未知时定位并记录；只能把候选问题交给既有有限自审和真实编译反馈，不本机预编译，不凭猜测开展重复修复。
+6. **官方依据**：C++17 N4659（stmt.jump、stmt.switch）、Microsoft C2360（case 跳过初始化与独立作用域）；与规则 2 的清理/RAII 映射共同使用。MSVC 的错误编号不外推到其它编译器。
 
 ## 四、按需加载的专题与场景规则
 
@@ -236,7 +245,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 1. **模型自检与预检**：转换模型生成的代码仅作内部自审，用于筛查声明遗漏、语法冲突与生命周期疑点。模型说“无问题”不等于无缺陷，严禁给模型自检贴上 `syntaxPassed` 或编译通过标签。
 2. **语法结论来源**：语法结论必须由第三方评估机构在目标 MinGW g++ C++17（或批准的工具链）下执行真实编译后回填；未收到结果前一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`。
-3. **功能行为边界**：编译通过绝对不代表功能正确。**功能结论只在任务约定的可观察范围内成立**：需要功能评估的任务，其验收依据是该项冻结的 oracle 与匹配驱动经过第三方平台实际运行后的回传证据；**oracle 是条件义务，不是每项都要造**——无运行入口的库翻译单元按契约补最小中性驱动即可，**不得为凑 oracle 而编造源程序本来没有的行为**。未被观察的维度如实记 `UNVERIFIED`，不外推为普遍等价。
+3. **功能行为边界**：编译不代表功能正确。需要功能评估时只据冻结 oracle/匹配驱动的真实回传，oracle 是条件义务。入口与驱动合法来源、可观察库准备缺口和真正无安全入口仅编译例外只按[评估准备契约](../../../references/framework/evaluation-readiness-contract.md)，本方向不授权补写辅助驱动。未观察维度 UNVERIFIED，不外推普遍等价。
 
 ---
 
@@ -246,4 +255,4 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧构建预检 → 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
