@@ -5,6 +5,8 @@ description: Identify POSIX and Windows path, canonicalization, directory traver
 
 # POSIX ↔ Windows 文件系统系统方向
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充系统映射，不单独推进转换。
+
 按实际文件系统 API/路径行为触发，不绑定 C→C++。当前细则主要是 POSIX→Windows；反向只在表内语义有明确依据时使用，缺反向映射记缺口，不按双向标题推定全面覆盖。§5 的 macOS↔Linux/Windows 仅覆盖位置/路径约定，不提供专有子系统映射。语言改写由所选方向页维护。
 
 本页是路径与文件系统映射知识。编译结论据精确版本/工具链真实诊断，需功能评估时才据对应 oracle/观察判断；历史个例不构成其他任务的结论。仅编译/文本分支按根入口契约，不能由本页强制补行为入口。

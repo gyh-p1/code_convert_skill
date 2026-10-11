@@ -27,6 +27,8 @@ runnerId、语言与当前快照只在 [Runner 能力矩阵](runner-capability-m
 
 ## API 契约
 
+Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2](../../framework/task-state-contract.md#22-冻结落盘门禁)回读本项本 run 的 `01-frozen/frozen-inputs.md` 并核身份/版本、适用内容与当前条件；缺失、空白或错位不 POST。此检查是提交端的手工前置要求，未新增 multipart 字段或服务端 frozen-inputs 校验，不把文件塞入 source/ 树冒充源码。未知提交的恢复查询、已发生 job 的取证及终止/清理不因缺件延后。
+
 **提交前消费者的引用核对**：Agent 调用 `POST /api/jobs` 前，先按[分类结果准入](../../workflow/classifier-agent-gate.md)确认准入判定为 `ALLOWED`、提交内容与被分类输入的身份/哈希一致、独立授权/隔离记录齐备，并持久化逐项记录和提交尝试。**`classification` 与 `batchAuthorization` 两个表单字段是提交契约的固定组成，每次提交一律随附**（单文件任务按"批次为一"附最小 `batch-authorization.json`，见[分类结果准入 §3](../../workflow/classifier-agent-gate.md)）。**2026-10-10 起平台已实现服务端硬门禁**（[Spec05](../../../docs/stages/stage1/specs/submission-and-batch-authorization.md) / [接入记录](../../../docs/stages/stage1/reports/平台提交端准入闭环接入-2026-10-10.md)）：现役 1.0.28 Controller 已强制校验，未准入直接 **403**（body 含 `blockingReason`）；历史 1.0.26 会**忽略**这两个多出的字段、不报错，因此一律随附既安全、又免去判断"门禁是否已生效"。不要把分类器的 `executionApproved` 当作服务器许可；身份/哈希核对与逐项留证仍由 Agent 执行。
 
 | 方法 | 路径 | 作用 |
@@ -133,6 +135,8 @@ capsule.zip
 项目清单 `evaluator_manifest.json` 是移交记录，**不可直接当作**本接口所需的 comparison capsule；以当前 Controller 的实际 schema 组装，原输入与回传证据落于任务输出位置。
 
 **生成前源侧预检**：使用现役平台已支持、获授权的预检提交形态，分类/授权随附规则相同；不提前生成转换目标来补包，也不自造平台字段。需行为评估时，源侧须按冻结条件真实构建、运行、观察与终止/清理，回传源 build、execution 和原始观察供[评估准备 §1.1](../../framework/evaluation-readiness-contract.md#11-生成前源侧预检)判读，不能只读 build 摘要。实际 job 的回执与证据归入 `job-00-source-buildability/`，目录名不禁止源运行；不适用运行的文本/片段/仅编译任务须核对应安全构建形态并记录理由。接口支持未知时待准备；本页的普通双侧 capsule 示例不构成源预检形态或仅编译能力已验收的证明。
+
+**本页尚未登记可直接照做的源预检请求示例。** Agent 须从用户或获批平台提供的精确调用契约核实请求形态、仅含源侧时的包/字段要求、适用运行与证据获取方式，并保存非敏感来源/版本依据；已有适用依据可沿用，不重复请求授权。没有这些依据时记 PREPARATION_GAP，按统一收尾入口暂停，下一动作是补平台调用契约，不是发送本页的双侧示例。此说明明确当前文档的能力缺口，不宣称现役平台一定不支持源预检。
 
 ## 提交—轮询—取证流程（本会话实测）
 

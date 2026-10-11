@@ -6,7 +6,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 # Python → Go 语言转换规则
 
 > **适用基线**：源语言 Python 3.12 / CPython 3.12 (PY-REF-DATA, PY-REF-YIELD) → 目标语言 Go 1.27 (GO-SPEC, GO-PKG-CONTEXT)
-> **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Python](../../references/languages/python.md)与[目标语言 Go](../../references/languages/go.md)。
+> **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 Python](../../references/languages/python.md)与[目标语言 Go](../../references/languages/go.md)，按源码选择适用规则。
 > **规范硬约束**：严格遵循 Python 3.12 规范与 Go 1.27 语言规范；纠正负索引认知（Go 常量负下标为编译期报错，非常数表达式负索引在运行期触发 panic）；消除任何不具官方依据的实现数字。
 
 ---

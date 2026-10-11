@@ -6,7 +6,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 # C → C++ 语言转换规则
 
 > **适用基线**：源语言 ISO C11 (WG14-N1570) → 目标语言 ISO C++17 (WG21-N4659)
-> **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 C++](../../references/languages/cpp.md)。
+> **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 C](../../references/languages/c.md)与[目标语言 C++](../../references/languages/cpp.md)，按源码选择适用规则。
 > **规范硬约束**：严格排除 C++20 Concepts、协程及 C++23 `std::expected` 等超出 C++17 基线的特性。
 
 ---
@@ -114,14 +114,14 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 ### 规则 5：`getopt_long` 的参数置换与长选项唯一前缀必须重建
 
-> **归属说明**：实参绑定的**共享事实**（位置/命名/默认值的绑定规则）归语言层，见 [C 语言页 §五](../../references/languages/c.md)、[C++ 语言页 §五](../../references/languages/cpp.md)。本规则**只写 C→C++ 方向特有**的两点：`getopt_long` 的置换与唯一前缀语义。
+> **归属说明**：实参计数与使用范围的共享事实见 [C 语言页 §一 L1-C-05](../../references/languages/c.md#l1-c-05-程序实参的计数基准与解析器语义必须显式重建)、[C++ 语言页 §一 L1-CPP-05](../../references/languages/cpp.md#l1-cpp-05-程序实参的计数基准与解析器语义必须显式重建)。本规则维护 C→C++ 方向的解析器保留要求。
 
 1. **触发条件**：C 源码使用 `getopt`/`getopt_long` 解析命令行，且（a）存在**选项与操作数交错**的调用形态（如 `prog <path> -q`），或（b）使用长选项。
 2. **适用前提**：源语言 ISO C11 + glibc `getopt(3)`/`getopt_long(3)` 行为；目标语言 ISO C++17。**非 glibc 实现（BSD/musl）行为不同**，须先确认源运行时的实现。
 3. **应保留行为**：
    - **参数置换**：glibc 默认置换 `argv`，使 `realpath <path> -q` 与 `realpath -q <path>` 在源相应选项语义下等价；解析结束后 optind 指向剩余操作数起始，不能把它当作全部操作数之后。
    - **长选项唯一前缀**：`getopt_long` 允许**唯一前缀**匹配，`--s` 可匹配 `--si`。
-   - **未知选项**：glibc 会**先自行输出诊断行**（形如 `prog: invalid option -- 'x'`）再返回 `'?'`；该输出属可观察行为。见 [C 语言页 §五 规则 L1-C-04](../../references/languages/c.md)。
+   - **未知选项**：须核 `opterr`、选项串前导控制符及应用自己的诊断/usage；未抑制库诊断的路径可先输出诊断再返回 `'?'`，不能推定所有调用都打印。库返回值、应用退出码、通道和准确文案分别按冻结 libc/版本/区域/程序名保持，详见两语言页 §一的参数规则。
 4. **可选映射与不适用条件**：
    - *可选映射*：用手写循环替换 `getopt` 时，必须显式重建置换顺序与唯一前缀匹配，否则命令行形态等价性丢失。
    - *不适用条件*：POSIXLY_CORRECT/前导 `+` 使解析在首操作数停止；前导 `-` 则以返回值 1 处理非选项，是另一模式，不能等同“停止”。须按实际配置冻结；短选项无交错时不涉及长选项缩写。

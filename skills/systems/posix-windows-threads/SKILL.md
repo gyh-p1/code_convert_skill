@@ -5,6 +5,8 @@ description: Map the POSIX pthread lifecycle used by a source file to Windows CR
 
 # POSIX ↔ Windows 线程系统方向（初稿）
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充系统映射，不单独推进转换。
+
 适用于 Linux/POSIX 的 `pthread_*` 与 Windows CRT/Win32 线程 API 之间的迁移。这里聚焦线程 API 与生命周期；共享状态、顺序和资源归属还须加载[并发场景](../../scenes/concurrency/SKILL.md)。规则以对应 API 契约为依据，未经本项目转换样例验证。
 
 ## 适用映射与边界

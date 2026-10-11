@@ -5,6 +5,8 @@ description: Use as the source-OS -> target-OS layer when source code reads or w
 
 # Windows 注册表与服务子系统方向
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充系统映射，不单独推进转换。
+
 本 Skill 是**系统方向**知识中 Windows 专有子系统的一份，覆盖注册表与服务控制管理器（SCM）两块的 API 语义义务。它与语言方向 Skill（如 [C → Go](../../directions/c-to-go/SKILL.md)）和 [进程执行场景](../../scenes/process-execution/SKILL.md) **共同阅读**：语言方向负责 API 与错误模型映射，本 Skill 只负责这两类 Windows 子系统"必须保留什么、哪里没有等价物"。它是静态规则与风险说明，**不保证**目标代码可编译、可移植或行为等价。
 
 **方向不对称的说明**：注册表与服务在 POSIX/Linux 上**没有直接等价物**（配置文件与 init/systemd 不是同一模型）。因此本 Skill 对 Windows → POSIX 方向主要给出"不可映射项与替代方案的边界"，对 Windows → 其他语言（Go/Python/C#/PowerShell/Ruby）方向主要给出"子系统语义义务"，因为目标语言通常用封装库访问同一子系统。两种情形都不允许把"写了个配置文件"当成注册表等价。

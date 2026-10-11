@@ -5,6 +5,8 @@ description: Use as the source-OS -> target-OS layer when converting socket code
 
 # POSIX ↔ Winsock 套接字系统方向
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充系统映射，不单独推进转换。
+
 本 Skill 是**系统方向**知识（源 OS → 目标 OS）中套接字层的一份，仅覆盖 POSIX/Linux 与 Windows/Winsock 之间的套接字 API 差异。它与语言方向 Skill（如 [C → C++](../../directions/c-to-cpp/SKILL.md)）和 [网络 I/O 场景](../../scenes/network-io/SKILL.md) **共同阅读**：语言方向负责语法/类型映射，网络场景负责协议与字节流语义，本 Skill 只负责两个平台套接字接口的差异与不可映射项。它是静态的规则与风险说明，不保证目标代码可编译、可移植或行为等价。
 
 ## 触发条件与前提

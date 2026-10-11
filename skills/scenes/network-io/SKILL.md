@@ -5,6 +5,8 @@ description: Use alongside a matching conversion direction when source code perf
 
 # 网络 I/O 场景：转换语义
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充行为义务，不单独推进转换。
+
 本场景只在源码确有网络 I/O 行为时与方向 Skill **共同阅读**。它不按关键字或 ATT&CK 标签单独判定行为，也不提供通信目标、隐蔽能力或攻击流程。先确认源/目标平台、流式或报文式接口、同步/非同步模式及调用方协议；未知时保留不确定性。
 
 转换可能改变路径、解析、认证、上限或解码顺序时按需加载[跨场景安全行为](../../references/security-behavior.md)，保持源安全姿态，不新增能力。

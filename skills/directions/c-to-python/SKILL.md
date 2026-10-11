@@ -6,7 +6,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 # C → Python 语言转换规则
 
 > **适用基线**：源语言 ISO C11 (WG14-N1570) → 目标语言 Python 3.12 / CPython 3.12 (PY-REF-DATA, CPY-DEV-GC)
-> **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 Python](../../references/languages/python.md)。
+> **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 C](../../references/languages/c.md)与[目标语言 Python](../../references/languages/python.md)，按源码选择适用规则。
 > **规范硬约束**：严格遵循 Python 3.12 标准，排除 Python 3.13+ 特性；严格区分 Python 语言规范与 CPython 解释器专有实现（如 GIL、引用计数）。
 
 ---

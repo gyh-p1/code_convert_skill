@@ -5,6 +5,8 @@ description: Preserve observable concurrency, shared state, ordering, and resour
 
 # 并发场景
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充行为义务，不单独推进转换。
+
 本 Skill 仅在源码实际创建或协作使用多个线程/任务时加载。它定义应盘点的行为，不替代 source OS → target OS 的线程 API 映射，也不证明无数据竞争。
 
 ## 转换前盘点

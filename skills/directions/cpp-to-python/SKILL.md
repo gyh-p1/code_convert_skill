@@ -6,7 +6,7 @@ description: Use when converting C++ source to Python; apply this direction's la
 # C++ → Python 语言转换规则
 
 > **适用基线**：ISO C++17 → CPython 3.12。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
-> **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C++](../../references/languages/cpp.md)与[目标语言 Python](../../references/languages/python.md)。
+> **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 C++](../../references/languages/cpp.md)与[目标语言 Python](../../references/languages/python.md)，按源码选择适用规则。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提

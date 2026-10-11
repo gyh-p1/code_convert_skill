@@ -5,6 +5,8 @@ description: Use as the source-OS -> target-OS layer when source code starts chi
 
 # POSIX ↔ Windows 进程创建与身份/权限系统方向
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充系统映射，不单独推进转换。
+
 本 Skill 是**系统方向**知识（源 OS → 目标 OS）中的进程与身份层，只覆盖 POSIX/Linux 与 Windows 之间的进程创建/替换/等待/终止、以及进程自身的身份与特权差异。它与语言方向 Skill（如 [C → C++](../../directions/c-to-cpp/SKILL.md)）、[进程执行场景](../../scenes/process-execution/SKILL.md) **共同阅读**：语言方向负责语法/类型/错误模型映射，进程执行场景负责子进程树、管道、超时与输出语义，本 Skill 只负责两个平台系统接口的差异与不可映射项。它是静态规则与风险说明，**不保证**目标代码可编译、可移植或行为等价。
 
 线程生命周期（`pthread_*` ↔ CRT/Win32 线程）不在本 Skill，见 [POSIX ↔ Windows 线程](../posix-windows-threads/SKILL.md)。

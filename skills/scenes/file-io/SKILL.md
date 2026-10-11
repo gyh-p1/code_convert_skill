@@ -5,6 +5,8 @@ description: Use alongside a matching conversion direction when source code crea
 
 # 文件 I/O 场景：转换语义
 
+> **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充行为义务，不单独推进转换。
+
 本场景只在源码确有文件系统操作时与方向 Skill 共同阅读，维护文件可观察行为，不按文件名/扩展名推断用途。先确认 OS、文本/二进制、原子性/持久化和并发模型；未知标未知。路径穿越/规范化见[跨场景安全行为](../../references/security-behavior.md)。
 
 ## 转换时保留的决策边界

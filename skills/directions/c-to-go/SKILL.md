@@ -6,7 +6,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 # C → Go 语言转换规则
 
 > **适用基线**：源语言 ISO C11 (WG14-N1570) → 目标语言 Go 1.27 (GO-SPEC, GO-RT-DOC)
-> **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C](../../references/languages/c.md)与[目标语言 Go](../../references/languages/go.md)。
+> **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 C](../../references/languages/c.md)与[目标语言 Go](../../references/languages/go.md)，按源码选择适用规则。
 > **规范硬约束**：严格遵循 Go 1.27 语言规范；Go 规范未规定 map 迭代顺序；清除无官方逐条出处的具体实现假设；禁用跨实现的无保证推断。
 
 ---

@@ -6,7 +6,7 @@ description: Use when converting Ruby source to Go; apply this direction's langu
 # Ruby → Go 语言转换规则
 
 > **适用基线**：CRuby 3.4 → Go 1.27。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
-> **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 Ruby](../../references/languages/ruby.md)与[目标语言 Go](../../references/languages/go.md)。
+> **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 Ruby](../../references/languages/ruby.md)与[目标语言 Go](../../references/languages/go.md)，按源码选择适用规则。
 > **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
 
 ## 适用范围与前提

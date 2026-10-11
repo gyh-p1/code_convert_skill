@@ -83,7 +83,7 @@ result.md 在该项约定的 run 输出根保存；尚无 run 目录时只创建
 
 | 规则 | 说明 |
 |---|---|
-| `01-frozen/` | 正式已转换项保留 frozen-inputs.md、classifier-input.json 与分类结果；重分类另存递增编号并指明当前版本，不覆盖旧结果。不写 frozen-inputs.json；未到分类的条目只要求实际适用件 |
+| `01-frozen/` | 分类前已完成冻结的项即须有 frozen-inputs.md，并按[任务状态 §2.2](task-state-contract.md#22-冻结落盘门禁)写出且回读通过；不等生成或收尾才要求。已发生分类保留 classifier-input.json 与原分类结果；重分类另存递增编号并指明当前版本，不覆盖旧结果。不写 frozen-inputs.json；冻结前停止的项只要求实际适用件，不伪建冻结记录 |
 | **提交前必须有当前适用的 `classification-<N>.json` 且 ALLOWED/null** | 首次通常为 classification-1.json；重分类引用实际新编号。每次进入评估准备/提交/重提核该结果与完整源集合、身份/条件对应；是否重分类只按[分类准入](../workflow/classifier-agent-gate.md)，不能因原编号有 ALLOWED 沿用失效结果 |
 | `frozen-inputs.md` 必须记录授权与隔离 | 含授权来源、范围、有效期，源/目标 VM 与 runnerId、网络边界、清理条件；**不得只靠事后 evidence 的 `clean` 代替提交前记录** |
 | 请求/响应追溯 | 不另堆 prompt.txt；在该轮 model.json 或其指向的不可变记录保存脱敏请求/原始响应与身份、哈希。哈希不能还原正文；raw.txt 是实际响应，不是请求替代品。自审原始响应也须保留，不能只保存解析结论 |

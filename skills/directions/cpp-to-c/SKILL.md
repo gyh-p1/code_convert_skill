@@ -6,7 +6,7 @@ description: Use when converting C++ source code (ISO C++17) to C (ISO C11) whil
 # C++ → C 语言转换规则
 
 > **适用基线**：源语言 ISO C++17 (WG21-N4659) → 目标语言 ISO C11 (WG14-N1570)
-> **共性语义**：[分类与场景索引](../../references/seven-language-common-semantics.md)；按需读取[源语言 C++](../../references/languages/cpp.md)与[目标语言 C](../../references/languages/c.md)。
+> **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 C++](../../references/languages/cpp.md)与[目标语言 C](../../references/languages/c.md)，按源码选择适用规则。
 > **规范硬约束**：源基线以 ISO C++17 为限（不含 C++20 Concepts、协程等）；目标基线以 ISO C11 为限（不含 C23 特性）。
 
 ---

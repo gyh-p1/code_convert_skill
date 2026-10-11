@@ -2,6 +2,8 @@
 
 本页维护 Agent 的提交准备条件与证据采信边界；不产生第三方功能 PASS/FAIL，不建设驱动、比较器或运行时。单项闭环规定何时核对，[行为指导](../workflow/behavior-preservation-contract.md)整理目标与允许差异，[Controller 适配](../adapter/controller/remote-controller-adapter.md)规定外部字段。执行红线以[安全边界](safety-boundary.md)及 [AGENTS.md](../../AGENTS.md) 为准。
 
+源预检及每次提交/重提前，先按[任务状态 §2.2](task-state-contract.md#22-冻结落盘门禁)回读本项本 run 的 `01-frozen/frozen-inputs.md`，核路径/版本、适用内容及当前动作所需条件；缺失、空白或错位不进入新 job。已有 ALLOWED/预检 PASS 不替代本检查，未知提交的查询、取回已发生证据及终止/清理仍按原 job 处理。
+
 ## 1. 适用分支与提交条件
 
 | 分支 | 提交前必须核对 | 功能结论 |
