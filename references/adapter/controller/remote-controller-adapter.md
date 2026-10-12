@@ -1,4 +1,4 @@
-> 历史部署记录（2026-10-10 22:33，北京时间）：当时四角色统一 1.0.28，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约 `a9ed1445…` 一致。最终快照已生效，macOS 冷启动自动登录通过；当时接口缺准入字段返回 422、非法 JSON 返回 400 且零新 job，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.28部署与快照更新记录-2026-10-10.md)。该历史版本/哈希不作为当前协议固定值；样本执行与网络隔离仍逐例核对。
+> 现场部署更新（2026-10-12 09:46，北京时间）：四角色统一 1.0.29，原包 health-only 验收通过；Controller ready=true，三 Runner READY/clean，契约 `8090cfcc…` 一致，四角色实现身份可用且 restartRequired=false。新快照已实际恢复，macOS 自动登录通过；comparison/source-preflight 两入口缺字段 422、非法 JSON 400，零新 job。见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.29部署与快照更新记录-2026-10-12.md)。版本/哈希是本次现场事实，样本执行与网络隔离仍逐例核对。
 
 # 远端 Controller 适配与连接
 

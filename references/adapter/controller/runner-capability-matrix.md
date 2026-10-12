@@ -1,25 +1,25 @@
-> 历史部署记录（2026-10-10 22:33，北京时间）：当时四角色统一 1.0.28，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约一致。最终快照已生效，macOS 冷启动自动登录通过，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.28部署与快照更新记录-2026-10-10.md)。样本执行与网络隔离未在该次验收，提交仍须逐例核对。
+> 现场部署更新（2026-10-12 09:46，北京时间）：四角色统一 1.0.29，原包 health-only 验收通过。Controller ready=true，三 Runner READY/clean、blockedRunnerCount=0，契约一致；四角色实现身份可用且 restartRequired=false。新快照已实际恢复，macOS 冷启动自动登录通过，见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.29部署与快照更新记录-2026-10-12.md)。样本执行与网络隔离未在本次验收，提交仍须逐例核对。
 
-# Runner 能力矩阵与 Controller 部署事实（2026-10-10 复核）
+# Runner 能力矩阵与 Controller 部署事实（2026-10-12 复核）
 
-当前平台协议支持独立 source-only、build-only、closure/原件导出、submissionId 与实现身份机制；请求、取证及身份核对按[当前协议适配](platform-revision-adapter.md)。本页 1.0.28 部署/快照记录属于历史现场事实，保留原范围；其版本和哈希不作为当前协议的固定值，任务以实际 health、发布身份和回传核验。
+当前平台协议支持独立 source-only、build-only、closure/原件导出、submissionId 与实现身份机制；请求、取证及身份核对按[当前协议适配](platform-revision-adapter.md)。本次 1.0.29 核对了健康、接口声明与拒收，未执行有效任务；旧 1.0.28 记录保留历史范围，任务仍以实时 health、发布身份和回传核验。
 
 > 文档类型：外部评估基础设施事实（reference）
 > 状态：ACTIVE（以 Controller 实时接口为准的唯一 runner 能力口径）
-> 取值方式：2026-10-10 22:33 原包四角色健康验收、Controller `GET /api/health`、`GET /api/runners` 与部署回执；旧 Ruby/Go/消噪 job 证据保留原适用范围，提交时仍以实时接口为准
-> 上述历史验收的服务与契约身份：`service=remote-host-controller`、`version=1.0.0`、`ready=true`、
-> `contractSetHash=sha256:a9ed144595a658a44301a3638e0d14224a130b65e7e5debce8f237ff6ecdd82e`、`runnerMode=agent`
+> 取值方式：2026-10-12 09:46 原包四角色健康验收、Controller `GET /api/health`、`GET /api/runners` 与部署回执；旧 Ruby/Go/消噪 job 证据保留原适用范围，提交时仍以实时接口为准
+> 本次验收的服务与契约身份：`service=remote-host-controller`、`version=1.0.0`、`ready=true`、
+> `contractSetHash=sha256:8090cfcc71697e552c93d4531fdce9dc17b92be41cb306fcbe081a4af3ec4aac`、`runnerMode=agent`
 >
 > **历史契约冲突**：当日部署前 Controller 曾报告 `56b32706…`、Agent 为 `e088a356…`，导致 CONTRACT_MISMATCH。
-> 1.0.26 统一部署后该冲突已消除；1.0.28 四角色同步升级到上方新契约集合。旧逐版本证据保留于[根因定论](../../../docs/stages/stage1/reports/contract-mismatch-root-cause-2026-10-09.md)，不作为当前状态。
+> 1.0.26 统一部署后该冲突已消除；1.0.28 升至 `a9ed1445…`，本次 1.0.29 四角色同步升级到上方契约集合。旧逐版本证据保留于[根因定论](../../../docs/stages/stage1/reports/contract-mismatch-root-cause-2026-10-09.md)，不作为当前状态。
 
 ## 1. 现役 runner
 
 | runnerId | os / arch | 支持语言（`supportedLanguages`） | 快照回滚 | 基线快照 | 实测状态 |
 |---|---|---|---|---|---|
-| `linux-vm-agent-x64` | linux / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Linux-8Lang-1.0.28` | READY、`contaminated=false` |
-| `windows-vm-agent-x64` | windows / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Windows-8Lang-1.0.28` | READY、`contaminated=false` |
-| `macos-vm-agent-x64` | macos / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Mac-7Lang-1.0.28-AutoLogin` | READY、`contaminated=false` |
+| `linux-vm-agent-x64` | linux / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Linux-8Lang-1.0.29` | READY、`contaminated=false` |
+| `windows-vm-agent-x64` | windows / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Windows-8Lang-1.0.29` | READY、`contaminated=false` |
+| `macos-vm-agent-x64` | macos / x64 | python、powershell、c、cpp、go、dotnet、ruby | `true` | `CC-Eval-Mac-7Lang-1.0.29-AutoLogin` | READY、`contaminated=false` |
 
 三个 runner 的 `selectionPriority` 均为 100，`lastFailureType`/`lastFailureReason` 均为 `null`。
 
@@ -38,7 +38,7 @@
 
 ## 1.3 Controller 消噪部署（2026-10-09，**历史**）
 
-> **历史状态提示**：本节记录当日 `1.0.25-noise.1` 消噪试用部署，当时被 **1.0.26 统一部署取代**，见[当日部署记录](../../../docs/stages/stage1/reports/1.0.26部署与快照更新记录-2026-10-09.md)。最后已知部署身份只见页首 1.0.28 记录，实际实例仍须按适配页核验。**消噪配置曾沿用**（`preset=noise-tolerant-v1` 等在 1.0.26 健康验收中一致），本节的身份与回退材料均为历史值，不得作为现役基线引用。
+> **历史状态提示**：本节记录当日 `1.0.25-noise.1` 消噪试用部署，当时被 **1.0.26 统一部署取代**，见[当日部署记录](../../../docs/stages/stage1/reports/1.0.26部署与快照更新记录-2026-10-09.md)。最后已知部署身份只见页首 1.0.29 记录，实际实例仍须按适配页核验。**消噪配置曾沿用**（`preset=noise-tolerant-v1` 等在 1.0.26 健康验收中一致），本节的身份与回退材料均为历史值，不得作为现役基线引用。
 
 2026-10-09 用户授权保留文本消噪、文件消噪与次要差异容忍并部署试用成品。平台使用新不可变发布包，只升级 Controller 比较实现与配置；Agent、三 VM 基线、执行路线及 Schema 集合没有随本次变更改动。
 
