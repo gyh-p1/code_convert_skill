@@ -1,5 +1,7 @@
 # 项目协作指引
 
+凡涉及代码转换、批量转换或转换评估，必须先读取 [code-convert Skill 发现入口](.agents/skills/code-convert/SKILL.md)，再按根 [SKILL.md](SKILL.md) 的执行顺序加载必读契约和适用知识并逐项推进。
+
 本项目以轻量 Markdown 转换 Skill 为核心交付，不自建转换运行时或测试框架：转换由 Agent 调用外部模型完成，编译与运行只在另行批准、与公网及生产网隔离的一次性外部环境（远端 Controller / 隔离 VM）进行；本机只做只读审阅与文本编写，不在本机承载或触发任何运行时。
 
 - 以 [项目业务文档和能力边界](docs/项目业务文档和能力边界.md) 作为业务能力真源，以 [项目开发规范](docs/项目开发规范.md) 作为项目演进规则，以 [Skill 编写规范](docs/Skill编写规范.md) 作为 Skill 内容规则，以 [安全边界](references/framework/safety-boundary.md) 作为执行红线真源；不要在本文件复制它们。
