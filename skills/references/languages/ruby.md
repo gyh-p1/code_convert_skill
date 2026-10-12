@@ -108,7 +108,7 @@
 - **字符串数据结构**：`[语言规范保证]` `String`：可变字节序列，**显式附带 `Encoding` 元数据标签**（默认 UTF-8）。
 - **字节序列数据结构**：`[语言规范保证]` 同样为 `String`，其编码标记为 `Encoding::BINARY` (`ASCII-8BIT`)。
 - **NUL (`\0`) 字符语义与处理**：`[语言规范保证]` 显式记录长度，允许包含 `\0` 字节；底层 C 扩展遇到 `\0` 可能抛出 `ArgumentError`。
-- **编码假设与转换陷阱**：`[语言规范保证]` 两个不同 Encoding 的 String 进行拼接时，若无法无损转码将抛出 `Encoding::CompatibilityError`。
+- **编码假设与转换陷阱**：拼接核 Encoding.compatible? 的标签/内容兼容性，不是自动尝试无损转码；不同标签也可能兼容。force_encoding 只改标签不改字节，encode 才转码；valid_encoding? 返回布尔，不因返回 false 本身抛异常。
 - **官方资料依据**：RB-DOC-CORE
 
 ### L1-RB-03 字节路径必须固定为 BINARY，不得依赖默认 UTF-8
@@ -117,7 +117,7 @@
 3. **原可观察行为**：
    - `File.read` 使用**默认外部编码**（通常 UTF-8）并**受 `Encoding.default_external` 影响**；`File.binread` 返回 `ASCII-8BIT`。
    - 字节串默认标记为 UTF-8 时，`valid_encoding?` 可能为假；对非法字节序列 `encode`/正则匹配会抛 `Encoding::InvalidByteSequenceError`/`UndefinedConversionError`。
-   - 两个不同 Encoding 拼接且无法无损转码 → 抛 `Encoding::CompatibilityError`。
+   - 拼接编码不兼容可抛 CompatibilityError，不等于“标签不同就失败”或自动转码；按实际字符串与 API 核对。
    - `String#length` 是**字符数**（按编码标签计），`bytesize` 才是字节数。
 4. **目标可选写法和不适用条件**：
    - *Ruby 作为源*：字节路径用 `String#b` 或 `force_encoding(Encoding::BINARY)` 固定为 `ASCII-8BIT` 再做摘要/编码/打包；文本路径显式标 `Encoding::UTF_8` 并在边界转换。
@@ -271,6 +271,20 @@
 5. **反例**：用 gets 暂停替代单键等待会增加换行要求；只取 getch 字符可能丢失源修饰键分支。
 6. **未知**：无合法终端入口属于准备缺口，不伪造源栈、不删暂停或静默改读整行；只做文本/仅编译的适用性由契约定。
 7. **依据**：Ruby IO.getch/getc/gets。
+
+## 十二、标准库替换的选择引导
+
+以CRuby3.4和实际gem/标准库版本为前提。优先保持源的调用与消费者，不把所有API同名视作等价。
+
+| 使用点 | 引导及易错边界 |
+|---|---|
+| 读取及rescue | 先核读取单位、长度、EOF、已经取得的部分数据和异常范围；从Go迁入时关注n与error同时存在，不能因异常丢掉已得数据，也不为继续执行rescue整个业务函数 |
+| Base64/数值解析 | 核严格/宽松API、非法字符、空白、padding、返回编码与异常；源严格不选宽松以求成功，源宽松也不无条件升级为严格 |
+| split/Hash/排序 | 看首尾空项、limit、首个等号、重复键、缺键默认与是否变异；稳定性按源义务，不把语言便利语法作为重排授权 |
+| 创建文件/目录与临时目录 | 创建模式/umask、已存在文件的权限改变、递归与末级创建分别看API；Dir.tmpdir的候选校验见L1-RB-09，不等同只返回路径 |
+| fork/exec/等待 | Ruby fork的子返回nil、父返回PID、失败异常与C的0/-1形态不同；先核成功/失败出口和映像替换，再选择目标。等待状态不直接当退出码，单流拼接不代合流交错 |
+
+依据：Ruby3.4 IO/String/Hash/Kernel/Process及Base64库精确版本；fork/exec详细事实见本页§九和进程系统页。无法核具体库版本时只记该API缺口，不扩大rescue或补造入口。
 
 ## 使用边界
 

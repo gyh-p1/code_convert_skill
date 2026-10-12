@@ -42,11 +42,11 @@ Controller 的收尾字段与原件下载消费[当前协议适配 §4](../adapt
 
 ### 2.1.1 单文件任务的标准骨架（2026-10-09 冻结，按 `docs/test/dataset/` 实测形制）
 
-**每个用例的落点与完整骨架如下，后续转换一律照此产出**：
+**首次 run 的默认落点与完整骨架如下；用户已约定其他合法落点时以冻结指针为准，各阶段适用件不变**：
 
 ```text
 <direction>/<case-id>/
-├── case.md                        # 冻结契约（FROZEN 阶段写入）
+├── case.md                        # 接入/任务说明（已有时保留；不代 frozen-inputs.md）
 ├── source/<源文件>                 # 只读源快照，不随转换改写
 └── output/<batchId>/
     ├── 01-frozen/
@@ -81,6 +81,8 @@ Controller 的收尾字段与原件下载消费[当前协议适配 §4](../adapt
     └── target.<ext>               # 最终交付版本（run 根级）
 ```
 
+**关联变体的落点**：任务状态要求另开 run 时，在本 case 的 `output/<batchId>/runs/<runId>/` 使用同样的阶段骨架；首次 run 根及原件保留，不覆盖旧 frozen-inputs、目标、自审或 job。runId 为本项唯一的非敏感本地版本名，不改 batchId/taskId，不新增 Controller 字段或第二套索引。既有 item/event/manifest 指向当前 run 的实际根、报告和原件；源未变可引用原只读 source，已有源构建按评估准备 §1.2 核对复用，不能把新请求或新证据倒填旧 run。目标 repair 在原 run 内另存目标版本，原条件重提另记 attempt/job，不为这两类动作重复开 run；旧 case.md 保留原接入/冻结说明，新范围写入新 run 的 frozen-inputs。
+
 **关于"不多不少"的硬性约束**（本次实测反复踩到，逐一固化）：
 
 | 规则 | 说明 |
@@ -108,7 +110,7 @@ Controller 的收尾字段与原件下载消费[当前协议适配 §4](../adapt
 
 非可转换去向不要求 target，缺 target 不算缺档；result.md 是所有已处理项的报告义务，缺报告算交付缺档，不能写成目标转换失败。门禁核的是该去向该有的件是否齐备，报告义务不证明产出目标或功能通过。
 
-LIB_UNOBSERVABLE_COMPILE_ONLY 是已转换项的仅编译原因，不是非可转换去向。实际完成仅编译提交的项须有 target/result、冻结/分类、真实双侧编译 job 证据，PARTIAL、功能 UNVERIFIED。因平台不支持仅编译而尚未提交的项按“评估前停止”行交付并写编译 UNVERIFIED，不能假称已完成仅编译取证。判据见[评估准备 §3](evaluation-readiness-contract.md#3-无安全可观察入口)。未知提交或仍活动/未确认清理的 job 保持 WAITING，不能靠适用件豁免记 PARTIAL。
+LIB_UNOBSERVABLE_COMPILE_ONLY 是本轮行为未评估、仅验证目标语法/编译的分支，不是非可转换去向；当前缺合法入口也适用，不只限结构性无观察方式。真实生成后须交完整 target/result、冻结/分类、全部模型/自审原件、源预检及实际目标验证证据，PARTIAL、行为未评估/UNVERIFIED，源 PASS 不代目标结论。尚无目标验证能力时先交已有完整目标、目标 UNVERIFIED 与缺口，不伪造 job/comparison。判据见[评估准备 §1.3](evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)。未知提交、活动或清理未确认仍 WAITING。
 
 ### 2.1.2 批次索引骨架（2026-10-09 冻结，按 `docs/test/dataset/batch-01/` 实测形制）
 
@@ -174,7 +176,7 @@ LIB_UNOBSERVABLE_COMPILE_ONLY 是已转换项的仅编译原因，不是非可�
 **源侧预检必须落在 `04-evaluation/` 内并单独命名**，不得另建同级目录、不得混入 batch 根。
 理由：它是该用例的一次真实 Controller 提交，其回执与证据同属该 run 的评估记录；
 放在别处会与"每个第三方 job 一个子目录"的口径冲突，也无法与后续 job 按序对账。
-预检读取**源侧** `build`，需行为评估时还读取适用 `execution`、原始观察及终止/清理记录，按[评估准备 §1.1](evaluation-readiness-contract.md#11-生成前源侧预检)核源基线；不以 build 成功代替源运行正常，不据源运行推定目标功能一致。源侧不可构建时按真实诊断记 `SOURCE_NOT_BUILDABLE`（平台不匹配）或 `SOURCE_DEPENDENCY_GAP`（引用快照外文件）；运行/观察缺口另记原因与恢复条件，不混为源不可构建。上述缺口均不是转换失败，此时不产生转换目标或 `job-01-dual-build`、不消耗转换模型调用。不适用源运行的文本/片段/仅编译分支须留理由，未发生的 execution 不伪造。
+预检读取源侧 build；正常行为分支另核有效源 execution/原观察及终止/清理，不以构建成功代运行或目标功能一致。源构建失败按真实诊断记 SOURCE_NOT_BUILDABLE/SOURCE_DEPENDENCY_GAP，不生成目标或消耗转换调用。运行/观察缺口分别归因；本轮无法合法行为评估但源构建通过时，按评估准备 §1.3 记 LIB_UNOBSERVABLE_COMPILE_ONLY 后继续生成、自审及目标语法/编译验证，保存本轮理由与实际失败原件；未发生 execution/comparison 不伪造，不把库入口缺口记源不可转换。
 
 每个 job 目录内统一 stem：
 
@@ -205,7 +207,26 @@ LIB_UNOBSERVABLE_COMPILE_ONLY 是已转换项的仅编译原因，不是非可�
 
 职责与复用判据见[任务状态 §2.1](task-state-contract.md#21-版本关联与复用边界)及[评估准备 §1.2](evaluation-readiness-contract.md#12-源基线复用与失效)。字段名可沿用当前消费者的实际记录，不新增 Controller schema；缺历史字段只登记缺口/有依据的追加说明，不倒填曾发生的请求或执行。
 
+交付时按任务状态 §2.1 的对象分工核接收清单、冻结、分类、实际请求与 job，不把移交模板当 Controller 输入。模板 `taskMetadata.sourceLanguage/targetLanguage` 与 `languagePair.sourceLang/targetLang` 含义对应；语法/行为证据范围、hasSource/hasTranslatedCode 和批准状态均须据实替换，示例中的布尔/字符串不构成存在或已执行证明。当前指针可更新，失败 attempt、首轮分类、旧稿原件及原判不可被“整理最后一版”删除。
+
 ### 2.3 `result.md`：面向读者的中文报告骨架
+
+取回件逐件区分：已取得且完整、未回传/不可读、取得失败占位、已删除但有历史指针、未发生、不适用；这些状态不能互相替换。closure列出的摘要只证明平台记录过该路径/摘要，不证明本地或远端正文现存。原始JSON/流保留；平台提供的可读副本可辅助阅读但不覆盖原件，工具展示截断须补读或明确未读，不以COMPLETE标签代全文。model.json既可能是元数据也可能含完整响应，按实际层次/字段核，不一概认为只有哈希。
+
+产物核对沿用既有清单/result 的文字记录，逐件列“实际发生/适用性、取回状态、路径/版本、读取范围、缺口与下一动作”；不新增平台状态值。按以下区别处理：
+
+| 本地所见 | 可记录的事实与边界 |
+|---|---|
+| 有对应采集记录的真实空流/空 HTTP body | 原件可为空；仍核对象与实际阶段。空 body 不保证响应可解析，空程序流不自动支持功能通过 |
+| 下载失败、错误页或人为占位 | 记录取得失败/非合法原件，保留 HTTP/传输诊断；不把占位 size=0 当远端真实空输出 |
+| 摘要/指针存在，正文未回传或不可读 | 记录原件缺口及已知身份；哈希、closure 清单、最终标签不替代正文，不能断言它目前仍在远端 |
+| 正文曾取得但已删除 | 记录删除及历史来源/时间/指针，不改写为从未发生；当前不可复核范围保留 UNVERIFIED，不凭旧 PASS 恢复正文 |
+| 本轮未发生或该分支不适用 | 写具体原因，不造 evidence/comparison/target；source-only 与 build-only 按当前协议适用回传集核件 |
+| 平台采集截断或工具展示截断 | 前者核原 producer/范围及完整摘要是否足够，后者补读实际原件；只看到开头不能写全文已审 |
+
+流展示至少辨明侧、build/execution 通道、程序/装置归属依据、实际 encoding/digest/size/truncated 与可回读原件范围；缺来源照实未知。raw HTTP body、解码文本、normalizedText、structuredValue 与程序原字节是不同对象；格式化/可读副本明确派生关系，不改写原 JSON 或声称补齐被丢弃字节。构建 completed/exitCode、执行 completed/exitCode/timedOut、oracle、比较及清理分别呈现；短摘要只导向原件，不免 §1.1 逐件回读。
+
+结果与批次统计的功能口径统一见[评估准备§5.1](evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)：有效matched和semantic_pass均可记约定观察范围比较通过，另列具体允许差异、未覆盖、编译和交付。completed、exitCode、timedOut及有效基线分别读，不能把阶段结束写成业务成功。
 
 result.md 是所有已处理项的结果阅读入口，成功、失败、生成前阻断/非可转换及 WAITING 暂停均适用，不以目标已产出为前提。它不把日志、manifest 字段或模型逐轮回复按时间堆在一起。沿用以下相同标题与顺序；无材料的栏目保留标题，简写“未执行／未验证／不适用”及原因。正文用中文和短句，先说结论与影响，再给可追溯证据；工具链命令、job ID、模型原话和完整诊断放在链接指向的过程文件中，只有决定结论的关键细节进入正文。§1.1 的实际产物核对写入第 4 栏，失败/暂停原因与恢复条件写入第 3/5 栏，不能只留一句“失败”。
 
@@ -222,7 +243,7 @@ result.md 是所有已处理项的结果阅读入口，成功、失败、生成�
 填写时按来源分三类，不得混淆或自创：
 
 - **(A) 转换结果类——据实填**：`files[].relativePath`、`sourcePath`、`translatedCodePath`、`artifacts.hasTranslatedCode`、`files[].success`。其中 `success` 表示“该文件转换产物已就绪可交评测”，**不表示验证通过**；目标代码未产出前为 `false`。
-- **(B) 任务输入类——从冻结输入/任务契约抄**：`languagePair`、`taskMetadata`（`sourceLang`/`targetLang`/`sourceOs`/`targetOs`/`sourceArch`/`targetArch`/`sceneTags`/`attackTactic`/`riskLevel`）、`targetDir`、隔离启动参数。不凭函数名或战术标签推断；契约未给的标为待确认。
+- **(B) 任务输入类——从冻结输入/任务契约抄**：`languagePair`、`taskMetadata`（`sourceLanguage`/`targetLanguage`/`sourceOs`/`targetOs`/`sourceArch`/`targetArch`/`sceneTags`/`attackTactic`/`riskLevel`）、`targetDir`、隔离启动参数。不凭函数名或战术标签推断；契约未给的标为待确认。
 - **(C) 审批·执行·验证类——据实记录，不凭自评宣称**：已有授权与本次实际提交分开记录。`executionApproved` 默认 `false`；只有本次 comparison capsule 被获批隔离 Controller 接收并取得回执后置 `true`，记录 job ID。返回证据到达后再填写证据路径及语法/行为结论；提交未返回证据不回退授权状态，也不填 PASS。`plannedResultPath`/`plannedReportPath`/`plannedEvaluatorOutputPath` 只是计划落点；`evidenceMode`/`supportLevel` 按契约填，缺省 `experimental`。
 
 ## 4. manifest 形状（临时，对齐外部控制器）
@@ -230,11 +251,11 @@ result.md 是所有已处理项的结果阅读入口，成功、失败、生成�
 核心字段沿用项目移交清单的 `third-party-evaluator-manifest` 形状；它不是当前 Controller `/api/jobs` 可直接提交的 capsule。**占位模板见同目录 [`evaluator_manifest.example.json`](evaluator_manifest.example.json)，填写前核对消费方契约。**
 
 - 顶层：`schemaVersion`、`kind: "third-party-evaluator-manifest"`、`generatedBy`、`languagePair{sourceLang,targetLang}`、`taskMetadata`、`targetDir`、`summaryPath`、`batchReportPath`、`replayArtifactDir`、`plannedResultPath`、`plannedReportPath`、`files[]`。
-- `taskMetadata`：`sourceLanguage`、`targetLanguage`（**注意**：控制器 schema 在此用长名，与 `languagePair` 的 `sourceLang`/`targetLang` 短名并存且冗余——照它保留，不要“修正”成一致）、`attackTactic`、`sceneTags[]`、`sourceOs`、`targetOs`、`sourceArch`、`targetArch`、`riskLevel`、`evidenceMode`、`supportLevel`。
+- `taskMetadata`：`sourceLanguage`、`targetLanguage`（项目移交清单沿用长名，与 `languagePair` 的 `sourceLang`/`targetLang` 含义对应；不是 Controller capsule 字段）、`attackTactic`、`sceneTags[]`、`sourceOs`、`targetOs`、`sourceArch`、`targetArch`、`riskLevel`、`evidenceMode`、`supportLevel`。
 - `files[]` 每项：`relativePath`、`sourcePath`、`translatedCodePath`、`evaluationNotesPath`（可为 null）、`replayArtifactPath`（可为 null）、`success`、`artifacts{hasSource,hasTranslatedCode,hasEvaluationNotes,hasReplayArtifact}`、`plannedEvaluatorOutputPath`。
 - 本项目专用附加段 `x_adapter`：承载“未执行 / 未批准 / 前置条件 / 隔离启动参数”等**本仓库临时状态**，不污染核心 schema，控制器不消费；长单文件可加 `sourceAnalysisPath` 指向同目录画像；`generatedBy` 标为 hand-authored（非控制器 MCP 产出）。
 
-现役控制器 schema 与本形状不一致时，**以控制器实际契约为准**；本节属临时适配，控制器更新后同步或废弃。
+移交消费方要求本形状时按其精确版本填写；使用 Controller 则按当前协议适配另组实际 capsule，不以改名或增删本模板字段假装兼容。两种对象的职责与批准状态分别记录，不从其一推定另一已受理。
 
 ## 5. UNVERIFIED 与移交
 

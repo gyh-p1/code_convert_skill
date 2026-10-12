@@ -64,7 +64,7 @@ description: Use when converting C# source to C++; apply this direction's langua
 ### 规则 CS-CPP-03：C# CancellationToken 协同取消向 C++17 原子标志或条件变量映射
 1. **源码触发条件**：C# 源码中使用 `CancellationToken` 并在循环或 I/O 中轮询 `IsCancellationRequested`。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-CANCEL）；目标语言 ISO C++17（WG21-N4659 Clause 32）。
-3. **原可观察行为**：调用方请求取消后，工作线程检测到信号抛出 `OperationCanceledException` 退出。
+3. **原可观察行为**：IsCancellationRequested 只读状态，不自动抛错；源码可能继续、break、返回或另调用 ThrowIfCancellationRequested。回调/取消树/关联 I/O 按实际使用保留，不把所有取消统一成异常退出。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：在 C++17 中使用 `std::shared_ptr<std::atomic<bool>>` 作为停止标志；在条件变量阻塞时配合带谓词的 `wait_for`。
    - *不适用条件*：禁止直接使用 C++20 的 `std::stop_token`（超出冻结 C++17 范围）；严禁使用非原子普通 `bool` 变量跨线程传递取消（触发未定义行为的数据竞争）。
@@ -77,16 +77,16 @@ description: Use when converting C# source to C++; apply this direction's langua
    std::atomic<bool> cancel_requested{false};
    void Worker() { while (!cancel_requested.load(std::memory_order_relaxed)) { ... } }
    ```
-6. **信息不足或实现相关时的处理**：若取消涉及网络连接中断，需显式关闭底层套接字。
+6. **信息不足或实现相关时的处理**：取消涉及 I/O 时核源唤醒/取消/关闭机制与目标平台支持，加载并发/网络/系统页；不默认关闭套接字或加 wait_for 超时。状态/异常/回调与唤醒关系未知停该映射。
 7. **资料依据（名称/版本/章节）**：MS-CS-CANCEL；WG21-N4659 Clause 32。
 
 ### 规则 CS-CPP-04：COM 接口指针的取址与类型双关必须用 SDK 官方访问器
 
 1. **源码触发条件**：C# 源码通过 COM 互操作（`[ComImport]`、`Marshal.GetIUnknownForObject`、`Marshal.QueryInterface`、`IntPtr` 转换）获取或传递接口指针，或在 P/Invoke 里把 `ref IntPtr`/`out IntPtr` 交给需要 `void**` 的原生 API。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8；目标语言 ISO C++17 + WRL/ATL（Microsoft `ComPtr`）。
-3. **原可观察行为**：C# 侧由封送器完成接口指针的获取与引用计数管理；C++ 侧的 `void**` 形参约定是“由被调方**回填**一个已加引用的接口指针”。
+3. **原可观察行为**：封送器、Marshal 或裸 IntPtr 的引用责任不同，按实际 API 与调用者核；void** 只说明指针层级，不保证回填的是 COM 已加引用接口，QueryInterface 等具体 API 才规定其引用/失败语义。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：必须使用 WRL 提供的官方访问器——**取址回填**用 `GetAddressOf()`（不释放已有指针，可能泄漏），**替换现有值**用 `ReleaseAndGetAddressOf()`（先释放再取址）。二者不可互替。
+   - *可选映射*：确实采用 WRL 时核 GetAddressOf（不释放）与 ReleaseAndGetAddressOf（先释放）的输出类型/失败契约；源失败保旧值时可需临时输出后成功再交接。不能只按“替换”二字默认先释放，SDK之外的封装另核其真实接口。
    - *不适用条件*：不得用 `reinterpret_cast<void**>(&ptr)` 直接对 `ComPtr<T>` 取地址——这**绕过**了 WRL 内部的状态跟踪，既可能与断言冲突，也会在替换路径上泄漏旧引用。
 5. **错误机械替换反例**：
    ```cpp
@@ -95,11 +95,12 @@ description: Use when converting C# source to C++; apply this direction's langua
    hr = pUnk->QueryInterface(__uuidof(IFoo), reinterpret_cast<void**>(&sp));
    // → 绕过 WRL 跟踪；若 sp 原本非空，旧引用泄漏
 
-   // 正确：按语义选择访问器
-   hr = pUnk->QueryInterface(__uuidof(IFoo), sp.GetAddressOf());          // 仅在 sp 确定为空时
-   hr = pUnk->QueryInterface(__uuidof(IFoo), sp.ReleaseAndGetAddressOf()); // 替换已有值时
+   // 条件候选：输出 ComPtr 类型须与查询的接口 IID 对应，宏产生匹配的 IID/void**
+   ComPtr<IFoo> output; // 已确认空且 IFoo/SDK 可用时
+   hr = pUnk->QueryInterface(IID_PPV_ARGS(output.GetAddressOf()));
+   // 对已有值的替换另核失败后保留/释放契约，不把 ReleaseAndGetAddressOf 作为默认。
    ```
-6. **信息不足或实现相关时的处理**：无法确定目标侧 `sp` 在调用点是否已持有引用时，**默认使用 `ReleaseAndGetAddressOf()`**（用错它只多一次释放，用错 `GetAddressOf()` 会泄漏）；并在交付中标注该决策。
+6. **信息不足或实现相关时的处理**：持有引用、输出参数覆盖/失败后保留与释放时点未知时停止该映射并核调用契约；不得默认 ReleaseAndGetAddressOf，提前释放可能改变源失败后的对象存活与状态。各访问器是按所有权/出参契约选择的候选，不按“多释放更安全”猜测。
 7. **资料依据（名称/版本/章节）**：`Microsoft::WRL::ComPtr`、`ComPtr::GetAddressOf`、`ComPtr::ReleaseAndGetAddressOf`；Microsoft `QueryInterface`)。
 
 ## 转换与验证边界

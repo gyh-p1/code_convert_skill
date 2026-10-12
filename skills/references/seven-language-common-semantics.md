@@ -52,6 +52,11 @@
 | 读键/读字符/整行、回显与终端模式 | [C# L1-CS-07](languages/csharp.md#l1-cs-07-readkey-不是-readline-或普通流字符读取)、[Python L1-PY-09](languages/python.md#l1-py-09-流读取一个字符不等于读取一个终端键事件)、[Ruby L1-RB-10](languages/ruby.md#l1-rb-10-getchgetc-与-gets-的输入单位不同)；按方向读 CS-PY-08/CS-RB-07；无子进程也读取 |
 | 去空白集合、nil/空串/全空白判定 | 两语言实际谓词；[Ruby L1-RB-08](languages/ruby.md#l1-rb-08-strip-不是通用-unicode-空白删除)、[Go L1-GO-06](languages/go.md#l1-go-06-unicode-空白不等于其他语言的-strip-集合)、C# L1-CS-01；Ruby→Go 读 RB-GO-07 |
 | 临时目录候选、校验/回退及环境优先级 | [Ruby L1-RB-09](languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)、[Go L1-GO-07](languages/go.md#l1-go-07-ostempdir-选路径不检查目录可用性)，另一语言按实际 API；Ruby→Go 读 RB-GO-08，实际文件副作用还读文件场景 |
+| optparse、Unicode分行/制表、deque操作组合与解析接受域 | [Python §九](languages/python.md#九解析器文本边界与容器的选择引导)；不套其他解析器或同名容器默认 |
+| JSON编码/终止符、Scanner上限、稳定排序、时间/计数器及用户后端 | [Go §九](languages/go.md#九标准库消费点的选择引导)，另一语言同读；对象键序与文本义务分开 |
+| 扫描停止/部分结果、用户后端、同键顺序、截止预算、合流与n/error | [Go L1-GO-08至12](languages/go.md#l1-go-08-scanner-的停止边界与已取得结果)；按源使用点读相应条目及网络/进程场景。Go→Ruby读[GO-RB-08](../directions/go-to-ruby/SKILL.md) |
+| Python临时目录候选/缓存及显式dir | [Python L1-PY-14](languages/python.md#l1-py-14-tempfile-的候选可用性与缓存)，结合已有Go/Ruby临时目录事实选映射，不能按同名套用 |
+| 容量/借用、可变长结构、托管或对象管道替换 | [C §九](languages/c.md#九容量借用与默认值的选择引导)、[C++ §八](languages/cpp.md#八库抽象替换的选择引导)、[C# §十](languages/csharp.md#十互操作与公开返回形态的选择引导)、[PowerShell §十](languages/powershell.md#十对象管道与外部状态的选择引导)、[Ruby §十二](languages/ruby.md#十二标准库替换的选择引导)；原生ABI/权限另读实际系统页 |
 
 实际工具链、诊断文本或未覆盖错误路径未知时维持待核，不从语法相似/相同显示推断行为等价。规则技术依据与转换效果证据分开。
 

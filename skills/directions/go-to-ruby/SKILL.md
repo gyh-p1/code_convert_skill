@@ -55,17 +55,17 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 CRuby 3.4（RB-DOC-THREAD）。
 3. **原可观察行为**：轻量协程高效流水线调度。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：使用 `Thread` 配合 `Thread::SizedQueue` 模拟带缓冲 Channel；在队列关闭时使用特定的标志对象（Sentinel Object）。
+   - *可选映射*：仅容量、发送/接收会合、关闭后排空/零值与成功标志、关闭发送失败及 select 义务都可对应时考虑 Thread/SizedQueue。普通队列或 sentinel 不自动承接无缓冲 channel；sentinel 还可能占容量或与合法数据冲突，不能默认添加。
    - *不适用条件*：受 GVL 限制，纯 CPU 运算无法多核并行；注意未关闭队列会导致线程永久挂起。
 5. **错误机械替换反例**：
    ```ruby
    # 错误：未关闭队列导致消费者线程 pop 永远阻塞发生死锁
    q = SizedQueue.new(10)
    # 生产者结束未通知，消费者 q.pop 永久挂死！
-   # 正确：使用哨兵或关闭机制
+   # 队列关闭只是候选动作，还须核源 channel 的排空/零值与发送失败；非完整映射
    q.close
    ```
-6. **信息不足或实现相关时的处理**：若需完全独立并发，建议采用 Ractor 模型并记录实验性质。
+6. **信息不足或实现相关时的处理**：共享、容量/关闭/select 或调度消费者未知时记录具体缺口，停止受影响映射；不因性能或“独立并发”改成 Ractor，也不以记录实验性质代允许差异。
 7. **资料依据（名称/版本/章节）**：RB-DOC-THREAD。
 
 ### 规则 GO-RB-04：Go nil 与零值向 Ruby nil 与真值判断的映射
@@ -74,7 +74,7 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 3. **原可观察行为**：Go 中只有显式的 `nil`/零值比较才为真，`0`、`""`、空切片、空 map 都是普通值；`len(x) == 0` 与 `x == nil` 是不同判断；从 nil map 读取返回零值、写入则 panic。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：nil 状态映射为 Ruby `nil` 并显式写 `if x.nil?` / `unless x.nil?`；长度或内容判断显式写 `if x.empty?` / `if x == ""` / `if x.zero?`；从 map 取值需要区分“缺键”时用 `fetch` 或 `key?` 判断而不是 `h[k]`。
-   - *不适用条件*：**严禁把 Go 的 `!= nil` 判断机械改写成 Ruby 的 `if x` 真值判断**——Ruby 中只有 `nil` 与 `false` 为假，`0`、`""`、`[]`、`{}` 全为真，因此 `if err` 在 `err` 是空串或 0 时不会进入分支，逻辑会被静默取反；也不得假定 Ruby 会像 Go 的 nil map 那样自动生成键（`h[k] += 1` 在缺键时对 `nil` 调 `+` 会抛 `NoMethodError`）。
+   - *不适用条件*：Ruby 真值仅排除 nil/false，0 与空串仍为真；是否可用 if x 承接非 nil 判断取决于目标值域是否含 false，不能声称空串/0 会跳过分支。Go nil map 读零值、写 panic，Ruby Hash 的缺键/默认值/写入须分别对应，不声称 Go 会自动创建键。
 5. **错误机械替换反例**：
    ```ruby
    # 错误：把 Go 的 err != nil / line != "" 直接写成真值判断
@@ -109,8 +109,8 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Defer_statements）；目标语言 CRuby 3.4（RB-DOC-EXCEPT、RB-DOC-FILE）。
 3. **原可观察行为**：`defer` 在外层函数返回前按 LIFO 逆序执行，对正常返回、提前 `return` 与异常展开均生效；`os.Exit` 会跳过所有 `defer`。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：函数级清理用 `begin ... ensure ... end`，多个清理按 Go 的逆序从上到下排列；文件/套接字等资源优先用块式 API（`File.open(path, "wb") { |f| ... }`）把关闭责任交给语言；只应清理一次的临时文件用 `ensure` 中的 `File.delete(path) if File.exist?(path)` 显式判存。
-   - *不适用条件*：**严禁把 `ensure` 块的清理写成 `rescue` 或 `retry` 分支**——`ensure` 无条件执行，而 `rescue` 只在异常时执行，把清理放进 `rescue` 会让正常返回路径漏掉清理；也不得用 `exit!` 代替 `exit`（`exit!` 绕过 `ensure`，等价于 Go 中跳过 `defer` 的 `os.Exit`），不得把 `throw`/`catch` 当异常使用（`throw` 不触发展开语义，与 Go 的 `panic` 展开不同）。
+   - *可选映射*：函数级 ensure 须对应实际注册的动作、注册时参数、LIFO 及退出边界；块式资源 API 只在块结束就是源函数级释放点时适用。源忽略 os.Remove/Close 失败时不得让 Ruby 删除/关闭异常新增传播，也不添加源不存在的先查存在后删除。
+   - *不适用条件*：rescue/retry 不自动承接所有清理路径；Go os.Exit 跳过 defer，Ruby exit 会展开 ensure，exit! 则跳过退出处理，须逐项核退出码/清理/缓冲副作用后选用，不能全禁 exit!。Ruby throw/catch 是非局部控制流，不能当成异常类型/捕获范围的直接等价，也不能声称其不展开 ensure。
 5. **错误机械替换反例**：
    ```ruby
    # 错误：把 defer 的清理职责放进 rescue，正常返回时临时文件不删
@@ -143,17 +143,16 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 3. **原可观察行为**：Go 的 `[]byte`/`string` 按原始字节处理，长度按字节计，允许非法 UTF-8；`string(b)` 与 `[]byte(s)` 互转不改变字节。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：字节路径用 `String#b` 或显式 `force_encoding(Encoding::BINARY)` 固定为 ASCII-8BIT，再做 `Digest::SHA256.digest`/`Base64.strict_encode64`/`pack("H*")` 等字节级操作；文本路径显式标 `Encoding::UTF_8` 并用 `encode`/`force_encoding` 在边界处转换；文件读写按用途选 `File.binread`/`File.binwrite` 与文本模式。
-   - *不适用条件*：**严禁把二进制内容当作默认 UTF-8 的 `String` 直接参与拼接、正则或编码转换**——不同 `Encoding` 的两串拼接且无法无损转码时会抛 `Encoding::CompatibilityError`，对非法字节序列做 `encode`/`valid_encoding?` 检查失败会抛 `Encoding::InvalidByteSequenceError`/`UndefinedConversionError`，二者都会改变原程序“永不因编码失败”的可观察行为；也不得依赖 `String#length` 承接 Go 按字节计的长度（非 ASCII 时字符数不等于字节数）。
+   - *不适用条件*：不得为原始字节路径新增转码/替换或传播源不存在的编码失败；拼接按 Encoding.compatible? 核对，valid_encoding? 返回 false 本身不抛错。length 与 bytesize 按源消费者选择；不能把任意字节的读取等同于所有后续操作均不失败。
 5. **错误机械替换反例**：
    ```ruby
-   # 错误：把 Go 的 hex.EncodeToString(sha256.Sum256(b)) 机械写成文本路径
-   content = File.read(path)                 # 文本模式：按外部编码解码，字节已被改写
-   hex = Digest::SHA256.hexdigest(content)   # 校验和与 Go 版不一致
+   # 风险候选：文本 IO 配置可能改变字节；需核精确模式，不能只凭接口名断言不同
+   content = File.read(path)                 # 是否改字节取决于 IO 转码/文本模式；只改标签不自动改变摘要
+   hex = Digest::SHA256.hexdigest(content)   # 不能仅凭 File.read 就断言摘要不同，需核真实字节
    # 正确：字节进字节出，必要时再显式解码为文本
    content = File.binread(path).force_encoding(Encoding::BINARY)
    hex = Digest::SHA256.hexdigest(content)   # 对照 Go 的 sumHex(b []byte)
-   text  = content.dup.force_encoding(Encoding::UTF_8)
-   text = text.encode(Encoding::UTF_8) if text.valid_encoding? == false  # 边界处显式处理
+   # 只有源明确解码/验证时才进入文本边界；force_encoding 不校验或修复非法字节。
    ```
 6. **信息不足或实现相关时的处理**：若无法确认原数据的编码，或原 Go 代码依赖按字节的长度与切片下标语义，必须标注“编码与字节长度语义待确认”，不得用 `scrub`/`encode(invalid: :replace)` 之类的宽松策略掩盖差异。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #String_types；RB-DOC-STRING、RB-DOC-ENCODING。
@@ -179,6 +178,12 @@ description: Use when converting Go source to Ruby; apply this direction's langu
    ```
 6. **信息不足或实现相关时的处理**：若不清楚 Go 是否检查 `Scanner.Err()`、`defer f.Close()` 的返回值、或后续报告写入是否成功，不能断言退出码和产物；把打开失败路径单列为待验证 oracle。
 7. **资料依据（名称/版本/章节）**：Go `os.File` nil 接收者的 `ErrInvalid`；Go `bufio.Scanner.Scan`；Ruby 3.4 `Errno`。
+
+### 规则 GO-RB-08：部分字节与EOF/异常的选择引导
+
+触发为源实际消费Reader返回的有效长度与错误；先读[Go L1-GO-12](../../references/languages/go.md#l1-go-12-合流与部分读取的消费顺序)及Ruby字节/错误正文。Go的n、err不直接等于Ruby一个String或一次异常。Ruby3.4 IO.readpartial正长度请求可返回当时取得的块，在无数据的EOF抛EOFError；此前已经返回的块仍须按源消费者保留，不能因后续异常清空累计结果。长度0的分支另按两侧接口核，不套正长度的EOF条件。
+
+只有源确实先消费有效字节再处理EOF/错误时，才选择相应的块累积及局部异常分流；源有意丢弃或传播时保持对应路径。按实际Read/read/readpartial接口区分长度、阻塞、编码标签、nil/空串/EOF，不把所有异常rescue成成功，也不凭异常恢复不存在的字节。未能表达源返回形态时注明具体缺口。本条仅引导目标选择，不生成辅助驱动或要求回归。依据：Go io.Reader；Ruby3.4 IO.readpartial、字节读取与异常。
 
 ### 临时目录选择的适用边界
 

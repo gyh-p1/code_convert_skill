@@ -38,16 +38,16 @@ description: Use when converting PowerShell source to Go; apply this direction's
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-AUTO, MS-PS-PREF）；目标语言 Go 1.27（GO-SPEC #Errors）。
 3. **原可观察行为**：PS 将错误记录混合进管道输出流。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：Go 语言中严格区分数据返回与错误流！函数返回 `(Data, error)`；CLI 标准输出与标准错误分别写入 `os.Stdout` 和 `os.Stderr`。
-   - *不适用条件*：严禁将普通业务错误信息直接格式化打印到标准输出而返回 `nil` error。
+   - *可选映射*：按源实际重定向保留流合并/分离、ErrorRecord 与字符串对象、顺序和 $?/$LASTEXITCODE 的消费者。Go 可选显式结果/error，但不因惯用法把源2>&1拆回 stderr，记录打印与返回状态也分别保留。
+   - *不适用条件*：不得把源写 stdout 的诊断自动挪 stderr 或新增 error；也不能删源实际失败标志。CLI 流与函数返回不是同一个状态。
 5. **错误机械替换反例**：
    ```go
-   // 错误：将错误信息打印至 stdout 并返回 nil
+   // 条件示意：打印诊断与返回状态须按源，不因名称 Error 自动判这种写法非法
    func Process() error {
        fmt.Println("Error: something failed")
        return nil // 调用方误以为成功！
    }
-   // 正确：返回 error
+   // 另一候选：仅源对应失败确实通过返回/终止传递时适用
    func Process() error {
        return errors.New("something failed")
    }
@@ -60,15 +60,15 @@ description: Use when converting PowerShell source to Go; apply this direction's
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-THREADJOB）；目标语言 Go 1.27（GO-SPEC #Go_statements）。
 3. **原可观察行为**：在后台 Runspace 线程池中并发执行。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为 `go worker()`，主线程使用 `sync.WaitGroup` 等待全部任务退出。
-   - *不适用条件*：严禁在启动 Goroutine 时捕获循环迭代变量（Go 1.22 虽修正循环变量作用域，但保持显式传参是最佳防错实践）；共享数据必须同步。
+   - *可选映射*：核 Job/Runspace 的启动、作用域、结果与错误保存、Receive/Wait/Stop 时点；goroutine/WaitGroup 仅这些义务对应时用。源不等待时不自动补全等，源后台存活期也不能缩到目标 main 退出。
+   - *不适用条件*：捕获按冻结 Go 版本及循环变量声明方式核（:= 的每次迭代变量与复用变量不同），不因防错偏好全禁合法捕获；同步、变量复制与共享按源保留。
 5. **错误机械替换反例**：
    ```go
    // 错误：启动后台 Goroutine 未做同步等待，主函数提前退出导致后台任务被杀死
    func main() {
        go doBackground()
    } // main 退出，所有 Goroutine 立即终止！
-   // 正确：使用 sync.WaitGroup
+   // 条件候选：仅源确在此点等待全部任务时适用
    func main() {
        var wg sync.WaitGroup
        wg.Add(1)
@@ -92,10 +92,8 @@ description: Use when converting PowerShell source to Go; apply this direction's
    res := callWMIMethod("StdRegProv", "CreateKey")
    key := res["sValue"].(string)          // panic: 失败时无 sValue
    if res["ReturnValue"].(int32) != 0 { } // 类型/符号不符时同样 panic
-   // 正确：双返回断言 + error 分支
-   v, ok := res["sValue"].(string)
-   if !ok { return fmt.Errorf("CreateKey failed: rc=%#x", res["ReturnValue"]) }
-   _ = v
+   // 双返回断言只是安全取值候选；CreateKey/CheckAccess/读取值方法各有不同出参。
+   // 仅检查源实际检查的属性与 ReturnValue，不能因缺少不适用的 sValue 就新增失败。
    ```
 6. **信息不足或实现相关时的处理**：具体方法的返回码取值集合、属性名与是否可能缺失、以及返回码字段的符号宽度，都必须从目标 API 文档或调用方契约确认；确认不了就停下标注，不要假定“非 0 且非空即成功”或反推一个码表。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Errors；GO-PKG-FMT。
@@ -103,7 +101,7 @@ description: Use when converting PowerShell source to Go; apply this direction's
 ### 规则 PS-GO-05：PowerShell `.Count`/`$null`/空集合判定向 Go `len`/`nil` 与 map 存在性映射
 1. **源码触发条件**：源码对可能为空的取值做计数或存在性判定，例如 `if (($Result.ReturnValue -eq 0) -and ($Result.sValue))`、`[byte[]]$Data = @()` 之后 `if($Data.Length -eq 0){Start-Sleep -Milliseconds 100}` 与 `if($Data -ne $null){...}`、`if(($i -ne $null) -and (($r -ne "") -or ($e -ne "")))`、`if($Socket -eq $null){break}`、`if (($attr.Contains('|')))` 前后对集合/字符串的空值判定、`$null = $hostList.Add($iHostPart1)`、`Get-Random -Count 10` 返回单元素时的标量退化。
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-ARRAY, MS-PS-OPERATORS）；目标语言 Go 1.27（GO-SPEC #Slice_types, GO-SPEC #Index_expressions）。
-3. **原可观察行为**：PS 里 `$null`、空数组、空字符串与 0 在布尔化时都为假，但 `.Count`/`.Length` 只对已存在的集合/字符串有意义，对 `$null` 读取长度会得到 `$null`（不抛错）并再次布尔化为假；`$Data.Length -eq 0` 与 `$Data -ne $null` 是两个不同判定，前者对空数组为真、后者对空数组也为真；`@()` 与“未赋值”在源里常常承载不同意图但表现接近；单元素数组在管道中还会退化为标量，`.count` 随之变为 `1` 或不存在。
+3. **原可观察行为**：null/空串/0 的布尔与 Count/Length 是不同操作。PowerShell 7 正常模式下 null.Count 为0，标量可有自动 Count=1，数组0项为假、1项取该项真值、多项为真；空 Hash 等非 IList 对象不按数组规则泛化。StrictMode/显式属性覆盖及管道解包另核，不能把 null 所有属性概括为 null。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：Go 用 `len(data) == 0` 覆盖“空或未初始化”（nil 切片与空切片长度都为 0）；确实需要区分“缺失”与“存在但空”时使用带 `ok` 的 map 取值、`*T` 指针或显式的 `hasValue bool` 字段；从 JSON 反序列化时把 `null` 与 `[]` 分别处理，不要靠 `len` 区分；字符串空判定用 `s == ""`（`len(s) == 0` 等价）。
    - *不适用条件*：严禁把 `if ($x)` 机械写成 `if x != nil` 或 `if len(x) > 0` 后就不再区分两者（源中“无结果”与“结果为空”若在后续路径上可观察，用 `len` 会合并它们）；严禁用 `data == nil` 判断“空切片”（非 nil 的空切片会被判为存在）；严禁把 map 取值的零值当作“键存在且值为零”（须用 `v, ok := m[k]`）。

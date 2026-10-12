@@ -39,20 +39,20 @@ description: Use when converting Go source to Python; apply this direction's lan
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 Python 3.12（PY-REF-DATA §3.2）。
 3. **原可观察行为**：错误通过返回值显式传递，未检查不会自动抛出。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为 Python 标准异常（如 `ValueError`, `FileNotFoundError`, `RuntimeError`），依靠异常自动冒泡传播，消除深层样板检查。
-   - *不适用条件*：严禁在 Python 中模仿 Go 返回二元元组并在每一步手写 `if err is not None`（严重违背 Python 习惯用法，极易遗漏处理）。
+   - *可选映射*：保留 `(value, error)` 元组或显式结果对象及源检查/忽略分支；仅整条调用链、接口与捕获边界可对应时才考虑 Python 异常。惯用写法不能改变源可观察行为。
+   - *不适用条件*：不得把源会忽略的 error 自动升级为异常，也不得因元组不够惯用而禁止保留它；异常类型、数据与传播不能仅按消息猜测。
 5. **错误机械替换反例**：
    ```python
-   # 错误：在 Python 中强行写 Go 风格的返回元组，违背习惯且容易被忽略
+   # 可选：源调用方观察二元结果时保留返回形态
    def divide(a, b):
        if b == 0: return None, "divide by zero"
        return a / b, None
-   # 正确：抛出内置异常
+   # 另一候选：仅调用链/接口允许异常且捕获语义一致时适用
    def divide(a, b):
        if b == 0: raise ZeroDivisionError("divide by zero")
        return a / b
    ```
-6. **信息不足或实现相关时的处理**：若原 Go 错误类型具备专有字段，定义继承自 `Exception` 的子类。
+6. **信息不足或实现相关时的处理**：核错误字段、身份比较、包装和实际消费者；返回形态或捕获边界未知时保留缺口，不强制异常化。
 7. **资料依据（名称/版本/章节）**：PY-REF-DATA §3.2。
 
 ### 规则 GO-PY-03：Go 并发 Goroutine 与 Channel 向 Python asyncio 协程与 Queue 映射
@@ -60,13 +60,13 @@ description: Use when converting Go source to Python; apply this direction's lan
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 Python 3.12（PY-REF-DATA）。
 3. **原可观察行为**：轻量级协程在 M:N 调度器下执行，支持高并发 channel 通信。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：重写为 `async def`，channel 替换为 `asyncio.Queue`，通信使用 `await queue.put()` 与 `await queue.get()`。
-   - *不适用条件*：受 CPython GIL 影响，纯 CPU 运算无法多核加速；严禁在普通函数中直接使用阻塞队列而未设超时。
+   - *可选映射*：先核调度、背压、容量、close/select 与消费者。仅义务一致时考虑 `async def` 与 `asyncio.Queue`；默认 Queue 无界，`maxsize=0` 不代表 Go 无缓冲 channel 的发送/接收会合。
+   - *不适用条件*：普通队列不能自动承接无缓冲交接、关闭后排空与关闭发送失败；不可为避免阻塞自行添加超时或改变源调度模型。GIL/多进程选择另核冻结解释器和共享状态，性能偏好不授权改行为。
 5. **错误机械替换反例**：
    ```python
-   # 错误：在未加入事件循环的普通线程中调用 asyncio.Queue 导致 RuntimeError
+   # 错误候选：以默认无界 Queue 承接 make(chan int) 的无缓冲交接
    import asyncio
-   q = asyncio.Queue() # 无当前运行的事件循环时在旧版本报错或引发跨线程异常
+   q = asyncio.Queue() # put 不会等待对应 get，不能据此声称与无缓冲 channel 等价
    ```
 6. **信息不足或实现相关时的处理**：若代码涉及高吞吐 CPU 运算，向用户建议使用多进程并报告差异。
 7. **资料依据（名称/版本/章节）**：PY-REF-DATA。
@@ -76,7 +76,7 @@ description: Use when converting Go source to Python; apply this direction's lan
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Comparison_operators）；目标语言 Python 3.12（PY-TRUTH）。
 3. **原可观察行为**：Go 只显式比较 nil 或具体零值；`len(x) == 0` 与 `x == nil` 是两种不同判断，空切片/空 map/空字符串本身不是 nil；`nil != 0` 且 `nil != ""`。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：把 Go 的 nil 状态映射为 `None` 并显式写 `is None` / `is not None`；把长度或内容判断显式写为 `len(x) == 0` / `not x` 只在**确实只想判断非空**时使用；对 `""`、`0`、空容器分别写 `== ""`、`== 0` 或 `not any(...)`，不要合并成一处 `if not v`。
+   - *可选映射*：把 Go 的 nil 状态映射为 `None` 并显式写 `is None` / `is not None`；字符串为空用 `== ""`，数值为零用 `== 0`，容器为空用 `len(x) == 0`（只在目标真值恰好对应空判断时用 `not x`）。`not any(x)` 检查元素真值，`[0]` 也满足它，不能承接长度为零。
    - *不适用条件*：严禁用 Python 的真值判断机械承接 Go 的 nil 判断——Python 中 `0`、`0.0`、`""`、`b""`、`[]`、`{}`、`set()` 全为假，把 `if err is not None` 改写成 `if err` 会在 `err` 为 `""`/`0` 时静默走错分支；反向把 `if len(x) == 0` 写成 `if x is None` 会漏判空容器。
 5. **错误机械替换反例**：
    ```python

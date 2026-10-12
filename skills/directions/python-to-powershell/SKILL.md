@@ -57,13 +57,14 @@ description: Use when converting Python source to PowerShell; apply this directi
 ### 规则 PY-PS-03：Python 异常层次向 PowerShell 终止错误与 catch 映射
 1. **源码触发条件**：Python 源码中使用 `raise ValueError(...)` 并通过 `except Exception as e:` 捕获。
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12；目标语言 PowerShell 7.6（MS-PS-ERROR）。
-3. **原可观察行为**：抛出异常，中断执行，打印 traceback。
+3. **原可观察行为**：抛出异常转入适用捕获分支；捕获后输出、返回或静默继续由源代码决定。未捕获异常才走解释器的诊断/退出路径，不把所有raise都映射为必须打印traceback。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：使用 `throw [System.ArgumentException]::new("...")`；捕获使用 `try { ... } catch { ... }`，通过 `$_` 获取当前异常对象。
-   - *不适用条件*：严禁在 catch 块中忽略 `$_` 的具体内容而直接静默返回。
+   - *不适用条件*：源传播或输出异常时，不以空 catch 静默吞掉；源明确 `except Exception: pass` 时则保持其静默继续，不能为记录错误新增输出。异常处理还须结合 PY-PS-05 和 Python 语言页 L1-PY-04。
 5. **错误机械替换反例**：
    ```powershell
-   # 错误：捕获后未打印或记录异常信息，静默掩盖严重系统故障
+   # 前提：源 catch/except 会记录错误；若源本来静默忽略，则不套此例
+   # 错误：删除源的异常诊断
    try { Dangerous-Action } catch { } # 盲捕获吞没错误！
    # 正确：至少记录错误
    try { Dangerous-Action } catch { Write-Error "Action failed: $_" }
@@ -91,27 +92,30 @@ description: Use when converting Python source to PowerShell; apply this directi
 6. **信息不足或实现相关时的处理**：源数值的取值范围不明时（字节计数、时间戳差值、哈希值、加密大整数）必须停下并要求给出上界，或直接改用 `[bigint]`，不得默认挑 `[int]`；源若依赖 `& 0xFFFFFFFF` 之类掩码，需逐处确认掩码宽度并在目标显式保留。
 7. **资料依据（名称/版本/章节）**：PY-REF-DATA；MS-PS-ARITH。
 
-### 规则 PY-PS-05：Python 异常兜底与原生命令返回值向 PowerShell 非终止错误与 `$LASTEXITCODE` 映射
+### 规则 PY-PS-05：Python 异常兜底与子进程状态向 PowerShell 错误和进程对象映射
 1. **源码触发条件**：Python 源码用 `except Exception: pass`（或 `except Exception:` 后静默继续）包住平台采集类调用，或用 `subprocess.call([...])`、`os.system("...")` 调外部命令而忽略其返回码，以及依赖“失败必然抛异常”的 `try/except` 结构。
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-LIB-SUBPROCESS）；目标语言 PowerShell 7.6（MS-PS-TCF、MS-PS-PREF）。
-3. **原可观察行为**：Python 中失败即抛异常并被 `except` 捕获；`subprocess.call` 不抛异常而返回退出码，`os.system` 返回等待状态，调用方只有显式检查才能发现失败。
+3. **原可观察行为**：启动失败与已启动子进程非零退出不同。`subprocess.call`等待并返回退出码，启动错误仍可能抛OSError；run的check=True及check_call/check_output等检查接口会把非零退出变成CalledProcessError。源忽略、返回、检查或传播状态的路径分别保持；POSIX os.system的等待状态也不直接当作已解码退出码。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：Cmdlet 的失败默认是**非终止错误**（写入错误流、流程继续），`try`/`catch` 不会捕获它；要捕获须在该语句上显式 `-ErrorAction Stop`，或在作用域内设置 `$ErrorActionPreference = 'Stop'`。原生命令（`& exe @args`、`Start-Process`）的成败用 `$LASTEXITCODE` 判定并显式 `throw`，不要把 `$?` 当退出码使用（`$?` 只反映上一条语句，且会被后续语句覆盖）。
+   - *可选映射*：先按源的失败处理选择 Cmdlet/原生命令/进程对象。Cmdlet 的非终止错误不进入 catch；源确要捕获时可在对应调用用 `-ErrorAction Stop`，不要无条件改变整个作用域。直接 `& exe @args` 后及时保存 `$LASTEXITCODE`；`Start-Process` 默认异步，需等待/取码时考虑 `-Wait -PassThru` 返回的 `Process.ExitCode`，不读可能陈旧的 `$LASTEXITCODE`。仅源检查或传播非零状态时重建对应分支；源忽略状态时不新增 throw。参数引用、流、等待范围及副作用另按进程场景核对，`Start-Process -ArgumentList` 会拼成命令行字符串，不等于Python argv数组原样透传。
    - *不适用条件*：严禁把 `except Exception: pass` 机械替换为 `try { ... } catch { }` 并当作等价——非终止错误会穿过 `try`/`catch`，源中的“静默兜底”在目标中退化为“错误照常输出、流程照常继续”。也严禁用 `if (-not $?)` 取代退出码检查：`$?` 与 `$LASTEXITCODE` 是两个不同信号，前者不区分“Cmdlet 写了非终止错误”与“原生命令返回非零”。
 5. **错误机械替换反例**：
    ```powershell
    # Python 原型：for ...: try: get_stats() except Exception: pass
    # 错误：Get-Content 失败只写非终止错误，catch 根本不触发，静默兜底失效
    try { Get-Content -Path $missing } catch { }        # 错误流照样输出，流程继续
-   # 正确：先把非终止错误提升为终止错误，再捕获
-   try { Get-Content -Path $missing -ErrorAction Stop } catch { Write-Verbose "skip: $_" }
-   # 错误：忽略原生命令退出码
-   & $nativeTool @toolArgs                             # $LASTEXITCODE 被丢弃
+   # 候选：源静默兜底时，提升对应错误后静默捕获，不新增诊断
+   try { Get-Content -Path $missing -ErrorAction Stop } catch { }
+   # 前提：源明确检查非零状态；源忽略返回码时不能套用此throw
    & $nativeTool @toolArgs
-   if ($LASTEXITCODE -ne 0) { throw "native tool failed: $LASTEXITCODE" }   # 正确
+   $childExitCode = $LASTEXITCODE
+   if ($childExitCode -ne 0) { throw "native tool failed: $childExitCode" }
+   # Start-Process采用进程对象渠道，参数引用/流和等待范围须另核
+   $child = Start-Process -FilePath $nativeTool -Wait -PassThru
+   $childExitCode = $child.ExitCode
    ```
-6. **信息不足或实现相关时的处理**：无法确认某命令写的是终止还是非终止错误时（第三方模块、包装函数），一律按非终止处理并要求 `-ErrorAction Stop`；映射 `subprocess.call`/`os.system` 前须逐条列出退出码含义，不得默认非零码即业务正常，也不得假定目标命令沿用同一套退出码。
-7. **资料依据（名称/版本/章节）**：MS-PS-TCF；MS-PS-PREF；PY-LIB-SUBPROCESS。
+6. **信息不足或实现相关时的处理**：先定位源是否等待、捕获启动异常、检查退出及保留双流；第三方命令的错误类型未知时记缺口，不一律加Stop/throw。PowerShell原生命令错误偏好及作用域会影响行为，按实际7.6设置核对，不能把所有非零退出自动视作异常。
+7. **资料依据（名称/版本/章节）**：Python 3.12 subprocess：call/run/check、异常；os.system；PowerShell 7.6 Start-Process：ArgumentList/Wait/PassThru、about_Automatic_Variables：LASTEXITCODE、about_Preference_Variables；异常捕获参考MS-PS-TCF。
 
 ### 规则 PY-PS-06：Python `str.encode()`/`bytes`/base64 写盘向 PowerShell .NET 字符串与 `[byte[]]` 映射
 1. **源码触发条件**：Python 源码中出现 `data.encode()`、`bytes`/`bytearray`、`base64.b64encode(...)`、`open(path, "wb")` 或 `open(path, "rb")` 的二进制读写。
@@ -119,21 +123,23 @@ description: Use when converting Python source to PowerShell; apply this directi
 3. **原可观察行为**：`str` 与 `bytes` 严格隔离、混用抛 `TypeError`；`b64encode` 接受并返回 `bytes`；`"wb"` 只接受 bytes，写出的字节与输入逐字节一致（保留 `\0`、不追加换行）。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`data.encode()` 映射为 `[System.Text.Encoding]::UTF8.GetBytes($data)`（得到 `[byte[]]`）；`base64.b64encode(...)` 映射为 `[System.Convert]::ToBase64String(<byte[]>)`（返回 `System.String`）；`open(..., "wb")` 映射为 `[System.IO.File]::WriteAllBytes($path, $bytes)` 或 `Set-Content -AsByteStream`；`open(..., "rb")` 映射为 `[System.IO.File]::ReadAllBytes($path)`。
-   - *不适用条件*：严禁假定 PowerShell 字符串与 `[byte[]]` 可隐式互转——`System.String` 是 UTF-16 字符序列，`[System.Convert]::ToBase64String` / `FromBase64String` 的重载要求 `[byte[]]`，传入 `.ToCharArray()` 或裸字符串都拿不到正确的 UTF-8 字节序列；严禁用 `Set-Content`/`Out-File` 把 base64 结果（字符串）写进目标文件，那是把 base64 文本当成原始字节；也严禁用 `Get-Content -Raw` 读二进制后再做字符串拼接，文本解码会破坏不属于该编码的字节。
+   - *不适用条件*：先分清原始bytes、Base64编码后的ASCII bytes和用于承载它的.NET字符串。`ToBase64String`输入byte[]、输出string；`FromBase64String`输入string、输出byte[]，不是两个接口都输入byte[]。源写编码结果时，目标也写Base64字节；源写原始bytes时才直接写原始数组。文本cmdlet只有编码/BOM/换行与源一致时才是候选，不能只因文件内容是Base64文本而判错。二进制读取不经`Get-Content -Raw`文本解码，char[]也不代UTF-8编码。
 5. **错误机械替换反例**：
    ```powershell
    # Python 原型：encoded_data = base64.b64encode(data.encode()); open(f,"wb").write(encoded_data)
-   $data  = "import socketserver; socketserver.TCPServer(('localhost', 9999), socketserver.StreamRequestHandler)"
+   $data  = "example text"
    $chars = $data.ToCharArray()                 # 错误：得到 [char[]]，不是编码后的字节
    $b64   = [Convert]::ToBase64String($chars)   # 错误：重载要求 [byte[]]；按元素强转得到的也是 UTF-16 代码单元，不是 UTF-8 字节
-   Set-Content -Path $filename -Value $b64      # 错误：写进文件的是 base64 文本，不是原始字节
-   # 正确：显式编码取字节，再按字节写盘
+   Set-Content -Path $filename -Value $b64      # 默认换行/编码可能改变源的精确字节
+   # 候选：源写的是Base64编码结果，不是编码前bytes
    $bytes = [System.Text.Encoding]::UTF8.GetBytes($data)
    $b64   = [Convert]::ToBase64String($bytes)
-   [System.IO.File]::WriteAllBytes($filename, $bytes)
+   $encodedBytes = [System.Text.Encoding]::ASCII.GetBytes($b64)
+   [System.IO.File]::WriteAllBytes($filename, $encodedBytes)
+   # 反例：改写为WriteAllBytes($filename, $bytes)会删除源的Base64转换
    ```
 6. **信息不足或实现相关时的处理**：源 `.encode()` 未给实参时须确认其默认编码（Python 3 为 UTF-8）；源声明 `latin-1`/`gbk` 等必须显式映射为对应的 .NET `Encoding`，且 .NET (Core) 默认只内置 Unicode/ASCII 编码、非 Unicode 代码页可能需要先注册代码页提供程序才可取到，属于必须核对的目标运行时前提；`open()` 的写入模式（截断/追加）也要一并确认。
-7. **资料依据（名称/版本/章节）**：PY-LIB-BASE64；MS-PS-ENC；DOTNET-API。
+7. **资料依据（名称/版本/章节）**：Python 3.12 base64.b64encode；PowerShell 7.6 about_Character_Encoding；.NET Convert.ToBase64String/FromBase64String、Encoding.GetBytes、File.WriteAllBytes。
 
 ## 转换与验证边界
 

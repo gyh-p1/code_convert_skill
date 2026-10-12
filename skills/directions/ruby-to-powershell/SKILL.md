@@ -84,16 +84,16 @@ description: Use when converting Ruby source to PowerShell; apply this direction
 3. **原可观察行为**：**Ruby 只有 `nil` 与 `false` 为假**：空字符串 `''`、`0`、空数组、空 Hash 全是真，因此 `if s` 对空串仍进入分支；`a || b` 返回第一个为真的**值本身**，因此 `'' || 'Unknown'` 得到 `''`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：`x.nil?` → `$null -eq $x`（把 `$null` 放左侧，避免与数组比较时的元素过滤语义）；`x || default` 在 x 只可能是 `$null` 时 → `if ($null -eq $x) { $default } else { $x }`；需要在管道里做空值兜底时才用 `??`（PowerShell 7 的空合并运算符），并确认左操作数确实只有 `$null`；`x&.m` → `if ($null -ne $x) { $x.m }`。
-   - *不适用条件*：严禁把 Ruby 的真值判断机械翻译成 PowerShell 的布尔上下文（`if ($s)`）——PowerShell 另有 `''`、`0`、空集合等假值，同一表达式在两侧的分流不同；也不得把 Ruby 的 `||` 翻成 `??` 后当作等价：Ruby `||` 处理的是"假值"，`??` 处理的是"`$null`"，空串与 `$null` 在两侧的分流并不重合。
+   - *不适用条件*：严禁把 Ruby 的真值判断机械翻译成 PowerShell 的布尔上下文（`if ($s)`）——PowerShell 另有 `''`、`0`、空集合等假值。可空字符串上的 `??` 会与 Ruby `||` 一样保留空串；左值还可能为布尔 false 时，`??` 才不足以承接该假值分流。须保持只求值一次与默认值短路。
 5. **错误机械替换反例**：
    ```powershell
    # 错误：照抄 Ruby 的真值判断，PowerShell 把空字符串当假
    $value = $hash['Mfg']
    if ($value) { $label = $value } else { $label = 'Unknown' }  # 错误：空串会走 else，Ruby 不会
-   # 错误：用 ?? 顶替 Ruby 的 ||，空串与 $null 的分流被合并
-   $label = $hash['Mfg'] ?? 'Unknown'                            # 空串仍返回空串，需回到源码确认意图
-   # 正确：显式写出判据
-   if ($null -eq $value -or $value -eq '') { $label = 'Unknown' } else { $label = $value }
+   # 可空字符串候选：?? 保留空串，与 Ruby 此值域上的 || 一致
+   $label = $hash['Mfg'] ?? 'Unknown'
+   # 一般对象真值：仅 null 与布尔 false 走默认分支，0/空串/空集合保留
+   if ($null -eq $value -or ($value -is [bool] -and -not $value)) { $label = 'Unknown' } else { $label = $value }
    ```
 6. **信息不足或实现相关时的处理**：条件的判据在源码中不显式（`if $v`、`unless $v`）而 v 可能是字符串/数值/集合时，必须标注"真值判据待确认"并询问；PowerShell 版本与宿主决定可用运算符（`??`、`?.` 需 7.x），任务未冻结宿主版本时不得假定可用。
 7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；MS-PS-TYPES；MS-PS-OPERATORS。

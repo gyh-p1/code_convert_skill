@@ -77,7 +77,7 @@ description: Use when converting Python source to C#; apply this direction's lan
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-DATA）；目标语言 C# 12 / .NET 8（MS-CS-CHECKED）。
 3. **原可观察行为**：Python `int` 为任意精度，算术不发生截断（`1 << 40`、阶乘、大数乘法都保持精确值），仅受可用内存限制；`& 0xFFFFFFFF` 之类的掩码是显式位运算而非溢出保护。C# `int`/`long` 为定宽，默认 `unchecked` 上下文按补码截断回绕（`int.MaxValue + 1` 得 `int.MinValue`），`checked` 作用域内则抛 `System.OverflowException`。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：先用源码证据确定数值上界，能落入 64 位的用 `long`/`ulong`，需要与 Python 语义一致的按位运算用 `uint`/`ulong` 并显式声明宽度；需要真正的任意精度时用 `System.Numerics.BigInteger`，且在报告中声明这一依赖与性能含义；需要"越界即失败"的位置写 `checked { ... }` 或 `checked(...)`。
+   - *可选映射*：仅所有相关中间值有已证上界时考虑 long/ulong；Python 任意精度按位运算不能仅凭操作符改 uint/ulong。BigInteger 可承接任意精度；源显式掩码只在对应表达式截断，源 pack/转换范围失败另映射，不任意加 checked 失败。
    - *不适用条件*：严禁把任意精度运算机械搬成 `int` 而不确认上界（截断会静默发生，只有在换算/序列化处才暴露）；严禁用 `unchecked` 上下文来"复现 Python 的无溢出"（方向恰好相反：`unchecked` 是回绕，Python 是不回绕）；严禁假定 `checked` 会覆盖被调用方法内部的算术（`checked` 只作用于该语句/作用域内直接书写的运算，不传播进被调用函数的函数体）。
 5. **错误机械替换反例**：
    ```csharp
@@ -85,7 +85,7 @@ description: Use when converting Python source to C#; apply this direction's lan
    int h = 0;
    foreach (byte c in data) { h = (h << 5) + h + c; }   // 错误：默认 unchecked，超过 32 位即回绕
    // Python 原型：packed = len(cert) & 0xFFFFFFFF
-   // 正确：需要回绕语义时写明宽度，需要失败语义时用 checked
+   // 以下 h32 仅源每个对应步骤均有32位截断时适用；单独对 len(cert) 掩码不授权改哈希循环。
    uint h32 = 0;
    foreach (byte c in data) { unchecked { h32 = (h32 << 5) + h32 + c; } }
    int bounded;
@@ -99,17 +99,18 @@ description: Use when converting Python source to C#; apply this direction's lan
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-SUBSCRIPTIONS）；目标语言 C# 12 / .NET 8（MS-CS-INDICES）。
 3. **原可观察行为**：Python 负索引等价于 `len + i`；切片对任何边界都做**裁剪**（`seq[0:999]` 取到末尾，`seq[-999:]` 取全部），不抛异常，`seq[a:b]` 在 `a >= b` 时返回空序列。C# 的 `^n` 是"从末尾数第 n 个"（`^1` 为最后一个元素，`^0` 等于 `Length`，越界即抛 `ArgumentOutOfRangeException`），`seq[a..b]` 要求两端都在 `0..Length` 内，越界抛 `ArgumentOutOfRangeException`，且 `a > b` 同样抛异常而非返回空。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：`seq[-1]`→`seq[^1]`，`seq[a:b]`→`seq[a..b]`，`seq[:n]`→`seq[..n]`，`seq[r:]`→`seq[r..]`，且在三处显式补齐检查：`a`、`b` 先裁剪到 `[0, Length]`，`a > b` 时直接取空结果，负向步长遍历改为 `for (int i = seq.Length - 1; i >= 0; i--)`。
+   - *可选映射*：非空序列的单项 `seq[-1]` 可用 `seq[^1]`，空序列仍须保留索引失败，不能返回默认值。步长为 1 的切片先把负边界按 `Length + 边界` 换算，再分别裁剪到 `[0, Length]`；起点不小于终点时返回空序列，其他情况才用 Range。负步长另保留遍历、遗漏边界和新序列语义。
    - *不适用条件*：严禁把 `seq[a:b]` 机械写成 `seq[a..b]` 而不做裁剪（Python 侧不抛异常的越界切片会在 C# 侧变成运行期异常，失败路径被新增）；严禁在计算 `^n` 时使用 `n <= 0` 或 `n > Length` 的值（`^0` 与超界都抛异常，而 Python 的 `seq[-0]` 就是 `seq[0]`，两者语义不同）；严禁假定 `a > b` 时 `Range` 会返回空（C# 抛 `ArgumentOutOfRangeException`）。
 5. **错误机械替换反例**：
    ```csharp
    // Python 原型：head = data[:limit]        # limit 可能大于 len(data)，Python 会裁剪
    var head = data[..limit];                  // 错误：limit > data.Length 时抛 ArgumentOutOfRangeException
    // Python 原型：last = data[-1]; window = data[start:end]
-   int safeEnd = Math.Clamp(end, 0, data.Length);
-   int safeStart = Math.Clamp(start, 0, safeEnd);
-   var window = data[safeStart..safeEnd];     // 正确：先裁剪，且保证 start <= end
-   var last = data.Length > 0 ? data[^1] : default; // 正确：^1 需先确认非空
+   // 此示意仅 start/end 已在 long 范围内；任意精度输入须先归一化再收窄
+   int safeEnd = (int)Math.Clamp(end < 0 ? (long)data.Length + end : end, 0L, data.Length);
+   int safeStart = (int)Math.Clamp(start < 0 ? (long)data.Length + start : start, 0L, data.Length);
+   var window = safeStart >= safeEnd ? data[0..0] : data[safeStart..safeEnd];
+   var last = data[^1]; // 非空时为最后一项；空时仍失败，异常类别按源捕获边界映射
    ```
 6. **信息不足或实现相关时的处理**：若源码切片的 `start`/`end` 由外部输入驱动且源码依赖"越界被裁剪"这一行为，必须把该依赖写进任务前提；目标类型是否提供 `Length`/`Count` 与索引器决定了 `^`/`Range` 能否直接使用，不满足时改用 `Array.Copy`/`Span` 显式实现。
 7. **资料依据（名称/版本/章节）**：MS-CS-INDICES；PY-REF-SUBSCRIPTIONS。
@@ -129,7 +130,7 @@ description: Use when converting Python source to C#; apply this direction's lan
    // 正确：显式区分"缺失"与"存在但为空"，并让顺序语义可见
    string serviceKey = arguments.GetValueOrDefault("/servicekey"); // 缺失得到 null
    if (arguments.TryGetValue("/servicekey", out var found)) { useKey(found); }
-   var ordered = new List<KeyValuePair<string, string>>(arguments);  // 需要插入顺序时显式保序
+   // 若插入顺序可观察，从构造/更新时维护键顺序；事后复制 Dictionary 无法恢复已丢失的顺序。
    ```
 6. **信息不足或实现相关时的处理**：若源码依赖 `dict` 的插入顺序做输出或校验，必须确认该顺序是否为可观察行为，否则不能声称等价；自定义键对象的哈希/相等语义在目标侧需显式实现 `IEqualityComparer<TKey>`，无法确认时标为待确认。
 7. **资料依据（名称/版本/章节）**：MS-API-DICTIONARY；PY-REF-DATA。

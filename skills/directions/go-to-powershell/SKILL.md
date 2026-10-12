@@ -16,25 +16,25 @@ description: Use when converting Go source to PowerShell; apply this direction's
 ## 方向专向规则
 
 ### 规则 GO-PS-01：Go 强类型结构体输出向 PowerShell PSCustomObject 管道对象流映射
-1. **源码触发条件**：Go 源码中处理结构体切片并进行遍历处理。
+1. **源码触发条件**：源码有结构体/切片的返回或输出边界，且目标接口已明确为对象或对象管道；仅有内部遍历不意味着应输出管道对象。
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 PowerShell 7.6（MS-PS-PIPE）。
-3. **原可观察行为**：强类型结构体字段访问，编译期严格类型保证。
+3. **原可观察行为**：先区分内部字段访问、函数返回、JSON/文本/字节输出与消费者实际读取的字段、大小写、集合形状和顺序。Go 的静态类型保证不因换成动态对象自动保留。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为 `[PSCustomObject]@{ Field = val }` 并推入管道，以便下游通过 `$_` 访问属性。
-   - *不适用条件*：严禁序列化为 JSON 字符串直接输出而不解包，会破坏管道后续的无缝处理。
+   - *可选映射*：已冻结为对象接口时可用 PSCustomObject，保持消费者需要的属性、类型和返回形状；若要求一个集合对象，不让 PowerShell 自动逐项展开。函数内未捕获表达式也会输出，须避免多出 success 流元素。
+   - *不适用条件*：源边界本来是 JSON/文本/字节时，须保持该边界及编码/字段，不能换成对象默认显示；源消费者需要对象时也不能换成不解包的 JSON 文本。不要仅凭结构体切片选择输出形态。
 5. **错误机械替换反例**：
    ```powershell
-   # 错误：将结构体转为文本 JSON 输出，下游必须手动二次 ConvertFrom-Json
+   # 仅在冻结接口要求对象管道时：JSON 文本会改变该接口
    $json = $data | ConvertTo-Json
    Write-Output $json
-   # 正确：直接输出对象
+   # 对象接口的候选写法；不能用于替换源的 JSON/stdout 字节边界
    [PSCustomObject]@{
        Id   = $data.Id
        Name = $data.Name
    }
    ```
-6. **信息不足或实现相关时的处理**：若字段涉及首字母大小写可见性，在 PowerShell 中统一规范为 PascalCase。
-7. **资料依据（名称/版本/章节）**：MS-PS-PIPE。
+6. **信息不足或实现相关时的处理**：字段名、JSON tag、大小写或输出边界未知时定位消费者并记缺口，不统一改 PascalCase。Go 导出可见性、JSON 键与目标属性是不同契约；内部重命名不得改公开字段/序列化文本。
+7. **资料依据（名称/版本/章节）**：PowerShell 7.6 about_Return（表达式输出与集合展开）；Go encoding/json Marshal（字段名、json tag 与集合编码）；适用共享事实见源/目标语言页。
 
 ### 规则 GO-PS-02：Go os.Exit 向 PowerShell 独立进程入口的退出边界
 1. **源码触发条件**：源调用 `os.Exit(code)`，与普通函数返回/`panic` 清理不同。
@@ -83,19 +83,20 @@ description: Use when converting Go source to PowerShell; apply this direction's
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Go_statements、GO-MEM）；目标语言 PowerShell 7.6（MS-PS-PARALLEL、MS-PS-JOBS）。
 3. **原可观察行为**：并发任务各自执行、共享状态受显式同步保护；`wg.Wait()` 之后全部结果已就绪；结果写入互不覆盖（每个任务写自己的下标/自己的队列位置）；channel 的缓冲容量决定发送端是否阻塞。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：有界并行用 `ForEach-Object -Parallel { ... } -ThrottleLimit N`（外部变量以 `$using:` 引入，结果经管道回收）；需要作业对象与显式等待时用 `Start-ThreadJob`/`Start-Job` 配 `Wait-Job`/`Receive-Job`。
-   - *不适用条件*：严禁假定并行块内对父作用域变量的写入会回写父作用域——Runspace 之间不共享变量，写入会静默丢弃；结果必须经管道输出或 `Receive-Job` 收集；也不得依赖并行输出的顺序（与 Go 中显式按索引写 `results[i]` 的确定性不同），需要稳定顺序时必须显式排序。
+   - *可选映射*：有界并行可用 `ForEach-Object -Parallel { ... } -ThrottleLimit N`，外部变量以 `$using:` 引入；结果可经管道回收，或使用符合源同步义务的线程安全共享对象。需要作业对象与显式等待时可用 `Start-ThreadJob` 或 `Start-Job` 配 `Wait-Job`/`Receive-Job`，但两类作业的进程/对象传递边界须另核，不视为可互换。
+   - *不适用条件*：并行块的普通变量赋值不回写父作用域；这不等于引用对象绝不共享，`$using:` 引入的可变对象必须满足线程安全。7.6 默认复用 Runspace 池，不能假设每项都有全新执行上下文。输出到达顺序不保证源的索引顺序；源按 `results[i]` 汇聚时须保留原任务身份/索引并据此恢复，不能按结果值排序替代源顺序。源无排序义务时也不额外排序。
 5. **错误机械替换反例**：
    ```powershell
    # 错误：以为并行块里能像 Go 协程写共享切片那样直接写父作用域变量
    $results = @()
-   1..4 | ForEach-Object -Parallel { $results += $_ }   # 每次迭代都是新 Runspace，写入丢失！
+   1..4 | ForEach-Object -Parallel { $results += $_ }   # 普通赋值不回写父作用域
    $results.Count                                          # 仍为 0
-   # 正确：经管道回收结果，并显式排序以固定顺序
+   # 仅对此例“结果值就是原索引”的契约，经管道回收再按值排序才与索引顺序一致
+   # 实际任务值与索引不同时，必须按原任务索引恢复，不能照抄此 Sort-Object
    $results = 1..4 | ForEach-Object -Parallel { $_ } | Sort-Object
    ```
-6. **信息不足或实现相关时的处理**：若源码依赖 channel 的阻塞背压、`select` 多路复用或 `context` 级联取消，必须标注“PowerShell 无 channel/select 对等物，背压与取消需重新设计”，交由并发场景 Skill 决定，不得声称行为等价。
-7. **资料依据（名称/版本/章节）**：GO-SPEC #Go_statements；MS-PS-PARALLEL、MS-PS-JOBS。
+6. **信息不足或实现相关时的处理**：触发本规则即加载并发场景。若源码依赖 channel 背压、`select` 或 `context` 取消，须逐项冻结阻塞/选择/取消与清理义务，由配置模型在目标实现中保持；Runspace API 近似不能自动证明等价，场景页也不代作实现裁决。缺任务身份、同步或取消语义时记录缺口，不能仅“注明重新设计”就接受改变。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Go_statements；PowerShell 7.6 ForEach-Object 的 Description、Example 14、Notes；MS-PS-JOBS。
 
 ### 规则 GO-PS-06：Go error 返回与 defer 清理向 PowerShell 控制流与 finally 映射
 1. **源码触发条件**：源以 `(T, error)` 返回、在调用点检查/忽略错误，并通过 defer 登记清理。

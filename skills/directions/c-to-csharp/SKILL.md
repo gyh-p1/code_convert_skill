@@ -18,9 +18,9 @@ description: Use when converting C source to C#; apply this direction's language
 ### 规则 C-CS-01：C 结构体裸指针与定宽整数向 C# struct/class 划分与 checked 上下文映射
 1. **源码触发条件**：C 源码中定义包含数值或数组的结构体并按值传递，或存在定宽无符号整数回绕算术计算。
 2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.2.5, §6.2.6.2）；目标语言 C# 12 / .NET 8（MS-CS-SPEC, MS-CS-CHECKED）。
-3. **原可观察行为**：C 结构体赋值与传参为全量字节值拷贝；无符号整数运算严格按模 $2^n$ 截断回绕；有符号溢出为 UB。
+3. **原可观察行为**：C 结构体按成员值复制，内嵌数组随值复制，指针字段仍指同一对象；填充字节不作全量一致保证。无符号按具体提升/转换及位宽保留回绕，有符号溢出属 UB，不能泛化为补码保证。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：若需保留值传递与无 GC 堆分配语义，声明为 C# `struct`；若需表达多态或共享引用，声明为 `class`；整数回绕计算在默认 `unchecked` 上下文中执行，若需强校验则使用 `checked` 语句。
+   - *可选映射*：struct 可承接值字段，但托管数组字段复制的是引用，不能代 C 内嵌数组独立副本；按源布局/消费者选择内联存储或对应成员复制。struct 不保证无 GC 分配（装箱等可分配），class 也不因需要多态就免源复制。按源定宽算术选择 unchecked；源无 checked 失败时不为加固新增 checked。
    - *不适用条件*：严禁将所有 C 结构体机械映射为 C# `class`，否则后续传参变为引用别名，原独立副本被修改导致非预期副作用。
 5. **错误机械替换反例**：
    ```csharp
@@ -30,7 +30,7 @@ description: Use when converting C source to C#; apply this direction's language
    // 正确：使用 struct 保持值传递独立性
    public struct Point { public int X; public int Y; }
    ```
-6. **信息不足或实现相关时的处理**：若无法确认结构体是否跨线程共享，应向用户标记所有权模型未决并默认采用 `struct`。
+6. **信息不足或实现相关时的处理**：布局、内嵌数组/指针、共享或复制消费者未知时记录并停受影响映射，不默认 struct 或深复制；按已冻结 ABI 处理互操作布局，托管表示相似不证明字节等价。
 7. **资料依据（名称/版本/章节）**：MS-CS-SPEC；MS-CS-CHECKED。
 
 ### 规则 C-CS-02：C 错误指示码与 errno 向 C# 结构化异常与 using/IDisposable 映射
@@ -39,7 +39,7 @@ description: Use when converting C source to C#; apply this direction's language
 3. **原可观察行为**：调用方通过 `if (ret < 0)` 检查并手动跳转清理；操作系统错误通过 `errno` 暴露。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：底层严重失败转换为抛出派生自 `System.Exception` 的结构化异常（如 `InvalidOperationException`）；封装非托管资源的对象必须实现 `IDisposable` 并配合 `using` 语句释放。
-   - *不适用条件*：严禁将 C 的所有返回码机械忽略或仅作为返回值而不加检查；严禁将析构逻辑置于 Finalizer 中期待即时执行。
+   - *不适用条件*：不得删掉源实际存在的返回码检查，也不为源忽略的失败新增抛错/检查；仅接口与传播边界可对应时考虑异常。源显式释放不能只靠 Finalizer 期待即时执行；using/Dispose 的释放时点与失败副作用仍须对应源。
 5. **错误机械替换反例**：
    ```csharp
    // 错误：非内存资源未实现 IDisposable，导致句柄泄漏直到不可预期的 GC Finalizer
@@ -83,8 +83,8 @@ description: Use when converting C source to C#; apply this direction's language
 2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.2.5, §7.23）；目标语言 C# 12 / .NET 8（MS-CS-STRING, MS-DOTNET-API）。
 3. **原可观察行为**：缓冲区每个元素恒为 1 字节，字节数等于元素个数；当首字节或中间字节为 `0x00` 时，任何按 `\0` 结尾解读的函数都在该处停止，实际发送/比较/复制的字节数因此静默变短。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：原始字节统一声明为 `byte[]` 或 `Span<byte>`/`ReadOnlySpan<byte>`，长度取 `.Length`；C 的出参长度改为方法返回值（如 `Stream.Read(byte[], int, int)` 返回实际读取字节数）或 `BinaryReader` 的显式读取；需要文本时只在边界处用 `Encoding` 显式编码/解码一次。
-   - *不适用条件*：严禁把 C 的字节缓冲机械写成 C# `char[]` 或 `string`——`char` 是 UTF-16 代码单元，缓冲区字节数翻倍且 `Length` 语义改变；严禁用 `Encoding.*.GetString` 或搜索 `0x00` 的写法替代显式长度（等价于把 `size()` 换成 `strlen`）；严禁把指针参数的 `sizeof(ptr)` 直译为 `.Length`。
+   - *可选映射*：byte[]/Span 表示缓冲区；实际消费长度按源逐调用决定：显式长度/出参保实际数，strlen 保首 NUL 前缀，sizeof 数组与指针分别核。Length 仅对应源全缓冲区元素数，不能用它修源 strlen 截断。目标 Read/BinaryReader 还须保持短读/EOF/错误与循环行为。
+   - *不适用条件*：char/string 不代任意字节；源用显式长度时不新增 NUL 截断，源确用 strlen 时则保持该截断而不换 Length。不得将 sizeof(ptr) 换成集合 Length；源无合法终止符的越界风险单列，不凭缓冲区容量反推成功。
 5. **错误机械替换反例**：
    ```csharp
    // 错误：把 C 的 char buffer[N] 直译为 C# char[]，缓冲区不再是 N 字节
@@ -125,18 +125,18 @@ description: Use when converting C source to C#; apply this direction's language
 2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §6.3.2.3, §6.5.2.2）；目标语言 C# 12 / .NET 8（MS-CS-DELEGATES, MS-DOTNET-API）。
 3. **原可观察行为**：函数地址的调用约定由源码中的 `WINAPI`/`NTAPI` 等宏决定；地址为空时跳过调用；调用发生在当前进程地址空间内，参数按其原生宽度传递。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：声明与源 `typedef` 逐参数对应的委托类型并标注 `[UnmanagedFunctionPointer(CallingConvention...)]`，用 `Marshal.GetDelegateForFunctionPointer<TDelegate>(IntPtr)` 转换为委托后按普通方法调用；`== NULL` 对应 `IntPtr.Zero` 检查；**必须让该委托保持强引用直到不再需要调用**（存字段或局部变量并在同一作用域内使用）。
-   - *不适用条件*：严禁转换出的委托只用于一次调用后即失去引用（JIT 可回收该委托对象，此后任何原生回调触发都会崩溃）；严禁省略调用约定标注（x86 上错配会破坏栈）；严禁把函数地址当普通整数输出或与地址算术语义混用。
+   - *可选映射*：已知 ABI 的原生地址可用 GetDelegateForFunctionPointer<TDelegate> 包装并直接调用，核签名/调用约定与模块存活。反向把托管 delegate 交给原生方保存/异步回调时，才需让该托管对象保活至最后回调；一次同步调用结束不因局部引用消失自动错误。
+   - *不适用条件*：不得混淆“调用原生函数地址”与“原生保存托管回调”；签名/架构或模块存活未知停映射。字段级保活不是所有函数指针的强制方案，也不允许删源实际地址输出/算术消费者。
 5. **错误机械替换反例**：
    ```csharp
-   // 错误：无强引用的临时委托 + 未声明调用约定
+   // 此处是包装原生地址后同步调用，不是注册异步托管回调；ABI 必须先核
    delegate bool DumpFn(IntPtr h, uint pid, IntPtr f, uint t, IntPtr a, IntPtr b, IntPtr c);
    var dump = Marshal.GetDelegateForFunctionPointer<DumpFn>(addr);
-   return dump(hProc, pid, hFile, 2, nint.Zero, nint.Zero, nint.Zero); // 委托随即失去引用
-   // 正确：显式调用约定 + 字段级强引用跨越整个调用期
+   return dump(hProc, pid, hFile, 2, nint.Zero, nint.Zero, nint.Zero);
+   // 委托类型的调用约定候选；仅模块/签名/Winapi ABI 已匹配时使用
    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
    delegate bool DumpFnNative(IntPtr h, uint pid, IntPtr f, uint t, IntPtr a, IntPtr b, IntPtr c);
-   private static DumpFnNative? _dumpKeepAlive = null;
+   // 保活字段仅在原生方保存托管回调时考虑，不对上述一次同步调用强加。
    ```
 6. **信息不足或实现相关时的处理**：源码未展开 `WINAPI`/`NTAPI` 宏、未给出目标架构或参数宽度时，必须停标并要求冻结 ABI；缺少 ABI 事实时不得声称该委托可直接调用，也不得把"语法改写完成"当作可调用性结论。
 7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.3.2.3, §6.5.2.2；MS-CS-DELEGATES；MS-DOTNET-API。

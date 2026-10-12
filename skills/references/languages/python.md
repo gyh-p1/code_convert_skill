@@ -19,7 +19,7 @@
    - `x is None` 与 `not x` **不等价**：`""` 与 `0` 使 `not x` 为真但不是 `None`。
    - `x is None` 与 `x == None` 在自定义 `__eq__` 下也可能不同；用 `is` 才是身份判定。
 4. **目标可选写法和不适用条件**：
-   - *Python 作为源*：把源判的是“哪种空”显式映射到目标的对应检查。源写 `if not x:` 时**必须先判断源作者意图**是“无值”还是“空容器/空串/零值”，不可默认只映射成 null 检查。
+   - *Python 作为源*：按实际值域、__bool__/__len__ 与求值副作用保留 if not x 的真值行为，不能以推测的“作者意图”缩成 null 检查；必要类型/消费者未知时记录缺口。
    - *Python 作为目标*：源为静态类型语言时，源的空指针/零值判断必须分别映射为 `is None` 与 `== 0`/`len(x) == 0`；**不得**用 `if x:` 简化，那会把 `0`/`""` 一并并入假分支而改变控制流。
    - *不适用条件*：源确实按“非空/非零”统一判定（如“有内容才继续”）时，`if x:` 是等价映射，不必拆分。
 5. **错误机械替换反例**：
@@ -80,23 +80,19 @@
    - `int` **无溢出**：超出机器字长自动扩展，不会按模回绕。
    - `seq[:n]` 在 `n` 大于实际长度时**静默返回较短的结果**（不抛异常），因此用它表达“恰好 n 个字节”的源契约会失真。
    - `str(float)` 使用最短往返表示；`repr(float)` 与 `str(float)` 在 Python 3 中一致，但 `format(f, ".6f")` 等固定精度格式**位数不同**。
-   - 格式化与区域设置**无关**（除非显式使用 `locale` 模块）。
+   - 数值格式的精度、类型码和区域设置分别核对；n 类型码会使用区域设置，不能概括所有 format 都与 locale 无关。
 4. **目标可选写法和不适用条件**：
-   - *Python 作为源*：源按字节数写出的路径必须映射为目标的定长写入或显式长度校验，不得靠目标语言的“超长静默截断”承接。
+   - *Python 作为源*：保持实际切片裁剪、写入返回值及源重试/失败分支；源 buf[:n] 不因为 n 较大就自动变成长度错误。
    - *Python 作为目标*：源若依赖定宽溢出回绕，必须显式施加位掩码；源若依赖固定有效位数，目标必须写出相同精度，不得用默认 `str()`。
    - *不适用条件*：源本身只做无限精度算术且无定宽契约时，不涉及掩码；但**格式化位数**仍需核对。
 5. **错误机械替换反例**：
    ```python
-   # 错误：用切片冒充源“恰好写 n 字节”的契约
-   f.write(user.buf[:user.len])    # C 源 write(f, buf, len) 恰好写 len 字节；
-                                   # Python 侧若 buf 更短则静默少写，长度已变
+   # 候选受源限制：C write 请求 len 字节不保证一次完整写入；源缓冲区长度须有真实依据
+   # Python 源若就是 buf[:n]，目标应保留其裁剪，不新增长度异常。
    # 错误之二：用默认 str 冒充源的定宽/定精度格式
    out = str(value)                # 位数可能与源不同
-   # 正确：长度与精度都显式校验
-   if len(user.buf) < user.len:
-       raise ValueError("source wrote exactly user->len bytes")
-   f.write(user.buf[:user.len])
-   out = format(value, ".17g")     # 精度按源义务冻结
+   # 源已有长度检查/完整写入循环时才映射对应检查/循环；源越界风险不能冒充定长成功。
+   out = format(value, ".17g")     # 仅源本有该精度义务时适用
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的长度契约与有效位数时，标为“长度与数值格式待确认”；不得用 `str()` 的默认输出或切片的静默截断充当依据。
 7. **资料依据（名称/版本/章节）**：PY-REF-DATA §3.2；通用序列操作（切片语义）。
@@ -240,6 +236,40 @@
 5. **反例**：用 input 替代 ReadKey 增加 Enter 要求；只用 read(1) 而未确认设备/模式也不能声称“任意键继续”。
 6. **未知**：源返回键/修饰键映射未知或无合法 TTY 驱动时记缺口；Agent 不生成辅助驱动，不用伪造异常代源观察。
 7. **依据**：input；TextIOBase.read；tty；msvcrt。
+
+## 九、解析器、文本边界与容器的选择引导
+
+本节补充CPython 3.12的具体语义，用来选择映射；不增加转换调度门禁，不要求为每个反例运行测试。
+
+### L1-PY-10 optparse 的接受域与程序名
+
+源码实际使用optparse时，先看选项声明、callback、默认值、剩余参数和error/exit的覆盖，而不是套argparse或getopt的默认行为。optparse允许唯一的长选项前缀；歧义、未知选项、缺参走解析器错误路径，默认打印stderr用法/错误并退出2，应用覆盖这些方法时按覆盖保留。usage中的`%prog`默认取`os.path.basename(sys.argv[0])`，显式prog优先。
+
+目标解析器若不支持唯一前缀，可按已声明选项集保留唯一/歧义分流；没有source触发时不额外增加缩写。`./tool`不能直接当默认显示名，默认空argv下usage相同也不能证明选项分支已保持。具体文案、OS路径解释或callback未知时只标对应缺口，不猜完整诊断。依据：Python 3.12 optparse，OptionParser构造/解析错误/长选项缩写。
+
+### L1-PY-11 空白、分行与制表列位置
+
+先区分`str`的码点操作与`bytes`的字节操作，再确定源用strip、split、splitlines、expandtabs还是textwrap自有谓词；同样叫“空白”不说明集合相同。`str.splitlines`识别LF、CR、CRLF、VT、FF、U+001C至001E、U+0085、U+2028、U+2029；空串返回空列表，末尾分行符不增加空项。`split('\n')`不同，bytes方法也不继承完整Unicode集合。
+
+expandtabs按当前列推进到下一制表位，CR/LF重置列，不是把每个TAB换成固定个数空格；CPython 3.12在tabsize≤0时删除TAB。目标可选择按源集合和列状态处理；只有源明确ASCII范围时才考虑ASCII简化。textwrap还须按实际选项核去空白、断词和保留行尾，不从“Unicode空白”推定其所有谓词。依据：Python 3.12 Built-in Types；CPython v3.12.0 Objects/unicodeobject.c中的unicode_expandtabs_impl；textwrap。
+
+### L1-PY-12 容器操作组合决定顺序
+
+deque既能实现队列也能实现栈。`appendleft`后`popleft`是同端入出，后放入的先返回；`append`后`popleft`才是两端入出。先追踪插入端、取出端、连续pushback、空容器行为及消费者，再选择目标Stack/Queue/双端容器。不能凭名字deque改成Queue，也不能把一个token路径相同当作多个token的顺序保证。
+
+split要核分隔符、maxsplit、首尾空项和首个等号；dict读取默认值、defaultdict和显式插入要核是否改变成员集。稳定排序只在源确有同键顺序义务时对应稳定算法，不能为消噪重排有序序列。依据：Python 3.12 collections.deque、stdtypes字符串/dict及Sorting HOWTO。
+
+### L1-PY-13 编解码的输入接受集合
+
+源调用Base64/数值解析时，分别看编码与解码、接受的空白/非法字符、padding、异常与返回类型。`base64.b64decode`默认validate=False会在padding检查前丢弃非字母表字符，validate=True拒绝此类字符；`b64encode`返回编码后的bytes。选择目标API时保持源实际调用模式，不因同名或“更严格”而自动改变接受域；输出是原始bytes还是编码文本也分别对应。源有异常捕获时保持其范围，解析细节未知则记具体API缺口。依据：Python 3.12 base64、内置数值转换。
+
+涉及临时目录选择时还看源是否按环境优先级、可用性检查、缓存结果或明确传入目录选择；候选目录与真正创建文件分别对应。目标只返回一个默认路径不天然保持源的检查/回退/失败，环境稍后改变是否影响结果也依源缓存契约。具体tempfile API/版本未知时记录该选择点，不从Ruby/Go的顺序反推Python。
+
+### L1-PY-14 tempfile 的候选、可用性与缓存
+
+源码实际调用CPython3.12 tempfile.gettempdir时，默认搜索TMPDIR→TEMP→TMP，再到平台候选：Windows依次`C:\TEMP`、`C:\TMP`、`\TEMP`、`\TMP`；其他平台依次/tmp、/var/tmp、/usr/tmp；最后当前目录。搜索寻找调用用户能创建文件的候选并缓存结果；tempfile.tempdir已设置时会影响默认选择，实际文件API显式dir参数另优先。不能把它仅映射为每次读取一个环境变量或创建一个新目录。
+
+先看源码何时首次选择、是否修改tempdir、是否指定dir以及返回str/bytes的消费者，再选目标的选择/校验/缓存行为。环境变化不自动意味着已有缓存失效；Go os.TempDir的只选路径与Ruby Dir.tmpdir的候选/校验也不能替这套语义。未知OS、变量/缓存状态只写对应前提，不读取本机环境代替冻结条件，不在知识维护时真的创建文件验证。依据：Python3.12 tempfile.gettempdir/gettempdirb/tempdir及各文件API的dir参数。
 
 ## 使用边界
 

@@ -33,6 +33,12 @@ description: Use alongside a conversion direction when source launches child pro
 4. **反例**：只确认子程序启动，忽略父子分支或成功后的源语句是否执行；把显式空环境变成继承；为保持“不返回”而自行新增退出，均不能证明等价。
 5. **未知/依据**：缺源分支、准确平台或允许差异时记缺口，不补造路径；事实依据见上述系统页与[Ruby 进程页](../../references/languages/ruby.md#九进程返回替换与环境)。本条不增加运行授权、自审轮数或辅助驱动。
 
+## 等待、错误和双流的选择引导
+
+先区分启动失败、子进程非零退出、超时/取消、等待失败和管道排空失败；源忽略退出码不等于忽略启动异常，源传播一种错误不授权新增其他throw。绝对deadline、单次等待timeout及等待后代的范围分别对应，不用固定sleep代就绪状态。
+
+若源合并stdout/stderr，目标分别收集后按stdout+stderr拼接会改变交错关系；若源两流分离，合流又会丢来源。根据源是否消费交错、字节、行或对象选择捕获方式，不能仅以总长度相同当作保持。源返回值、流和副作用的消费者未知时只列相应条件缺口，不写新驱动或额外审阅循环。依据：Go os/exec、Python3.12 subprocess、.NET Process与PowerShell7.6 Start-Process的具体等待/重定向行为；已有四要素仍由评估准备契约维护。
+
 ## 语言与平台映射边界
 
 具体 API 改写由方向页维护，例如[Go→C++ 的 os/exec](../../directions/go-to-cpp/SKILL.md#子进程-api-映射)。本场景只规定显式 shell 语义、并发排空、取消/回收和输出观察义务；目标解释器、杀树能力或管道关闭条件未知时记缺口，不按名称推断。

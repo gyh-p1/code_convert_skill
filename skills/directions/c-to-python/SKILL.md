@@ -21,7 +21,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 - **二进制与文本严格隔离**：C 中 `char*` 既可以表示文本字符串，也可以表示任意二进制缓冲区；Python 中 `str`（Unicode 文本）与 `bytes`（8位无符号字节流）**严格隔离且禁止隐式互转**。在缺乏明确字符编码依据时，一律映射为 `bytes`，严禁机械转换为 `str`。
 - **定宽整数溢出截断**：C 依赖 32/64 位定宽整数的截断与溢出特性（如哈希计算、加密算法）；Python 的 `int` 具备任意精度，算术运算永不自动溢出。若需要保持截断行为，必须显式施加位掩码（如 `& 0xFFFFFFFF`）。
-- **确定性资源释放**：C 依赖显式 `free()`、`fclose()` 或 `close()` 释放资源；Python 依赖垃圾回收机制，但垃圾回收时机对于非内存资源（文件、Socket、锁）不具备跨实现确定性，必须统一映射为 `with` 上下文管理器。
+- **确定性资源释放**：保持 C 实际显式释放的时点、顺序及失败副作用。Python 垃圾回收不代显式释放；with 仅在其退出范围与源一致时适用，不为修源泄漏而新增释放路径。
 - **指针引用与对象别名**：C 指针传参修改外部结构体；Python 函数参数为“对象引用的按值传递”，对于不可变对象（`int`、`str`、`bytes`）无法原地修改，必须通过返回新值重构。
 
 ---
@@ -53,10 +53,10 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 1. **触发条件**：C 源码中使用 `char*`、`uint8_t[]`、`unsigned char*` 作为网络包数据、二进制协议帧或以 `\0` 结尾的字符串缓冲区。
 2. **适用前提**：源语言 ISO C11，目标语言 Python 3.12。
-3. **应保留行为**：保持原始字节数据的精确字节序列、内部嵌入的 `\0` 字节不被截断；若为纯文本，保持文本字符集解码一致性。
+3. **应保留行为**：显式长度路径保留全部字节及内部 NUL；源 NUL 终止 API 则保留其实际前缀观察，不扩大到缓冲区其余字节。纯文本按实际编码与消费者解码，不凭 char* 类型决定。
 4. **可选映射与不适用条件**：
    - *可选映射*：对于二进制包、固定长度数据结构或未明码流，映射为 `bytes`（只读）或 `bytearray`（需原地修改时）；仅当确认其输入完全为 UTF-8/ASCII 文本、且作为控制台输出或文本配置时，才可显式调用 `.decode('utf-8')` 转为 `str`；
-   - *不适用条件*：**严禁将包含任意字节流或 NUL 的 C 缓冲区直接转换为 Python `str`**（可能引发 `UnicodeDecodeError` 或破坏二进制协议）；无具体编码和 API 依据时一律保持为 `bytes` 并标记 `[待 D3 专题核验]`。
+   - *不适用条件*：没有编码和消费者依据不得把任意字节转为 str；NUL 本身不是 Python str 的禁用字符，已知编码的文本可包含它。源若按 NUL 终止 API 观察前缀，须保留该截断，而显式长度缓冲区须保留全部字节；未知时记录具体编码/长度缺口。
 5. **错误机械替换反例**：
    ```python
    # 错误反例：将底层套接字接收到的原始字节缓冲区强制当作 str 处理
@@ -75,16 +75,16 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 2. **适用前提**：源语言 ISO C11，目标语言 Python 3.12。
 3. **应保留行为**：保持失败时的错误类型（如找不到文件、连接拒绝、权限不足）与错误信息；保证上层调用者能够针对性捕获或向上传播。
 4. **可选映射与不适用条件**：
-   - *可选映射*：将 C 的负数失败返回重构为抛出 Python 内建异常（如 `OSError`、`ValueError`、`PermissionError`）；系统调用失败可直接构造 `OSError(errno, os.strerror(errno))`；
-   - *不适用条件*：严禁将 C 的返回值 `0` 错误判断为 Python 的 `False`，或把负数错误码当成正常的业务返回值；若原 C 函数具备业务状态查询语义（如查找不到返回 `-1`），应权衡返回 `None` 或抛出 `KeyError`/`IndexError`，不可混淆。
+   - *可选映射*：先保留返回码及源检查/忽略分支；只有接口、调用链和捕获边界均允许时才考虑 Python 异常。errno 仅在相应 API 的规定失败点取得，不从返回值符号猜测。
+   - *不适用条件*：不得把源当正常状态消费的负值自动异常化，也不为未识别错误码添加新的失败；返回 None/异常/原码须由源消费者与冻结契约决定。
 5. **错误机械替换反例**：
    ```python
-   # 错误反例：机械翻译 C 的错误检查，在 Python 中产生布尔真假反转的严重逻辑漏洞
+   # 返回值仍为数值码时，明确保留源的非零判断，不猜测目标 API 的返回形态
    # C 原型: if (write_data(fd, buf) != 0) { /* 错误处理 */ }
-   if write_data(fd, buf): # 错误：C 成功返回 0，在 Python 中 0 被视作 False，导致错误分支在成功时反向执行！
+   if write_data(fd, buf) != 0: # 成功 0 不进入；源非零失败进入，Python 数值真值不会把它反转
        handle_error()
    ```
-6. **不确定性处理**：若 C 源码定义了专有的私有枚举错误码，应在 Python 中定义专属的派生异常基类（继承自 `Exception`），并在未识别错误码出现时抛出通用运行时异常，标明错误码映射字典未穷尽。
+6. **不确定性处理**：私有枚举或未穷尽错误码保留实际数值、源分流与数据；不能自行给未知码添加通用异常。必要语义未知时记录并停止受影响映射。
 7. **官方依据**：PY-REF-DATA §3.2 Exceptions；WG14-N1570 §7.5。
 
 ---
@@ -93,7 +93,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 1. **触发条件**：C 源码中使用 `fopen`/`fclose`、`socket`/`close`，或手工管理互斥锁的加锁/解锁。
 2. **适用前提**：源语言 ISO C11，目标语言 Python 3.12。
-3. **应保留行为**：保证无论正常分支还是发生未捕获异常时，底层系统资源（文件句柄、套接字、互斥锁）均能立即、确定性地释放。
+3. **应保留行为**：保持源在正常/失败路径上实际发生的释放、缺失释放、释放顺序及副作用；源已有泄漏单列风险，不作为转换中自动修复的理由。
 4. **可选映射与不适用条件**：
    - *可选映射*：使用 Python `with` 上下文管理器（如 `with open(...) as f:`, `with lock:`）；针对无开箱即用支持的资源，使用 `contextlib.contextmanager` 编写封装器；
    - *不适用条件*：**严禁依赖对象的析构方法 `__del__()` 进行非内存资源清理**。CPython 虽然以引用计数为主，但当存在循环引用或在解释器退出阶段时，`__del__` 调用时机完全不确定，可能导致文件句柄耗尽或死锁。
@@ -143,7 +143,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 2. **适用前提**：源语言 ISO C11，目标语言 Python 3.12 / CPython。
 3. **应保留行为**：保持线程创建数量、入口函数、参数传递、同步与 join 的可观察行为；保持线程间共享状态的同步语义。
 4. **可选映射与不适用条件**：
-   - *可选映射*：映射为 Python `threading.Thread(target=func, args=(...))`；互斥锁映射为 `threading.Lock()`；条件变量映射为 `threading.Condition()`；**必须在转换报告中明确标注 CPython GIL 约束**：由于全局解释器锁，Python 多线程无法并行执行 CPU 密集计算（同一时刻仅一个线程执行字节码），仅适用于 I/O 密集任务；CPU 密集计算需使用 `multiprocessing` 多进程；
+   - *可选映射*：按创建/共享状态/等待/取消义务核 threading.Thread、Lock、Condition。冻结 CPython 构建与原生扩展决定 GIL 影响；性能限制单列，不为 CPU 密集任务自动切成 multiprocessing，否则共享状态、故障和进程副作用会变。
    - *不适用条件*：严禁假设 Python 多线程可以充分利用多核 CPU 进行 CPU 密集计算；严禁在未加锁情况下并发修改共享的可变对象（`list`、`dict`）。
 5. **错误机械替换反例**：
    ```python
@@ -158,7 +158,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
    # 错误：启动多线程期望并行加速，但 GIL 导致线程串行执行且上下文切换开销更大！
    threads = [threading.Thread(target=cpu_intensive_work, args=(i,)) for i in range(4)]
-   # 正确：CPU 密集任务应使用 multiprocessing.Pool
+   # 性能观察不授权改进程模型；multiprocessing 只在另行确认语义与任务范围后考虑。
    ```
 6. **不确定性处理**：若 C 源码涉及复杂的线程属性、信号掩码、线程取消或线程局部存储（TLS），Python `threading` 模块不完全对等，必须加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md) 并标注语义差异。
 7. **官方依据**：PY-THREADING；CPY-DEV-GC；WG14-N1570 §7.26。

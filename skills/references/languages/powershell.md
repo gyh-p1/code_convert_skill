@@ -41,7 +41,7 @@
 2. **冻结版本/运行时/API 前提**：PowerShell 7.6（about_Functions_Advanced_Parameters、about_Automatic_Variables）。
 3. **原可观察行为**：
    - **参数有三种来源**：**未绑定**、**显式传入**、**默认值生效**。默认值**仅在参数被省略时**生效；`$PSBoundParameters` 只含**真正传入**的参数。
-   - **位置参数**按 `Position` 绑定；未标 `Position` 的参数只能按名传入。
+   - 函数参数默认可按声明顺序位置绑定；显式 Position、CmdletBinding 的 PositionalBinding、参数集及 switch 等影响实际绑定。不能仅凭没有 Position 就判只能按名传入；需要稳定公开位置接口时显式记录/声明位置。
    - `$args` 只在**没有** `param()` 块（或 `param()` 未声明该参数）时承接剩余位置实参；一旦参数被 `param()` 声明，多余实参的行为依 `ValueFromRemainingArguments` 而变。
    - 名称**缩写**：PowerShell 允许**唯一前缀**缩写参数名（`-Dep` 可匹配 `-Depth`），有歧义时报错。
    - **`[switch]` 的显式假值**：`-Flag:$false` 与**省略** `-Flag` 在 `$PSBoundParameters` 中不同（前者已绑定）。
@@ -68,7 +68,7 @@
 
 - **整数宽度规范**：`[语言规范保证]` 底层为 .NET 整数体系；支持整型字面量后缀（`100L`, `1000D` 等）。
 - **有符号溢出行为**：`[指定运行时的实现相关事实]` 默认算术超出当前类型上限时，PowerShell 引擎会**自动提升为更大宽度整型**（如 `[int32]::MaxValue + 1` 自动转为 `[int64]` 或 `[double]`）。
-- **无符号溢出行为**：`[指定运行时的实现相关事实]` 显式通过 .NET 静态方法或强类型声明时遵循 .NET `unchecked` 回绕规则。
+- **无符号溢出行为**：`[指定运行时的实现相关事实]` 数值转换要求目标类型能容纳结果；类型约束或强制转换不是通用模回绕。源要求截断/回绕时须有显式位宽算法或准确 API 契约，不能用“底层是 .NET”代替依据。
 - **隐式提升与转换陷阱**：`[指定运行时的实现相关事实]` 动态弱类型转换系统在算术中自动升级类型，可能破坏对底层二进制溢出截断的依赖。
 - **官方资料依据**：MS-PS-AUTO
 
@@ -76,26 +76,26 @@
 1. **源码触发条件**：源码把数值转成文本——字符串内插 `"$x"`、`-f` 格式运算符、`.ToString()`、`[string]::Format`，或对定宽整数做宽度依赖的运算。
 2. **冻结版本/运行时/API 前提**：PowerShell 7.6；自动类型提升与格式运算符见 about_Operators、about_Arithmetic_Operators、MS-CS-FORMAT。
 3. **原可观察行为**：
-   - 算术超出当前类型上限时，引擎**自动提升为更大宽度整型**（如 `[int32]::MaxValue + 1` 转为 `[int64]` 或 `[double]`），**不按模回绕**——与 C/Go 语义相反。
-   - 字符串内插与 `-f` 使用**当前区域设置**；`.ToString()` 亦受 `CurrentCulture` 影响，小数点符号可能改变。
+   - 普通算术超出当前类型范围可能提升为更宽类型，不自动保持源的固定宽度回绕；Go 的有符号/无符号回绕、C 的无符号回绕与 C 有符号溢出分别按其语言页理解，不能合称同一规则。
+   - 可展开字符串的内插使用 invariant culture；`-f`/.NET 普通数值格式化与无提供程序的数值 ToString 另核当前区域、实际类型/重载。不能把内插与直接 ToString 当同一格式路径。
    - `"$x"` 对 `$null` 产生空串（不是 `"$null"`），对数组产生空格分隔的元素串；对 `[double]` 使用较短表示。
 4. **目标可选写法和不适用条件**：
-   - *PowerShell 作为源*：目标语言的数值输出必须显式钉住类型宽度与格式提供程序；源依赖自动提升的地方须显式转为定宽运算。
-   - *PowerShell 作为目标*：源若依赖定宽回绕（C/Go/Rust），必须用 `[int32]`/`[uint32]` 等固定类型与显式掩码，**不得**依赖引擎的自动提升；源若依赖固定区域，必须用 `InvariantCulture` 或显式格式。
+   - *PowerShell 作为源*：保持实际自动提升/数值范围与具体格式通道，不能反向强改为会截断的定宽运算；目标定宽不足时标出表示缺口。
+   - *PowerShell 作为目标*：源有已定义的定宽回绕时显式保持位宽，不靠自动提升或强制转换保证截断；源要求固定文本格式时保持实际精度、进制、符号和文化规则，不因目标 API 更常见而替换。
    - *不适用条件*：源本身只做任意精度算术（Python/Ruby）时，不涉及定宽；但格式化位数与区域仍需核对。
 5. **错误机械替换反例**：
    ```powershell
    # 错误：把 C 的 uint32 回绕搬运成 PowerShell 算术
    $h = [uint32]::MaxValue
    $h = $h + 1                       # PowerShell 提升为更大类型，得到 4294967296 而非 0
-   # 错误之二：用内插冒充源的固定格式与区域
-   "$value"                          # 受 CurrentCulture 影响，且对 $null 得空串
+   # 错误之二：源要求 invariant 数值文本，却改用当前文化的直接 ToString
+   $value.ToString()                  # 在逗号小数点文化下可改变文本
    # 正确：显式定宽与固定格式
-   $h = [uint32](($h + 1) -band 0xFFFFFFFF)
+    $h = [uint32](($h + 1) -band ([uint64][uint32]::MaxValue)) # 明确正值掩码，不依赖十六进制的符号解释
    [string]::Format([cultureinfo]::InvariantCulture, '{0}', $value)
    ```
 6. **信息不足或实现相关时的处理**：无法确定源的类型宽度或有效位数时，标为“数值类型与格式待确认”，并把该文本列入 oracle 观察点。
-7. **资料依据（名称/版本/章节）**：about_Arithmetic_Operators；about_Operators（-f 格式运算符）；MS-CS-FORMAT。
+7. **资料依据（名称/版本/章节）**：PowerShell 7.6 about_Arithmetic_Operators、about_Type_Conversion、about_Quoting_Rules（可展开字符串的 invariant culture）；.NET 数值 ToString/复合格式化的具体重载与提供程序。
 
 ## 三、字符串、字节、NUL、Unicode 与编码
 
@@ -216,6 +216,17 @@
 4. **反例**：把 C++ `report_ready:` 原样放入目标，被作为命令尝试调用；为消除该命令错误直接删掉仍被跳转引用的目标；合法的 PowerShell `:outer while (...)` 被当残留删除。
 5. **未知处理**：标签引用、清理顺序或循环范围未定位时保留待确认，不声称等价；静态检查只核对应关系，不运行目标来试探语法。
 6. **官方依据**：about_Break、about_Continue。
+
+## 十、对象管道与外部状态的选择引导
+
+PowerShell7.6的管道对象、输出流和外部进程是不同语义层。先看源需要的返回类型、字节、通道、等待及错误路径，不因语法更短合并它们。
+
+- 外部程序直接调用后从LASTEXITCODE取得该次状态并及时保存；Start-Process返回/等待采用Process对象渠道，ArgumentList拼接与流重定向另核。源忽略非零状态时不新增throw，源传播失败时不吞掉；`$?`也不代完整退出码。
+- Cmdlet非终止错误与.NET抛异常分开；只在源捕获的相应调用上考虑ErrorAction Stop，不无条件改变作用域。源静默兜底时不额外Write-Error/Verbose，以免增加可观察诊断。
+- .NET字符串、char数组、byte数组及Base64文本分层；文本写入须看编码/BOM/换行，源写编码结果时不能改写成原始byte数组。返回管道时还看数组展开、单项/空项和是否混入诊断对象。
+- 数值强转的舍入与源整除、原生字段宽度及容器值类型分别判断；不因为一项默认值相同就统一类型。环境展开、注册表原始值及身份查询依精确API，不能用惯用Trim或大小写忽略抹掉源条件。
+
+依据：PowerShell7.6 about_Automatic_Variables、Start-Process、about_Preference_Variables、about_Pipelines、about_Character_Encoding；.NET对应类型/API。示例是选择引导，非语法/行为验证记录。
 
 ## 使用边界
 

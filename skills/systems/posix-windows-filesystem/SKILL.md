@@ -51,7 +51,7 @@ FreeBSD 等平台的源码可能使用目标工具链缺少的头、类型或符
 
 **义务**：
 
-1. **同名 shim 必须改名**：`static char * realpath(...)` 这类自写实现与平台声明冲突，GCC 会报 `static declaration of 'realpath' follows non-static declaration`。**不得依赖“当前头文件恰好没声明它”**——该假设随 SDK/CRT 版本变化。改用独立内部名（如 `poc_realpath`）。
+1. **已定位的内部冲突才消歧**：同名 shim 是否冲突取决于声明、作用域、头与冻结 SDK；有精确诊断且仅内部符号时可考虑改名并核全部消费者。未确定冲突不能因未来 SDK 风险一律改名；公开 ABI/导出名先核外部契约。
 2. **类型别名不得与平台类型重定义**：`typedef long long off_t;` 在 MinGW/UCRT64 下常与 `<sys/stat.h>` 已定义的 `off_t`（通常为 `long`）冲突而编译阻断。须改用独立别名（如 `using du_off_t = long long;`），而不是假定平台没有该 typedef。
 3. **位宽常量必须按目标架构分别取值**：`INVALID_HANDLE_VALUE` 在 32 位 Windows 上是 `0xFFFFFFFF`、64 位上是 `0xFFFFFFFFFFFFFFFF`。把它硬编码成单一宽度会在另一架构上判错失效。**必须**使用平台宏或按目标架构分支，不得硬编码。
 4. **POSIX 专有常量不可直接搬运**：`st_flags`/`UF_NODUMP`、`DEV_BSIZE`、`SIGINFO`、`EX_USAGE` 等在 Windows 侧可能不存在或无同义语义，须按本文件 §2 核对其行为义务与目标替代方案；未经契约允许不删除为 no-op。
@@ -90,8 +90,8 @@ if (h == INVALID_HANDLE_VALUE) { /* 使用平台宏 */ }
 **义务**：
 
 1. **先核实目标 SDK 是否真存在该 API**，再决定是否需要替代物。**不得**凭名字相似假定存在（如假定某重载/属性存在而实际不存在）。
-2. **替代物不得默认等价**：选定时必须逐项列出**语义被削弱的方面**并登记为已知差异。例如 `_fullpath` 相对 `realpath`：**不解析符号链接**、分隔符形式变化、受 `_MAX_PATH`（260）长度上限约束。
-3. **削弱项要么补齐、要么登记**：能在目标侧补齐的（如自行解析符号链接）补齐；不能补齐的必须写入交付说明的已知差异清单，并评估下游影响。
+2. **替代物不得默认等价**：核实际输入接受域、存在性/链接解析、输出路径与失败；_fullpath 的调用缓冲/maxLength/CRT 条件分别核，不能把示例 char buf[_MAX_PATH] 的容量说成所有调用都固定260。
+3. **登记不是改行为授权**：具体差异需在目标侧按源义务补齐，或已有冻结允许差异；不能只写“已降级”便继续受影响映射。GetFinalPathNameByHandle 另需对应句柄、打开权限、前缀和容量，不自动等价 realpath。
 4. **不得用“桩函数”冒充等价**：返回固定值或空实现的桩不构成替代物，属未映射项。
 
 **错误机械替换反例**：
@@ -99,11 +99,10 @@ if (h == INVALID_HANDLE_VALUE) { /* 使用平台宏 */ }
 ```cpp
 // 错误：直接假定 _fullpath 等价于 realpath，未登记任何削弱项
 char buf[_MAX_PATH];
-_fullpath(buf, path, sizeof buf);      // 不解析符号链接、不校验存在性、260 上限
+_fullpath(buf, path, sizeof buf);      // 此调用受 buf/maxLength 限制；不据此推所有 CRT 调用固定260
 // 交付说明却写“已映射为 realpath 等价实现” → 虚假等价
 
-// 正确：逐项登记差异，并在需要符号链接语义时显式补齐
-// 已知差异：(1) 不解析符号链接 (2) 分隔符形式不同 (3) _MAX_PATH=260 长度上限
+// 条件候选：链接/存在性、路径形式、打开句柄与权限、缓冲及失败均须对应源，不只登记差异
 char resolved[PATH_MAX];
 if (GetFinalPathNameByHandleA(h, resolved, sizeof resolved, 0) == 0) { /* 需要链接解析时 */ }
 ```
@@ -114,6 +113,12 @@ if (GetFinalPathNameByHandleA(h, resolved, sizeof resolved, 0) == 0) { /* 需要
 
 **官方依据**：Microsoft `_fullpath`、`GetFinalPathNameByHandle`；The Open Group `realpath`；cppreference `recursive_directory_iterator`、`directory_options`；FreeBSD `fts(3)`。
 
+
+## 容量、枚举与创建模式的选择引导
+
+源码用固定缓冲解析路径时，先区分“最终对象/链接解析”“词法绝对化”“容量/终止符”。改为自动增长字符串虽可表达长路径，不天然保持源容量不足的失败条件；realpath、_fullpath与GetFinalPathNameByHandle分别按实际调用形式核，不把同OS高层替换当无条件等价。
+
+遍历看源是否跟随链接、返回哪种文件类型、如何处理权限失败/部分结果和排序；源无顺序保证不授权目标删除条目或合并不同类型。创建时看权限请求与umask、已有对象的行为，修改已有文件权限不能替代创建权限。未知文件系统/容量/编码仅影响该映射点，不能靠默认UTF-8、统一大小写或忽略所有错误补成等价。依据：本页所列POSIX/Win32路径与枚举API；POSIX mkdir/open/umask和实际语言文件API。
 
 ## 4. 路径安全与行为保留
 - 记录源是检查词法路径、绝对路径还是解析后的最终文件对象；`realpath` 与 `GetFullPathName` 语义差异会改变符号链接、相对路径、失败路径结果。
@@ -128,7 +133,7 @@ if (GetFinalPathNameByHandleA(h, resolved, sizeof resolved, 0) == 0) { /* 需要
 | 主题 | macOS | Linux | Windows | 转换必须处理的点 |
 |---|---|---|---|---|
 | 用户主目录 | `/Users/<name>` | `/home/<name>` | `C:\Users\<name>` | 不得把 `~/` 展开成硬编码前缀；`~` 的展开由 shell 或语言库完成，路径拼接要用目标平台的组合 API |
-| 应用数据位置 | `~/Library/Application Support/<Vendor>/<App>` | `~/.config/<app>`、`~/.<app>` | `%APPDATA%\<Vendor>\<App>` | 同一应用的三平台默认位置不同，属**可观察行为差异**（源里硬编码 macOS 路径时须显式改写并登记） |
+| 应用数据位置 | `~/Library/Application Support/<Vendor>/<App>` | `~/.config/<app>`、`~/.<app>` | `%APPDATA%\<Vendor>\<App>` | 默认位置不同是可观察差异；只有源使用平台默认或冻结允许换位置时才映射，硬编码路径不因目标惯例自动改写 |
 | 应用包结构 | `/Applications/<App>.app/Contents/MacOS/<bin>`（`.app` 是目录） | 无此结构 | `Program Files` 下的普通目录 | 不能把 `.app` 当普通文件；在目标平台须按实际安装布局重写 |
 | 密钥/凭据位置 | `~/Library/Keychains/*.keychain-db` | 取决于实现（文件/内核密钥环/桌面密钥环） | 凭据管理器/DPAPI | 路径差异之外还有**存储格式与保护机制**差异，不能只改路径就宣称等价 |
 | 大小写敏感性 | 默认卷通常大小写不敏感（可配制为敏感） | 通常敏感 | 不敏感 | 与 Windows 一样，大小写敏感性不能假定；比较路径时保留源语义 |

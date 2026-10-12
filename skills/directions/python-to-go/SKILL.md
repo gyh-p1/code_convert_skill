@@ -34,7 +34,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 2. **适用前提**：源语言 Python 3.12，目标语言 Go 1.27。
 3. **应保留行为**：保持读取序列末尾倒数第 $n$ 个元素的业务逻辑；保持空序列时的越界保护语义。
 4. **可选映射与不适用条件**：
-   - *可选映射*：在 Go 中显式编写长度换算逻辑：`idx := len(s) - n`，并前置断言 `if len(s) < n { return 0, ErrIndexOutOfRange }`；安全切片 `s[len(s)-n:]`；
+   - *可选映射*：单项负索引先按 `len(s)+i` 换算并保留越界失败；切片负边界另按 Python 规则换算、裁剪到合法范围。`s[-n:]` 在正 n 大于长度时取全部，不得与单项索引一起新增越界错误。运行期任意精度边界先归一化再转 Go 索引宽度。
    - *不适用条件*：**绝对禁止在 Go 中直接使用负数字面量或负数变量做索引**。Go 规范明确规定：常量负索引（如 `s[-1]`）直接在**编译期报错**；动态变量负索引（如 `i := -1; s[i]`）在**运行期触发 panic**。
 5. **错误机械替换反例**：
    ```go
@@ -43,7 +43,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
        return s[-1] // 编译错误: invalid slice index -1 (index must be non-negative)
    }
    ```
-6. **不确定性处理**：若源 Python 代码使用了复杂的动态切片步长（如 `s[::-1]` 倒序），在 Go 中切片不支持负步长表达式，必须手工编写双指针原地逆序循环或构造新切片，标注切片步长算法展开。
+6. **不确定性处理**：负步长切片须保留边界、遗漏值、步长及结果为新序列的语义；`s[::-1]` 不能改成对原容器原地逆序。动态步长或任意精度边界未明确时记录缺口，不用默认近似算法替代。
 7. **官方依据**：GO-SPEC #Index_expressions, #Slice_expressions；PY-REF-DATA §3.2 Sequences。
 
 ---
@@ -55,7 +55,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 3. **应保留行为**：保持错误发生时的错误信息、失败原因与分支控制流；保持逐层向上传递错误的能力。
 4. **可选映射与不适用条件**：
    - *可选映射*：将函数返回值重构为 `(T, error)`；将 Python 的具体异常类映射为 Go 的预定义哨兵错误或实现 `error` 接口的自定义结构体；外层通过 `if err != nil` 结合 `errors.Is` / `errors.As` 进行处理；
-   - *不适用条件*：严禁将普通业务异常机械替换为 Go 的 `panic`；严禁使用空的 `except Exception: pass` 机械对齐为丢弃 Go 的 `err`（会导致静默失效）。
+   - *不适用条件*：普通异常不自动改为 panic；源 `except ...: pass` 确实吞掉的对应失败可以保留忽略，但须保持该捕获范围及后续控制流，不为改进错误处理新增传播。
 5. **错误机械替换反例**：
    ```go
    // 错误反例：将普通验证异常写成 panic，导致服务异常终止

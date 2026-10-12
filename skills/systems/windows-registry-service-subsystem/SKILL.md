@@ -24,7 +24,7 @@ description: Use as the source-OS -> target-OS layer when source code reads or w
 - **读写的可观察结果**：写后能否立刻读回、默认值与"值不存在"是否可区分、失败时是否留下部分写入（多值写入不是原子操作）。
 - **服务状态机**：服务的存在性、启动类型、可执行路径、账户、当前状态（停止/启动中/运行/停止中）与状态转换顺序；以及失败后是否回滚到原配置。
 - **权限与错误**：访问被拒绝、找不到键/服务、类型不匹配等失败类别；错误来自 `LONG` 返回值还是 `GetLastError()`。
-- **清理顺序**：所有打开的键句柄与 SCM/服务句柄都必须关闭；错误路径上不得泄漏句柄，也不得在失败后留下被改动的配置。
+- **清理顺序**：保持源关闭键/SCM/服务句柄的实际时点与顺序，源已有泄漏单列风险；失败后的部分配置保留或回滚按源逐路径对应，不自动新增回滚。
 
 ## 注册表：差异与必须处理的点
 
@@ -43,6 +43,14 @@ description: Use as the source-OS -> target-OS layer when source code reads or w
 
 若源代码对 `REG_SZ` 仅传 `strlen(s)`、遗漏终止符字节，记录为源已有风险并定位实际 A/W 调用与输入，不能把它提炼成正确的通用长度规则。转换时不得未经确认就补终止符并宣称行为未变；目标封装若无法表达源的原始长度行为，列出差异，按已确认任务契约处理或保持待确认。
 
+## 原始值、展开与枚举的选择引导
+
+源读取REG_EXPAND_SZ时，先确认使用的API是否自动展开及选项。.NET RegistryKey.GetValue通常会展开该类型，GetValue选项DoNotExpandEnvironmentNames用于保留原始串；Win32原始查询与封装结果不能直接互换。类型标签、原始文本、展开后的文本是三层，不以一个string覆盖它们。源Trim、去引号、展开、路径解析的顺序也要对应；Go os.ExpandEnv的`$VAR`语法不代Windows的`%VAR%`语法，变量缺失与空值按具体函数处理。
+
+枚举键/服务时，先看源消费的是名称、显示名、类型、状态还是计数，再选择接口与筛选；错误、重复、顺序、大小写及32/64位视图均可能影响结果。只有源无顺序义务才考虑集合表达，不能为消噪统一排序。公开查询接口与权限判定不是同一行为，未知SDK/封装选项只记对应缺口。
+
+依据：.NET8 RegistryKey.GetValue/RegistryValueOptions；Win32 RegQueryValueEx、ExpandEnvironmentStrings、注册表值类型及SCM枚举API。本节只补映射选择，不声明所有封装默认相同。
+
 ## 服务：差异与必须处理的点
 
 | 主题 | 源码常见写法 | 转换必须处理的点 |
@@ -54,7 +62,7 @@ description: Use as the source-OS -> target-OS layer when source code reads or w
 | 启动与状态轮询 | `StartServiceA(svc, 0, NULL)` 后直接读 `QueryServiceStatus` | `StartService` 返回成功只表示命令被接受；服务进入运行态需要轮询，源码若依赖轮询结果，目标侧必须保留轮询与超时 |
 | 停止/控制 | `ControlService(svc, SERVICE_CONTROL_STOP, &status)` | 停止是请求；服务可能拒绝、可能超时。不能把"发出停止"当成"已停止" |
 | 状态字段 | `SERVICE_STATUS`（`dwCurrentState`/`dwWin32ExitCode`/`dwServiceSpecificExitCode`） | 服务自身退出码在 `dwServiceSpecificExitCode`，与 SCM 级错误码不同来源，别混用 |
-| 创建/删除服务 | `CreateService` / `DeleteService` | 创建需要目标可执行文件已存在；删除对已启动服务的行为受版本与状态影响，须显式处理失败分支 |
+| 创建/删除服务 | `CreateService` / `DeleteService` | 创建登记配置与启动加载是不同阶段，不能新增“先验证exe存在”的源外门槛；按实际 API 返回核创建/启动各自失败。DeleteService 的标记删除、句柄/运行状态与最终删除另核，不把成功返回等同已立即移除 |
 | 配置回滚 | 先改配置、启动、再改回原值（如凭据/路径的一次性替换） | 源码若在失败路径上"改回原配置"，目标侧必须保留回滚及其失败处理；丢掉回滚会留下被修改的系统配置 |
 | 句柄清理 | 结束时 `CloseServiceHandle` | SCM 与服务的句柄**都要**关闭；顺序与错误路径上的关闭都要保留，泄漏句柄会阻塞服务对象释放 |
 

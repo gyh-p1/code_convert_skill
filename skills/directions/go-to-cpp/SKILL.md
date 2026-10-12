@@ -27,7 +27,8 @@ description: Use when converting Go source to C++; apply this direction's langua
    // 错误：在 C++17 基线代码中使用 C++23 的 std::expected
    // std::expected<int, std::string> Divide(int a, int b); // 编译报错：C++17 无此特性！
    // 正确：使用带状态结构体或 std::optional
-   struct Result { int value; std::string err; bool is_ok() const { return err.empty(); } };
+   struct Result { int value; std::string err; bool ok; bool is_ok() const { return ok; } };
+   // ok 独立承接 err == nil；非 nil error 的消息也可能为空，不能以消息长度判成功。
    ```
 6. **信息不足或实现相关时的处理**：若原 Go 代码无错误传递直接返回，直接映射为 C++ 对应单一返回值。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Errors；WG21-N4659 Clause 23.6。
@@ -37,7 +38,7 @@ description: Use when converting Go source to C++; apply this direction's langua
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Defer_statements）；目标语言 ISO C++17（WG21-N4659 Clause 6.7）。
 3. **原可观察行为**：注册的清理函数在外层函数返回前以 LIFO（后进先出）逆序确定性执行。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：互斥锁使用 `std::lock_guard`；文件/资源封装为 RAII 守卫类；或编写简易 ScopeGuard 类在析构时调用 lambda。
+   - *可选映射*：仅清理时点、注册顺序和参数取值相同才用函数级 RAII 守卫；内层块的 `std::lock_guard` 在块末析构，不自动承接 Go 函数级 `defer`。直接延迟调用保存注册时的函数/参数，闭包则按源实际捕获方式处理；循环多次注册须逐次保存并逆序执行。
    - *不适用条件*：严禁遗漏任何提前 `return` 分支中的资源释放。
 5. **错误机械替换反例**：
    ```cpp
@@ -53,7 +54,7 @@ description: Use when converting Go source to C++; apply this direction's langua
        if (check(file_guard.get()) == -1) return; // 析构自动 fclose！
    }
    ```
-6. **信息不足或实现相关时的处理**：若 defer 包含修改具名返回值的副作用，需在 C++ 中显式转化为返回前变量修改。
+6. **信息不足或实现相关时的处理**：若 defer 修改具名返回值，须在形成最终返回值之前执行相应副作用；不能指望返回值已复制后的局部析构改变该副本。清理若会失败，另核传播/覆盖规则，不能把它移入会终止进程的析构路径。无法确认作用域与捕获时点时停止受影响映射。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Defer_statements；WG21-N4659 Clause 6.7。
 
 ### 规则 GO-CPP-03：Go Goroutine 与 Channel 向 C++17 std::thread 与并发阻塞队列映射
@@ -83,7 +84,7 @@ description: Use when converting Go source to C++; apply this direction's langua
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Slice_types）；目标语言 ISO C++17（WG21-N4659）。
 3. **原可观察行为**：`s[a:b]` 得到的新切片与原切片共享底层数组，通过任一路径写入都可被另一路径观察到，直到 `append` 触发扩容后才分离；`string` 为只读字节序列且自带长度；切片值传递不复制元素。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：需要持有数据所有权时用 `std::vector<uint8_t>` / `std::string` 取值拷贝；只需要借用视图且不保活时用 `std::string_view` / `std::span<const uint8_t>`；显式声明“谁持有、谁保活、何时失效”，需要保活就用容器本身或 `std::shared_ptr` 承载。
+   - *可选映射*：源确需独立数据时可用 `std::vector<uint8_t>` / `std::string` 拷贝；共享切片需共享保活的数组与独立 offset/len/cap。C++17 的只读文本借用可用 `std::string_view`，其他借用可采用经核对的指针+长度表示；`std::span` 是 C++20 特性，不用于本页 C++17 基线。显式声明“谁持有、谁保活、何时失效”，不能让容器扩容使仍有效的源切片别名失效。
    - *不适用条件*：严禁把 Go 子切片共享底层数组的性质默认成 `std::vector` 的构造或赋值——`std::vector` 的拷贝构造与 `operator=` 会立即产生独立副本，对副本的写入不再回写到“原切片”；也严禁把带内部 `'\0'` 的 Go `string`/`[]byte` 交给 `strlen`/`c_str()` 语义推断长度。
 5. **错误机械替换反例**：
    ```cpp
@@ -91,9 +92,11 @@ description: Use when converting Go source to C++; apply this direction's langua
    std::vector<uint8_t> src = DecodeBase64(blob);
    std::vector<uint8_t> view = src;   // Go 里这是共享底层数组的子切片语义
    view[0] ^= 0xFF;                   // 只改了副本！src[0] 未变，后续校验和静默不一致
-   // 正确：需要别名才显式取视图；需要独立数据就明确写拷贝
-   std::span<uint8_t> alias{src};     // 共享，生命周期由 src 保活
-   std::vector<uint8_t> owned = src;  // 独立副本，语义与 Go 扩容后的分离一致
+   // 有条件的 C++17 借用示意：仅 src 保活、无扩容且借用范围一致时适用
+   auto* alias = src.data();
+   const auto alias_len = src.size();
+   // 若后续存在 Go 式扩容/旧别名，须另行保持旧数组存活，不能只保存此裸指针。
+   std::vector<uint8_t> owned = src;  // 仅源需要独立副本时适用
    ```
 6. **信息不足或实现相关时的处理**：若源码中存在跨线程共享同一底层数组的切片，必须先确认目标侧的同步与保活责任，标注“共享视图的线程安全与生命周期待确认”，不得仅凭类型相近就断定语义等价。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Slice_types, #String_types；WG21-N4659 Clause 24, Clause 21。
@@ -103,8 +106,8 @@ description: Use when converting Go source to C++; apply this direction's langua
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Errors, #Handling_panics）；目标语言 ISO C++17（WG21-N4659）。
 3. **原可观察行为**：错误经返回值显式传递，未检查不会自动中断控制流；`panic` 展开当前 Goroutine 的栈并执行已注册的 `defer`，可由 `recover()` 截断。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在纯 C++ 边界内，把可恢复失败映射为异常（定义派生自 `std::runtime_error` 的类别，抛 `throw`），把结构性致命错误映射为 `std::terminate` 前的最小必要处理；在 C ABI 边界（`extern "C"` 导出函数、回调进 C 库）**改为返回错误码或出参**，异常必须在边界内被捕获并翻译。
-   - *不适用条件*：严禁让异常逃出 `extern "C"` 边界或 `noexcept` 函数——那会直接触发 `std::terminate`（进程立即终止，且不保证执行 `catch`/析构之外的补救动作）；也不得为每个 `if err != nil` 机械补上 `throw` 而把原本会被忽略的常规错误升级为控制流中断。
+   - *可选映射*：返回错误或异常候选均须保持源检查/忽略与捕获边界；panic 先核当前 goroutine 的 defer/recover、传播和最终退出，不按“结构性”自动 terminate。C ABI/回调边界按具体 API 契约在边界内处理错误，不能改变源可恢复的结果。
+   - *不适用条件*：异常逃出 noexcept 会 terminate；extern "C" 是语言链接属性，不是自动 terminate 的充分条件，但未约定异常互操作的 C API 边界仍不得让异常逃出。不得为每个 err 检查机械添加 throw，也不以 terminate 跳过源清理/recover。
 5. **错误机械替换反例**：
    ```cpp
    // 错误：异常穿过 C ABI 边界抛出，C 调用方无法接住

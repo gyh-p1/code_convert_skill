@@ -20,14 +20,14 @@ description: Use when converting PowerShell source to Ruby; apply this direction
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-PIPE）；目标语言 CRuby 3.4（RB-DOC-CORE）。
 3. **原可观察行为**：对象逐个通过管道过滤与投影。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：使用 Ruby `Enumerable` 链式调用：`data.select { |x| ... }.map { |x| ... }`；若针对大集合需惰性求值，在链首追加 `.lazy`（如 `data.lazy.select { ... }.map { ... }`）。
-   - *不适用条件*：严禁直接在巨型数组上链式调用全量数组生成方法，避免多次中间数组分配。
+   - *可选映射*：先核逐元素交错过滤/投影、终止/错误与消费时点；仅分阶段处理不可观察时可用 select 后 map。lazy 候选必须在源管道实际消费的时点枚举，并保持结果与副作用，不能只返回未消费的枚举器。
+   - *不适用条件*：不得为性能将源逐元素交错处理改为全过滤后全投影，也不能为“惰性”推迟本应立即发生的副作用。
 5. **错误机械替换反例**：
    ```ruby
    # 错误：对超大流未使用 lazy，导致连续创建多重巨型中间数组引发内存溢出
    # huge_data.select { ... }.map { ... }
-   # 正确：使用 .lazy 保持管道惰性流式计算
-   huge_data.lazy.select { |x| x.valid? }.map { |x| x.process }
+   # 候选：在源本轮完整消费并收集结果时，明确消费 lazy 链
+   huge_data.lazy.select { |x| x.valid? }.map { |x| x.process }.to_a
    ```
 6. **信息不足或实现相关时的处理**：若源数据为哈希表，注意 Ruby 中迭代得到的是 `[key, value]` 数组。
 7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；MS-PS-PIPE。
@@ -37,17 +37,15 @@ description: Use when converting PowerShell source to Ruby; apply this direction
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-PREF）；目标语言 CRuby 3.4（RB-DOC-EXCEPT）。
 3. **原可观察行为**：命令遇到非终止错误时不中断脚本，静默跳过继续执行。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 Ruby 中对易出错的方法显式包裹 `begin ... rescue StandardError ... end`，或在单行使用 `action rescue nil`（仅限明确无副作用的只读探测）。
-   - *不适用条件*：严禁在关键文件写或网络通信中滥用全局 `rescue nil`，会掩盖权限或路径等严重错误。
+   - *可选映射*：按源 ErrorAction/偏好与命令实际错误类别保留继续、终止、日志及 Error 历史。仅对应源确实忽略的范围时可吞目标异常，文件写/网络失败也不能因“关键”擅自升级或新加 warn。
+   - *不适用条件*：不得将全部 StandardError 一律吞掉，源终止错误不能被 SilentlyContinue 名称掩盖；也不能新增源没有的诊断/失败传播。
 5. **错误机械替换反例**：
    ```ruby
-   # 错误：滥用 rescue nil 掩盖核心业务异常
-   File.write(target_path, content) rescue nil # 若目录不存在或无权限，静默失败且无日志！
-   # 正确：针对性捕获并处理
+   # 条件示意：仅源对应失败确实静默继续时，在相同边界吞该失败
    begin
      File.write(target_path, content)
-   rescue SystemCallError => e
-     warn "Write failed: #{e.message}"
+   rescue SystemCallError
+     # 源若不输出诊断则不新增 warn；实际捕获族仍须对应具体 Cmdlet 失败。
    end
    ```
 6. **信息不足或实现相关时的处理**：在报告中列出所有被降级为静默忽略的错误点。

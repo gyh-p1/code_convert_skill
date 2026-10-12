@@ -58,19 +58,19 @@ description: Use when converting C# source to C; apply this direction's language
 6. **信息不足或实现相关时的处理**：若 C# 异常携带特定上下文消息，在 C 中定义全局或线程局部的错误缓冲区。
 7. **资料依据（名称/版本/章节）**：MS-CS-EXCEPT；WG14-N1570 §7.5。
 
-### 规则 CS-C-03：C# async/await 异步任务向 C 同步阻塞或回调状态机降级映射
+### 规则 CS-C-03：C# async/await 完成与等待语义向 C 目标实现映射
 1. **源码触发条件**：C# 源码中使用 `async Task<int>` 与 `await` 异步调用。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-ASYNC）；目标语言 ISO C11。
-3. **原可观察行为**：调用点在等待 I/O 时让出线程，由 .NET 运行时状态机恢复执行。
+3. **原可观察行为**：等待未完成 Task 时可挂起当前方法并把控制权交还调用者；已经完成的 Task 不必挂起。async/await 不自动创建新线程。保留任务完成时机、调用者继续执行、取消、异常传播与清理时机。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：降级为标准同步阻塞函数（若并发性能非强要求）；若必须保持异步，手工实现带结构体上下文的状态机或显式事件循环。
-   - *不适用条件*：严禁在 C 中留下伪异步占位代码，必须明确其同步或回调模型。
+   - *可选映射*：异步契约可由配置模型生成保留状态/完成通知的 C 目标实现，并读取[并发场景](../../scenes/concurrency/SKILL.md)；不得把目标状态机当评测辅助驱动。仅当有源调用链依据确认同步等待不改变可观察行为，或用户明确允许相关差异时，才考虑阻塞形式。
+   - *不适用条件*：性能要求不强不是改为同步的充分条件；调用者需要继续工作、事件循环/锁依赖、取消/超时、异常或清理时机受影响时不能机械阻塞。严禁伪异步占位。
 5. **错误机械替换反例**：
    ```c
    // 错误：在 C 中简单将 async 方法写为直接返回，未处理尚未完成的异步任务
    // 导致数据竞争或未完成读取
    ```
-6. **信息不足或实现相关时的处理**：若涉及套接字异步多路复用，加载 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)。
+6. **信息不足或实现相关时的处理**：异步行为均加载并发场景，套接字 I/O 另读网络场景；缺调用链、同步上下文或取消/完成条件时记具体缺口，不凭习惯改模型，不能仅用报告“已降级”充作授权。
 7. **资料依据（名称/版本/章节）**：MS-CS-ASYNC。
 
 ### 规则 CS-C-04：C# UTF-16 string 的长度与编码语义向 C11 char*/wchar_t* 及显式长度映射
@@ -78,7 +78,7 @@ description: Use when converting C# source to C; apply this direction's language
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-STRING, MS-DOTNET-API）；目标语言 ISO C11（WG14-N1570 §7.23, §7.24）。
 3. **原可观察行为**：`string` 是 UTF-16 代码单元序列，`Length` 按代码单元计数（代理对占 2 个代码单元），允许内部 `\0`；`Substring`/`IndexOf` 的位置是代码单元索引；`File.WriteAllText` 在 .NET Core 上默认按 UTF-8（无 BOM）写入。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：内部统一用宽字符（`wchar_t`）+ 显式长度，或只在边界处转成 UTF-8 的 `char*` + 显式字节长度；转换用 `WideCharToMultiByte`（Windows）或 `wcstombs`（须先 `setlocale`，且不得假定其编码为 UTF-8），并以转换函数返回值作为长度；宽字符域的比较/查找用 `wcscmp`/`wcsstr`/`wcsncmp`，需要字节域时再显式转换一次并在注释中写明编码。
+   - *可选映射*：保持 UTF-16 代码单元索引可考虑 uint16_t/char16_t 存储加显式长度；wchar_t 的宽度/编码受平台约束，不能全平台代 UTF-16。仅源已有对应转换边界时转 UTF-8；码点索引不代代码单元。IndexOf/EndsWith 的具体重载、Ordinal/文化比较、大小写、嵌入 NUL 与区域设置分别保持，不能一律 wcscmp/wcsstr。
    - *不适用条件*：严禁对 UTF-16 缓冲或其转换结果使用 `strlen`/`strcpy`/`printf("%s")`——它们按 1 字节单元计数到首个 `\0`，而 UTF-16 中 ASCII 字符的第二个字节即 `0x00`，长度会被算成 1；严禁把 UTF-16 数据存进 `char*` 后按字节长度回传给托管侧；严禁把 `string.Length` 当字节数（非 ASCII 内容与 UTF-8 字节数不同）。
 5. **错误机械替换反例**：
    ```c
@@ -86,7 +86,7 @@ description: Use when converting C# source to C; apply this direction's language
    const wchar_t *wide = L"C:\\ProgramData";
    size_t n = strlen((const char *)wide);          /* 致命：结果为 1（'C' 后的 0x00） */
    fwrite(wide, 1, n, f);                          /* 只写出 1 字节，路径内容丢失 */
-   /* 正确：显式转换、检查失败、以转换返回值为长度 */
+   /* 条件候选：仅源编码边界与冻结 locale/平台转换一致时适用，非通用 UTF-16 实现 */
    size_t n2 = wcstombs(dst, wide, sizeof(dst));   /* 失败返回 (size_t)-1，须检查并先 setlocale */
    if (n2 != (size_t)-1) fwrite(dst, 1, n2, f);
    ```

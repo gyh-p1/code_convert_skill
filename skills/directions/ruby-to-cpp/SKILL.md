@@ -41,7 +41,7 @@ description: Use when converting Ruby source to C++; apply this direction's lang
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4；目标语言 ISO C++17（WG21-N4659 Clause 6.7）。
 3. **原可观察行为**：代码块执行完毕自动关闭底层资源句柄。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：利用 C++ 局部对象作用域析构特性（RAII），如 `std::ifstream file(path);`。
+   - *可选映射*：仅取得失败、块退出点、关闭顺序与失败传播对应时考虑局部 RAII。Ruby ensure/块退出可抛错或覆盖原异常；C++ 默认 noexcept 析构不能直接承接会抛错的清理，须在源对应边界显式处理，不能变 terminate 或吞掉失败。
    - *不适用条件*：严禁在堆上 `new` 出文件对象而不妥善管理其指针生命周期。
 5. **错误机械替换反例**：
    ```cpp
@@ -80,7 +80,7 @@ description: Use when converting Ruby source to C++; apply this direction's lang
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-PROC）；目标语言 ISO C++17（WG21-N4659 Clause 11.3, Clause 20.14）。
 3. **原可观察行为**：块是携带词法环境的一等对象，可被转发、延迟执行与多次调用；每次调用看到的是定义处捕获的那些变量（按引用看到变量本身，因此调用时机影响可观察结果）；块内的 `break`/`next`/`return` 由调用方方法决定其控制流含义。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：同步、单次、立即调用的迭代体用 lambda（`[&](const auto& item){ ... }`）或范围 `for` 直接展开，避免引入间接层；需要存储或转发时用 `std::function<R(Args...)>` 并**按值捕获**（`[=]`/`[x]`）需要跨作用域存活的状态；只被同步调用且明显不逃逸时才用引用捕获，并把“被捕获变量的作用域覆盖所有调用点”写进报告。
+   - *可选映射*：即时调用可考虑引用捕获，但仍核块控制流。保存/转发的块须同时保持捕获变量的共享可变性与保活，不能用按值快照自动解决；仅源变量后续变化不可观察时才可按值捕获。需要共享可变环境时明确环境所有权与所有写入消费者。
    - *不适用条件*：严禁在源 lambda 中用引用捕获（`[&]`）后把它存进 `std::function` 再于原作用域之外调用——被引用对象已析构，属未定义行为；也严禁把 Ruby 的“块捕获”直接当作 `std::function` 按值捕获处理：Ruby 里块看到的是变量本身的变化，按值捕获会冻结调用时刻的值。
 5. **错误机械替换反例**：
    ```cpp
@@ -89,7 +89,7 @@ description: Use when converting Ruby source to C++; apply this direction's lang
        std::string glob = "*.config";
        return [&]() { use(glob); };   // UB：glob 在返回后即销毁
    }
-   // 正确：按值捕获，或让 lambda 只作同步调用
+   // 条件候选：仅 glob 不再被其他消费者修改时按值捕获；一般 Ruby 共享变量须另行保活
    std::function<void()> make_cb() {
        std::string glob = "*.config";
        return [glob]() { use(glob); };
@@ -103,7 +103,7 @@ description: Use when converting Ruby source to C++; apply this direction's lang
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-SYMBOL、RB-DOC-HASH）；目标语言 ISO C++17（WG21-N4659 Clause 9.6, Clause 26.2.6）。
 3. **原可观察行为**：`Symbol` 是全局唯一、不可变的原子标识符（同一字面量处处同一对象），相等比较按身份；`Hash` 保留键的**插入顺序**，`each` 按插入顺序产出 `[key, value]`，且允许 `nil` 值存在而键仍在。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：取值集合在编译期封闭的 Symbol（如状态、类型标记）映射为 `enum class`，与外部交换时显式提供 `to_string`/`from_string`；键集合动态或来自外部输入的映射为 `std::unordered_map<std::string, V>`（需要保留插入顺序以匹配 Ruby 遍历语义时改用 `std::vector<std::pair<K,V>>` 或 `std::map` 并在报告里说明顺序来源）；捕获环境里的固定键改用 `static constexpr std::string_view` 常量，避免重复构造 `std::string`。
+   - *可选映射*：封闭 Symbol 可考虑 enum class；动态键须保持 Symbol/string 等不同身份，不统一转字符串。Hash 插入顺序须从插入/删除/重插入时维护，例如有序键序列配查找结构；std::map 是按比较器排序，不承接插入顺序。string_view 候选另核保活与源键对象的变化。
    - *不适用条件*：严禁把 Ruby 的 Symbol 一律落成散落的字符串字面量比较（丢失"编译期封闭、拼写受检查"的性质，且每次比较构造临时 `std::string`）；严禁依赖 `std::unordered_map` 的遍历顺序去复现 Ruby `Hash` 的插入顺序——规范不保证任何顺序，重哈希后顺序可变。
 5. **错误机械替换反例**：
    ```cpp

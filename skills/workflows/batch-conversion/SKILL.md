@@ -32,11 +32,11 @@ description: Use when one request contains multiple conversion tasks. Manually s
 
 源侧只选[已登记组合](../../../references/adapter/controller/runner-capability-matrix.md)。源码画像只产生候选 sourceOs；是否可构建由该项真实源预检诊断定案，不设头文件探针，不改源码、不造系统宏/桩来通过。命令/契约缺陷先按构建前提修正并重预检；真实快照外依赖记 SOURCE_DEPENDENCY_GAP，真实源平台接口不匹配记 SOURCE_NOT_BUILDABLE，均不消耗模型调用。候选依据和实际诊断分别落盘，后者不是冻结前已知事实。
 
-可安全观察但缺合法驱动/中性入口时待准备，Agent 不实现或委托模型编写辅助程序。真正无安全入口才 LIB_UNOBSERVABLE_COMPILE_ONLY，仅编译、PARTIAL、功能 UNVERIFIED；它是已转换项的原因，不是接入去向。
+能合法行为评估的继续评估；本轮缺合法驱动/观察条件/平台能力或无安全观察方式、但源构建通过时，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续转换、自审和目标语法/编译验证，PARTIAL、行为未评估/UNVERIFIED。不因缺 main/可执行文件/stdout/评估入口跳过，不造驱动；它是验证分支，不是不可转换去向。
 
 ## 2. 队列与用量
 
-只能串行 1 路，由 Agent 原生工具手工逐项推进；不使用循环或自动化程序排队、请求、组装、提交、轮询、取证或报告。正式生成只消费已冻结、分类 ALLOWED 且 blockingReason=null、源侧 build completed/exitCode=0 且已完成适用运行基线核对的项。需行为评估时，先按[评估准备 §1.1](../../../references/framework/evaluation-readiness-contract.md#11-生成前源侧预检)在隔离环境按冻结条件运行源、取得有效观察并终止/清理；基线缺口停生成，不算目标失败。文本/片段与真正无安全入口的仅编译例外须记录理由。
+只能串行 1 路，原生工具手工逐项推进，不写循环/程序排队、请求、组装、提交、轮询、取证或报告。生成须冻结、分类 ALLOWED/null、源 build completed/0 及适用清理；正常行为分支先取有效源基线，LIB_UNOBSERVABLE_COMPILE_ONLY 按评估准备 §1.3 记录本轮行为缺口后继续生成并验证目标语法/编译。真实运行故障先归因，不把缺入口或基线问题直接记源不可转换；原件与修复预算保留。
 
 分类阻断按真实原因处理，不手改 JSON；隔离缺失补真实证明后重新分类。重新分类的输入/条件变化及授权失效情况只按[分类准入](../../../references/workflow/classifier-agent-gate.md)，不能用“只改目标驱动/oracle”免除独立评估准备核对。
 
@@ -98,6 +98,10 @@ phase/pendingAction/lifecycle、阻断原因、版本结论的唯一语义见[�
 逐项适用交付、终态及终局对账齐备才可关闭批次。仍有 ACTIVE/WAITING/未处理 NOT_STARTED、SUBMISSION_UNKNOWN 或未确认终止/清理的 job 不记 CLOSED。全为 DONE/PARTIAL 且对账完整可收尾，PARTIAL 和功能未验证范围明示。
 
 汇总分列原始条目/各接入去向、冻结/实际处理数、lifecycle、仅编译项、请求/用量、交付完整性、编译、行为、安全、实际方向/OS/战术覆盖与未决项。不合成成功率；仅编译不并入行为通过数。≥40 条或 CLOSED 不能单独证明连续转换能力或无需人工操作。
+
+功能比较统计按[评估准备§5.1](../../../references/framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)先核观察有效性，再消噪、分类：有效matched与有效semantic_pass均计冻结范围功能比较通过，小计之外分别列两类、未覆盖/UNVERIFIED、差异及不可判定集合；不把维度数作任务数，不以生命周期DONE作比较通过。原平台标签及历史冻结策略保持原样，不重新挑最好一次或失败后放宽得到通过数。
+
+逐项名单、互斥集合及小计单位直接消费[评估准备 §5.2](../../../references/framework/evaluation-readiness-contract.md#52-功能比较统计的集合与单位)：按当前精确交付版本同快照列 M/S 与排除原因；维度、人读摘要和 JSON matchedDimensions 不互换，不将缺 comparison 的摘要反算为语义通过任务数。
 
 README 与运行中的 summary 使用同一注明时间的快照，逐项名单展开数须与表头/合计相符；同一快照的一项只能有一个当前 lifecycle。接入去向、处理阶段、分类状态和等待原因分开计数，保留历史字段原值及有依据的映射；动态索引可更新，但旧对账/原始证据保持不变，以追加记录说明更正。没有真实 items/events/过程记录时只报告静态矛盾，不代填状态、补登成功或批次恢复。
 

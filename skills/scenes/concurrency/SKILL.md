@@ -24,8 +24,8 @@ description: Preserve observable concurrency, shared state, ordering, and resour
 - 发现普通共享变量被多个线程并发访问而没有同步时，标记为源代码既有风险；不要把 `volatile` 当作同步，也不要在未经授权时静默重构。
 - `TerminateThread`、`pthread_cancel` 等强制取消不能视作可互换的常规清理路径；确认代码是否真正调用，再归入行为地图。
 - 跨段转换时，将共享状态结构、入口签名、所有权及终止协议作为跨单元契约。
-- Worker 计数/等待必须覆盖**实际处理任务的 worker**，不能只等待接收循环。接收循环结束不代表已派发的连接/任务已经完成。
-- 保留正常关闭、取消和错误退出三种路径的差异：正常关闭按源语义排空；取消时决定丢弃还是完成；无论哪种路径，读取共享结果前都要等待实际 worker。
+- 源要求等待/汇聚时，计数/等待须覆盖实际处理任务的 worker；只等待接收循环不能证明已派发任务完成。源不等待、后台继续或存在未同步读取时记录其行为/风险，不自动补等待。
+- 保留正常关闭、取消和错误退出三种路径的差异，按源分别对应排空、丢弃、等待和结果读取时点，不能把所有路径统一为等待全部 worker 后再读取。
 - 不要把 WaitGroup/计数器机械映射成 join 循环。先确认 Add/Wait 的配对时机、生产者是否还会新增任务、worker 是否可能阻塞在 I/O 或队列上；不明时记录未映射点。
 - 如果 worker 持有 socket、文件或锁，终止协议必须说明由谁释放、何时释放，以及主线程何时可以读取结果或退出进程。
 
@@ -49,8 +49,8 @@ description: Preserve observable concurrency, shared state, ordering, and resour
 源（Go）：listener.Close() 使阻塞在 Accept() 的 goroutine 立即返回并结束循环。
 目标（C++，错误）：仅 close(listen_fd) 后仍 join 阻塞在 accept() 的线程 → 永久挂起，
                   或该 fd 已被复用，close 命中了另一线程的新连接。
-正确：按目标平台文档选择能唤醒 accept 的机制（先 shutdown 再 close），
-      并保证 fd 生命周期唯一、唤醒后再 join。
+候选：按目标平台/套接字状态核实能唤醒 accept 的机制，
+      shutdown 不自动适用于每种监听状态；保留资源生命周期与源等待义务。
 ```
 
 **不适用条件**：源码本身就是轮询模型（循环 `sleep` + 标志位），或阻塞调用的返回本就是超时驱动（如设置了 deadline 的 `SetReadDeadline`）时，不适用“关闭必须唤醒”的义务；此时应核对的是超时/重试语义，不是唤醒语义。

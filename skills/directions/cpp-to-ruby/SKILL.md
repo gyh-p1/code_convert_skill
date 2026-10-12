@@ -68,9 +68,9 @@ description: Use when converting C++ source to Ruby; apply this direction's lang
 ### 规则 CPP-RB-03：C++ std::map 有序关联容器向 Ruby Hash 插入顺序语义约束
 1. **源码触发条件**：C++ 源码中使用 `std::map<Key, Value>` 依赖遍历时按键升序排列的性质。
 2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（WG21-N4659 Clause 26.4）；目标语言 CRuby 3.4（RB-DOC-HASH）。
-3. **原可观察行为**：`std::map` 无论插入顺序如何，遍历顺序严格按照键的 `operator<` 排序。
+3. **原可观察行为**：std::map 按实例的比较器排序，默认 std::less 只是一个情况；键等价也由比较器决定，不自动等于 Ruby hash/eql?。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：Ruby 的 `Hash` 保证的是**键的插入顺序**，而非按键排序！若需要按键有序遍历，必须在遍历前显式调用 `.sort_by { |k, v| k }`。
+   - *可选映射*：Hash 插入顺序不代 map 比较序；仅源比较器与 Ruby 的排序/键等价一致时可考虑 Hash 加排序。自定义比较器的去重、查找、默认插入与遍历须一起保留，不只事后 sort_by。
    - *不适用条件*：严禁将 C++ `std::map` 机械替换为 Ruby 原生 `Hash` 后直接依赖遍历有序性，插入顺序不同将导致遍历结果完全不同。
 5. **错误机械替换反例**：
    ```ruby
@@ -78,7 +78,7 @@ description: Use when converting C++ source to Ruby; apply this direction's lang
    h = {}
    h[10] = "b"; h[1] = "a"
    h.keys # 得到 [10, 1]，而 C++ std::map 遍历得到的是 [1, 10]！
-   # 正确：显式按键排序遍历
+   # 条件候选：仅此整数键与源默认升序/等价一致时适用
    h.sort.each do |key, val|
      # 此处严格按键递增遍历
    end

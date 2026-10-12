@@ -64,17 +64,17 @@ description: Use when converting C++ source to C#; apply this direction's langua
 ### 规则 CPP-CS-03：C++ std::future/std::thread 向 C# Task-based Asynchronous Pattern (TAP) 映射
 1. **源码触发条件**：C++ 源码中使用 `std::async` 或 `std::future::get()` 等待异步结果。
 2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（WG21-N4659 Clause 33.6）；目标语言 C# 12 / .NET 8（MS-CS-ASYNC）。
-3. **原可观察行为**：`get()` 阻塞调用线程直至后台线程计算完成并返回值。
+3. **原可观察行为**：get 等待共享状态并取值/传播存储异常；源 launch::deferred 时可能在等待线程执行，不能全称后台任务。启动、一次取值/失效、阻塞点与异常分别可观察。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：方法重构为 `async Task<T>`，使用 `await` 进行非阻塞等待，协同取消通过 `CancellationToken` 级联传递。
-   - *不适用条件*：严禁在 ASP.NET Core 或 UI 上下文中直接调用 `task.Result` 模拟同步 `get()`，极易导致死锁。
+   - *可选映射*：按实际启动策略与调用链保留同步/延迟/异步及取值点；仅接口与调度/异常/取消边界允许时才考虑 async/await，不为风险自动新加 CancellationToken 或改同步接口。
+   - *不适用条件*：同步 Task 取值在特定上下文可能死锁，须核该上下文与调度；这不是所有 ASP.NET Core/Result 都必死锁的保证，也不能据此把源同步 get 一律改 await。
 5. **错误机械替换反例**：
    ```csharp
    // 错误：机械模拟 future::get() 造成死锁
    public int Calculate() {
        return ComputeAsync().Result; // 错误：在特定同步上下文引发死锁
    }
-   // 正确：使用完整 async/await 调用链
+   // 条件候选：仅源接口/调度允许整条调用链异步化且行为对应时适用
    public async Task<int> CalculateAsync() {
        return await ComputeAsync();
    }
@@ -107,7 +107,7 @@ description: Use when converting C++ source to C#; apply this direction's langua
 2. **冻结版本/运行时/API 前提**：源语言 ISO C++17（WG21-N4659 Clause 26）；目标语言 C# 12 / .NET 8（MS-CS-MEMBERACCESS, MS-DOTNET-API）。
 3. **原可观察行为**：`std::map` 按比较器严格有序，遍历顺序确定且与插入顺序无关；`std::map::operator[]` 在键不存在时先插入默认构造值再返回引用（是写操作）；`std::vector::operator[]` 不做边界检查。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：需要稳定顺序时用 `SortedDictionary<TKey,TValue>`/`SortedSet<T>`（或在输出前显式 `OrderBy`）；只做查找时用 `Dictionary<TKey,TValue>`，读取可能缺失的键用 `TryGetValue`，计数写成 `dict[k] = dict.TryGetValue(k, out var c) ? c + 1 : 1;`；序列索引用 `List<T>`/数组索引器，必要时显式判界。
+   - *可选映射*：需要源键序时用显式对应源比较器的 SortedDictionary/SortedSet；string 默认文化比较不自动等于 C++ 字节序。源 map operator[] 的读取也会默认插入，TryGetValue 必须配合对应插入才能承接；纯查找候选只用于源 find/at 等实际语义。计数写成 `dict[k] = dict.TryGetValue(k, out var c) ? c + 1 : 1;`。
    - *不适用条件*：严禁把 `std::map` 直译为 `Dictionary` 后沿用原有遍历顺序（`Dictionary` 的遍历顺序不受保证，报告行序会变化）；严禁用 C# 索引器读取可能缺失的键来顶替 `std::map::operator[]` 的"默认插入"语义（前者抛 `KeyNotFoundException`）；也不得反过来用 `TryAdd` 忽略已存在的键（会丢计数，与 `typeCount[key]++` 语义不同）。
 5. **错误机械替换反例**：
    ```csharp
@@ -116,7 +116,7 @@ description: Use when converting C++ source to C#; apply this direction's langua
    typeCount[parts[2]]++;                                  // 新键 → KeyNotFoundException
    foreach (var kv in typeCount) report.AppendLine($"{kv.Key}={kv.Value}"); // 顺序不受保证
    // 正确：顺序敏感用 SortedDictionary，计数用 TryGetValue
-   var sorted = new SortedDictionary<string, int>();
+   var sorted = new SortedDictionary<string, int>(StringComparer.Ordinal); // 仅已确认源键序与序号比较一致时适用
    sorted[parts[2]] = sorted.TryGetValue(parts[2], out var c) ? c + 1 : 1;
    foreach (var kv in sorted) report.AppendLine($"{kv.Key}={kv.Value}");
    ```
@@ -129,7 +129,7 @@ description: Use when converting C++ source to C#; apply this direction's langua
 3. **原可观察行为**：iostream 默认不抛异常（失败置位并继续让调用方检查状态）；`<filesystem>` 与数值转换函数默认抛异常；`std::exception::what()` 返回错误消息；未捕获异常导致 `std::terminate()`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：把"失败位 + 检查"改写为 C# 的 `try`/`catch` 包裹会抛异常的 API（`File.OpenRead`、`Directory.CreateDirectory`、`int.Parse`），并按目标实际抛出的异常类型分流：文件/目录失败用 `IOException`/`UnauthorizedAccessException`/`DirectoryNotFoundException`，解析失败用 `FormatException`/`OverflowException`；`what()` 映射为 `ex.Message`；`catch (...)` 保留为 `catch (Exception)` 并记录为未分类失败；需要按条件分流时用 `catch (Exception ex) when (...)`。
-   - *不适用条件*：严禁删除 `if (!in)` 形式的失败检查后直接调用 C# 会抛异常的 API 而不加 `try`（转换后的程序在可预期失败处会直接终止，终止点与 C++ 不同）；严禁把 `catch (...)` 直译为空的 `catch { }`（静默吞掉未知异常）；严禁用 `throw ex;` 重置堆栈（应使用 `throw;`）。
+   - *不适用条件*：不得删源失败位检查而让目标异常越过原处理边界；catch 的范围与动作对应源，源本为空捕获时不自动添加日志/传播，也不将 Exception 声称覆盖所有 C++ 可抛值。重抛须保持适用的传播与堆栈语义。
 5. **错误机械替换反例**：
    ```csharp
    // 错误：C++ 的失败位检查被省略，会抛异常的 API 未被包裹

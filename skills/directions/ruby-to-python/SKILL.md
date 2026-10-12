@@ -20,7 +20,7 @@ description: Use when converting Ruby source to Python; apply this direction's l
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 CPython 3.12（PY-REF-DATA §3.2）。
 3. **原可观察行为**：**在 Ruby 中 `0` 与 `""` 均为真（Truthy）**，分支必然执行。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：**在 Python 中 `0` 与 `""` 均为假（Falsy）**！若原 Ruby 意图是判断对象是否存在（即非 `nil`），在 Python 中必须显式写为 `if obj is not None:`！
+   - *可选映射*：保留 Ruby 真值时用 `obj is not None and obj is not False`，不能用 `obj != False`（会把数值 0 也排除）。仅值域已证明不含 false 或源码明确用 `nil?` 时，才只核 None。
    - *不适用条件*：**绝对禁止直接翻译为 `if obj:`**！当 `obj == 0` 时，Python 判定为假导致分支被跳过，控制流发生完全逆转！
 5. **错误机械替换反例**：
    ```python
@@ -29,8 +29,8 @@ description: Use when converting Ruby source to Python; apply this direction's l
    val = 0
    if val: # 错误：在 Python 中 0 为 Falsy，分支被意外跳过！
        do_action()
-   # 正确：显式检查是否为 None
-   if val is not None:
+   # 保留 Ruby 真值：false 与 nil 不进入，0/空串仍进入
+   if val is not None and val is not False:
        do_action()
    ```
 6. **信息不足或实现相关时的处理**：对每个无显式操作符的条件表达式，结合上下文标注真值映射依据。
@@ -70,7 +70,7 @@ description: Use when converting Ruby source to Python; apply this direction's l
    # 正确：统一类型再拼接
    msg = b + s.encode('utf-8')
    ```
-6. **信息不足或实现相关时的处理**：若字符串来源不可信，使用 `errors='replace'` 或在报告中标记转码风险。
+6. **信息不足或实现相关时的处理**：来源不可信不授权 errors='replace'；按源编码、非法输入接受集合和失败分支选择 bytes/str。仅源已有替换策略时对应替换，未知记录缺口并停受影响转码，不以报告风险代授权。
 7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；PY-REF-DATA §3.2。
 
 ### 规则 RB-PY-04：Ruby Symbol 向 Python str / enum.Enum 的选择与相等性映射
@@ -141,7 +141,7 @@ description: Use when converting Ruby source to Python; apply this direction's l
    value = parsed['auths']['auth']           # 错误：缺键抛 KeyError，Ruby 返回 nil
    # 正确：None 哨兵 + 缺键安全读取
    def report_note(data, options=None):
-       options = dict(options) if options else {}
+       options = {} if options is None else options
        options['update'] = 'unique_data'
        return options
    value = parsed.get('auths', {}).get('auth')

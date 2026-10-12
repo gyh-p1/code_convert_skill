@@ -97,7 +97,7 @@ description: Use when converting PowerShell source to Python; apply this directi
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-OPERATORS）；目标语言 Python 3.12（PY-REF-EXPRESSIONS, PY-REF-DATA §3.1）。
 3. **原可观察行为**：`$null`、空数组、空字符串与数值 0 在布尔化时都为假，且 `$null` 与 0 在 `-eq` 下可区分（`$null -eq 0` 为假）但都为假值；`$PSBoundParameters.Timeout` 在参数未提供时不存在（相当于假），而显式传入 0 时同样为假，两条路径在源里走同一分支；把 `$null` 内插进字符串得到空串；`.ToString()` 对 `$null` 会抛错而不是返回空串。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：按源真实集合选择判定——`x is None`、`x == ""`、`not x`、`isinstance(x, (list, tuple)) and len(x) == 0`；需要区分“未提供”与“传 0”时用 `None` 作默认值并显式判 `is None`；可选值用 `Optional[T]` 标注，`typing.Optional` 与 `dataclass` 默认值配合表达缺省。
+   - *可选映射*：按源真实判据和值域选择 None/字符串/数值/集合判断；PowerShell IList 0项假、1项取元素真值、多项真，Python 非空 list 总为真，@(0) 不能直接映射 if [0]。未提供与显式 null 都可能存在时需独立存在标志，None 不自动够用；Optional 仅类型提示不决定分流。
    - *不适用条件*：严禁把 `if ($x -eq $null)` 机械写成 `if not x`——`not x` 会把空串、空列表、0 一并吞掉，扩大源的分支集合；严禁把 `if ($x)` 的 PS 真值语义直接当成 Python 真值语义（两者对“空容器/空串/0”一致，但对 `float('nan')`、自定义对象 `__bool__`、以及 `$null` 与 `False` 的区分并不一致）；`numpy` 等第三方类型的真值不适用本条。
 5. **错误机械替换反例**：
    ```python

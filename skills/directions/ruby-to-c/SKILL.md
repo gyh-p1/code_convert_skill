@@ -83,7 +83,7 @@ description: Use when converting Ruby source to C; apply this direction's langua
 ### 规则 RB-C-04：Ruby 任意精度 Integer 的位运算与 pack 定宽编码向 C 定宽整数与显式掩码映射
 1. **源码触发条件**：Ruby 源码中对 `Integer` 做位运算或指数运算（如 `perms.map`、`(1 << n)`、`2**k`），或用 `String#unpack('C*')`/`Array#pack('I<')`/`pack('H*')` 做二进制编解码后再作为整数参与运算。
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 ISO C11（WG14-N1570 §6.5 ¶5, §6.2.5）。具体任务须冻结 `int`/`long` 的实际宽度与 `CHAR_BIT`（由 `<limits.h>`/`<stdint.h>` 与 ABI 决定）。
-3. **原可观察行为**：Ruby `Integer` 无溢出概念，超出机器字长自动升级为大数表示，因此 `(1 << 40)`、`2**100` 与任何中间乘积都得到精确值；`pack('I<')`/`unpack('H*')` 按小端/十六进制在字节序列与整数之间转换，字节序与宽度由格式字符显式指定。
+3. **原可观察行为**：Integer 按任意精度计算；I< 是平台 C unsigned int 宽度的小端，H* 的打包/解包在十六进制文本与字节之间转换，不直接返回整数。须先辨明具体格式、返回类型和冻结平台宽度，不能一律取 uint32_t 或新增掩码。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：先确认源码中该值的真实上界：能落入 64 位的用 `uint64_t`/`int64_t`（`<stdint.h>`），并**显式**用 `& ((UINT64_C(1) << n) - 1U)` 之类的掩码保持位宽；需要保持任意精度的改用已有大数库并把精度上限写进任务前提。逐字节编解码用 `memcpy` + 独立宽度变量（小端用 `uint32_t`、按字节顺序写入 `unsigned char` 数组），十六进制串用 `strtoul`/`strtoull` 或逐位查表换算。
    - *不适用条件*：严禁把 Ruby 的 `1 << n`、`2**k` 或“不会溢出”的中间结果直接落成裸 `int`——32 位或 64 位之外的移位与有符号溢出在 C 中是未定义行为，不是确定的按模截断；严禁把 `pack('I<')`/`unpack('C*')` 的宽度或字节序默默改成平台默认（`'I'`、`'l'` 这类本机宽度的格式与本机字节序不能跨 ABI 复用）。
@@ -102,7 +102,7 @@ description: Use when converting Ruby source to C; apply this direction's langua
 ### 规则 RB-C-05：Ruby 可变字节串（含编码标签与内嵌 NUL）向 C 指针加长度（memcpy 而非字符串函数）映射
 1. **源码触发条件**：Ruby 源码中出现字符串拼接/截取并当作字节流使用，例如 `resp_payload = icmp_id + icmp_seq + contents`、`packet.payload[0, 2]`、`@record_data << data.to_s`、`cookies_msg.split('REMOTE_DEBUGGING|')[1]`，或对网络/文件读回的数据使用 `unpack`/`gsub("\x00", '')`。
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE、RB-DOC-STRING）；目标语言 ISO C11（WG14-N1570 §7.1.1, §7.24）。
-3. **原可观察行为**：Ruby `String` 是**可变字节序列加一个 `Encoding` 标签**；长度显式记录，因此内容可以包含 `\0`，`size`/切片/拼接都按该编码的字符语义计算；不同编码拼接失败时抛 `Encoding::CompatibilityError`，而 `ASCII-8BIT`（`BINARY`）串与任何字节互操作。
+3. **原可观察行为**：String 是可变字节加编码标签，可含 NUL；size/字符切片与 bytesize/getbyte 分开，拼接兼容性不等于自动转码。BINARY 可存任意字节，但与文本的拼接仍受编码兼容规则约束，不保证任意标签组合都可互操作。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：为每段字节流维护“缓冲区指针 + `size_t` 长度”这对状态：纯字节用 `unsigned char *`/`uint8_t *`，确实以文本使用且按本地编码约定时才用 `char *` 且必须同时传长度；拼接/截取用 `memcpy`（必要时 `realloc` 扩容）；与 C 接口交互需要 NUL 结尾时，额外分配 `len + 1` 并在末尾写 `'\0'`，长度状态不变。
    - *不适用条件*：严禁用 `strlen`/`strcpy`/`strcat`/`strcmp`/`printf("%s")` 处理这类数据——遇到首个 `\0` 即静默截断，或读越界（UB）；严禁把 Ruby 的“编码标签”当成可以丢弃的注释：`Encoding::CompatibilityError` 在 C 中没有任何等价检查，编码不匹配会退化为静默的字节错配。

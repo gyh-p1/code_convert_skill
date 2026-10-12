@@ -20,7 +20,7 @@ description: Use when converting PowerShell source to C++; apply this direction'
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6；目标语言 ISO C++17（WG21-N4659 Clause 8.1.5）。
 3. **原可观察行为**：脚本块延迟调用，可访问并修改调用栈上下文变量。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为 C++17 lambda 表达式，通用存储使用 `std::function<R(Args...)>`；若涉及局部引用捕获 `[&]`，必须保证 lambda 生命周期不超过被捕获变量的作用域。
+   - *可选映射*：先核 ScriptBlock 普通调用/点调用/GetNewClosure 的作用域与共享变量。lambda/std::function 候选须同时保留调用时的共享写入与环境保活；按值快照仅后续修改不可观察时用，引用捕获需保活且同步符合源。
    - *不适用条件*：严禁将持有引用捕获 `[&]` 的 lambda 跨线程传递或脱离作用域返回（会导致悬挂引用解引用 UB）。
 5. **错误机械替换反例**：
    ```cpp
@@ -28,7 +28,7 @@ description: Use when converting PowerShell source to C++; apply this direction'
    std::function<int()> MakeAdder(int x) {
        return [&x]() { return x + 1; }; // 严重错误：x 是局部形参，函数退出后引用失效！
    }
-   // 正确：使用值捕获 [=] 或显式转移
+   // 条件候选：仅 x 不再被其他源消费者修改且捕获规则允许快照时适用
    std::function<int()> MakeAdder(int x) {
        return [x]() { return x + 1; };
    }
@@ -99,7 +99,7 @@ description: Use when converting PowerShell source to C++; apply this direction'
 ### 规则 PS-CPP-05：PowerShell 数值位宽、符号与自动加宽向 C++ 定宽类型与截断前置校验映射
 1. **源码触发条件**：源码在数值边界上做强制转换或依赖自动加宽，例如 `[int] $objDeDomain.Properties['msds-behavior-version'].item(0)`、`[Int] ('0x{0}' -f (...))`、`[Convert]::ToInt16(($PacketElim[0..1] -join ""),16)` 后 `[byte[]]` 收窄、`[UInt32] 2` 与 `$Dll.Length` 传入 `VirtualAllocEx`/`VirtualFreeEx`、`$MiniDumpWithFullMemory` 之类的标志常量、`[DateTime]::MaxValue.Ticks` 与 1600 年加法、`$PortBytes = [System.BitConverter]::GetBytes($TcpRow.LocalPort)`；以及无符号与有符号值的混算与比较。
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-AUTO, MS-PS-CONVERT）；目标语言 ISO C++17（WG21-N4659 Clause 6.9.1, Clause 7.6）。
-3. **原可观察行为**：PowerShell 的 `[int]`/`[Int16]` 在目标类型表示范围内做确定性转换，超出范围时抛出终止错误（可被捕获），而算术溢出会由引擎自动加宽到更大整型或 `[double]`；`[Convert]::ToInt16` 之类的显式转换把超范围输入转成终止错误而不是静默取模；`[byte[]]` 收窄会把值按 8 位取模。这些行为与 C++ 的“有符号溢出是 UB、无符号按模回绕、窄化按模截断”并不一致。
+3. **原可观察行为**：PowerShell 数值转换与算术加宽须按源具体表达式、输入类型及冻结引擎核对；强制转换不是通用模回绕，尤其不能把 `[byte[]]` 收窄概括为按 8 位取模。失败是终止/非终止及其捕获路径另按准确操作确认，语言事实见 PowerShell 参考页。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：为每个数值字段选择与源 .NET 类型对应的定宽类型 `<cstdint>`（`std::int32_t`、`std::uint32_t`、`std::int64_t`）；窄化前用范围判定转成显式失败路径（返回错误码或抛异常），再赋值；有符号/无符号混算前先把两侧统一到同一类型并检查范围；P/Invoke 参数按目标 API 的签名选定宽度，避免 `int` 与 `std::size_t` 之间隐式转换。
    - *不适用条件*：严禁依赖 C++ 语言本身的截断行为去复刻 .NET 转换——有符号溢出在 C++ 是未定义行为（编译器可假定不发生），而不能像 PowerShell 的算术那样自动加宽；也严禁用 `static_cast` 一次性完成“转换+收窄”，因为它既不检查范围也不抛错。数字字面量后缀/宽度必须显式写清（`0x001F0FFF` 这类标志常量不要落到 `int` 之外再隐式回缩）。

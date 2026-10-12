@@ -43,7 +43,7 @@ description: Use when converting C# source to Go; apply this direction's languag
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-DISPOSE）；目标语言 Go 1.27（GO-SPEC #Defer_statements）。
 3. **原可观察行为**：离开作用域时无论如何立即调用 `Dispose()`。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在资源成功获取后，紧接着使用 `defer resource.Close()`。
+   - *可选映射*：函数级 using 的退出点与当前 Go 函数返回相同时可用 defer；块级 using/try-finally 不能直接移到外层函数末。可考虑对应作用域的目标函数或显式退出处理，但须保持原 return/异常传播、状态和 Dispose 失败；Close 返回值不默认忽略或升级。
    - *不适用条件*：严禁在长循环内部直接使用 `defer`（`defer` 在外层函数退出时才执行，循环内使用会导致句柄在循环结束前累积耗尽）。
 5. **错误机械替换反例**：
    ```go
@@ -58,7 +58,7 @@ description: Use when converting C# source to Go; apply this direction's languag
        if err := processFile(path); err != nil { return err }
    }
    ```
-6. **信息不足或实现相关时的处理**：若包含多资源依序释放，注意 Go `defer` 是 LIFO（后进先出）逆序执行。
+6. **信息不足或实现相关时的处理**：多资源取得失败、逆序释放、释放自身失败和异常覆盖按源逐路径核对；作用域/失败传播未知时停止该映射，不以函数级 defer 或默认全部忽略定案。
 7. **资料依据（名称/版本/章节）**：MS-CS-DISPOSE；GO-SPEC #Defer_statements。
 
 ### 规则 CS-GO-03：C# CancellationToken 向 Go context.Context 树状级联取消映射
@@ -97,17 +97,17 @@ description: Use when converting C# source to Go; apply this direction's languag
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-GC）；目标语言 Go 1.27（GO-SPEC #Defer_statements）。
 3. **原可观察行为**：源构造在每个正常与异常出口上同步执行一次释放；对已为 `IntPtr.Zero` 的句柄先判空再关闭，因此重复清理路径不会产生额外失败，清理时抛出的异常会覆盖原异常。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在资源**成功获取之后**立即 `defer` 释放，多个不同资源各自 `defer`，Go 规范保证按 LIFO 逆序于外层函数返回前执行；需要按取得时的句柄值释放时用 `defer func(h syscall.Handle) { ... }(h)` 以形参捕获当前值。
-   - *不适用条件*：严禁把 `defer` 写在长循环体内（它在外层函数返回时才执行，句柄会累积到循环结束）；严禁用 `runtime.SetFinalizer` 顶替显式释放（触发时机不确定、无法保证资源生命周期）；严禁把源语言"同一句柄可能被关闭两次"的容错序列机械改写为两次 `defer` 关闭同一句柄（造成 double-free 或对已释放对象操作）。
+   - *可选映射*：仅源 finally 的退出点对应当前函数返回时，在资源成功获取后登记 defer；内层 finally 应在原对应点执行。多个动作按实际注册与 LIFO 对应，取得时的句柄可用 defer 形参保存；源重复关闭、容错/返回值及失败覆盖须保留，不自动去重或加关闭。
+   - *不适用条件*：defer 的函数级时点不代块级 finally，Finalizer 不代源显式释放；源确有重复关闭/容错序列时核每次条件、哨兵、调用失败与句柄复用，不任意合并、去重或再加 defer，既有风险单列。
 5. **错误机械替换反例**：
    ```go
    // C# 原型：IntPtr hToken = IntPtr.Zero; ... finally { if (hToken != IntPtr.Zero) CloseHandle(hToken); }
    var hToken syscall.Handle // nil（0）值
-   defer windows.CloseHandle(hToken) // 错误：闭包捕获变量，取的是 defer 执行时的最终值
+   defer windows.CloseHandle(hToken) // 错误：此刻参数已求值为 0，后续赋值不会更新已保存的参数
    if err := openProcessToken(&hToken); err != nil {
        return err // 错误：此处 defer 仍会以 0 句柄调用 CloseHandle
    }
-   // 正确：获得有效句柄后再注册释放，且不让 defer 读取可变变量
+   // 有条件的映射：源释放点为函数退出时，获得有效句柄后再注册释放
    if err := openProcessToken(&hToken); err != nil {
        return err
    }

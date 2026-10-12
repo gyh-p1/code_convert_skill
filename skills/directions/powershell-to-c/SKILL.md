@@ -75,9 +75,9 @@ description: Use when converting PowerShell source to C; apply this direction's 
 ### 规则 PS-C-04：PowerShell `$null`/空字符串/空数组/空集合的真值差异向 C 指针与长度双重判定映射
 1. **源码触发条件**：源码把可能为空的取值结果直接放进条件或比较，例如 `if ($UserList -eq "")`、`while ($SmallestLockoutThreshold -eq "0")` 的反面写法、`if ( $PSOs.count -gt 0)`、`if (!$CallResult)`、`if ($DomainController -and $Credential.GetNetworkCredential().Password)`；取值来源可返回“无结果”，如 `Get-Content`、`$searcher.FindAll()`、`[ADSI]`、P/Invoke 布尔返回值与 `IntPtr` 返回值。
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-OPERATORS, MS-PS-ARRAY）；目标语言 ISO C11（WG14-N1570 §6.5）。
-3. **原可观察行为**：PowerShell 把 `$null`、空字符串、空数组、空集合以及数值 0 都按“假”参与布尔化，`$null` 参与左侧字符串比较时按空字符串处理，单元素结果自动退化为标量使 `.Count` 语义随元素个数变化；因此“无结果”“空结果”“结果为空串”在源码里往往走同一分支。
+3. **原可观察行为**：布尔化与比较分开：null/false/0/空串/空数组为假，IList 单项取元素真值、多项为真；空 Hash 等非 IList 不一律为假。null 的字符串插值可为空串，不代表 null 左侧比较就等于空串；标量 Count、真实属性/StrictMode 与管道解包按冻结规则核。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：C 中拆成两个显式事实——指针是否为 `NULL`、以及长度/计数是否为 0；返回“可能有/没有”的取值函数统一用 `int f(T *out, size_t *out_len)` 形式，调用点两项都判断。
+   - *可选映射*：按源实际值域分别保留 null、数值/文本、集合长度与元素真值，可考虑带类型/存在标志的表示；接口形态是候选，不强制所有函数变 out+len。仅源同时要求存在且 count>0 时才核两者，单元素0不能只按长度判断为真。
    - *不适用条件*：严禁把 `if ($x)` 机械写成 `if (x)` 或 `if (*x)`：对 `char *` 只判非空会放过空字符串，对结构体指针只判非空会放过“存在但长度为 0”，对已解引用值判断还会在指针为 `NULL` 时形成空指针解引用（UB）。“有条件的映射”：若源语义确实是“非空即真”，可保留单条件，但必须在转换记录里写明该取值点按契约不会出现 `NULL`。
 5. **错误机械替换反例**：
    ```c

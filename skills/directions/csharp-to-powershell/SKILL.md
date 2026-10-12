@@ -20,7 +20,7 @@ description: Use when converting C# source to PowerShell; apply this direction's
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-COLL）；目标语言 PowerShell 7.6（MS-PS-PIPE）。
 3. **原可观察行为**：强类型委托延迟执行（惰性求值）过滤与投影。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为 PowerShell 管道命令 `$list | Where-Object { ... } | ForEach-Object { ... }`；若数据量巨大追求性能，使用 .NET 原生方法。
+   - *可选映射*：仅源在同一时点消费查询、枚举次数/顺序与副作用一致时考虑 PowerShell 管道；源只构造 IEnumerable 而稍后/多次枚举时保留延迟查询语义，不能在赋值时立即执行管道。数据量或性能不决定能否改变执行时点。
    - *不适用条件*：必须注意 PowerShell 管道处理单元素集合时会自动解包展开（Unrolling），可能破坏后续针对数组长度的判定。
 5. **错误机械替换反例**：
    ```powershell
@@ -55,23 +55,23 @@ description: Use when converting C# source to PowerShell; apply this direction's
 6. **信息不足或实现相关时的处理**：若需兼容函数返回码，显式设置 `$global:LASTEXITCODE`。
 7. **资料依据（名称/版本/章节）**：MS-PS-ERROR。
 
-### 规则 CS-PS-03：C# async/await 向 PowerShell 异步作业与同步上下文等待映射
+### 规则 CS-PS-03：C# async/await 完成与等待语义向 PowerShell 目标实现映射
 1. **源码触发条件**：C# 源码中使用 `await DoAsync()` 等待异步结果。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-ASYNC）；目标语言 PowerShell 7.6（MS-PS-THREADJOB）。
-3. **原可观察行为**：非阻塞异步挂起，计算完成后恢复。
+3. **原可观察行为**：等待未完成 Task 时可挂起并把控制权交还调用者，任务完成后继续；已完成 Task 不必挂起。async 不自动代表新线程。保留调用者继续执行、完成/取消/错误与清理时机。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：使用 `Start-ThreadJob` 启动作业并配合 `Receive-Job -Wait`；对于 .NET 异步任务，可直接调用 `.GetAwaiter().GetResult()` 同步取回结果。
-   - *不适用条件*：严禁在未处理异常的情况下直接等待后台任务，未捕获异常可能导致作业状态异常沉默。
+   - *可选映射*：由配置模型在目标实现中保持完成/等待边界；需要独立作业且符合源的状态、调度及结果传递契约时，可用 `Start-ThreadJob` 并显式收集结果、错误和清理。只有源调用链证明阻塞不改变可观察行为，或用户明确允许相关差异时，才考虑 `Receive-Job -Wait` / `.GetAwaiter().GetResult()` 阻塞等待。
+   - *不适用条件*：不把作业 API 或同步取值当 await 的通用替换；源依赖调用者继续、事件循环/锁、同步上下文、取消或超时时不得机械阻塞。源如何观察/传播异常，目标就保持对应路径，不能新增吞错或强制捕获来改变源的失败行为。
 5. **错误机械替换反例**：
    ```powershell
    # 错误：遗漏 Receive-Job 导致后台作业结果丢失与作业泄漏
    $job = Start-ThreadJob { Do-HeavyTask }
-   # 正确：显式等待并取回数据，最后清理 Job
+   # 仅在阻塞等待符合冻结契约时：显式取回数据并清理 Job；这不是通用 await 映射
    $job = Start-ThreadJob { Do-HeavyTask }
    $result = Receive-Job -Job $job -Wait -AutoRemoveJob
    ```
-6. **信息不足或实现相关时的处理**：若需超时控制，向 `Wait-Job` 传入 `-Timeout` 参数。
-7. **资料依据（名称/版本/章节）**：MS-PS-THREADJOB。
+6. **信息不足或实现相关时的处理**：触发本规则即加载并发场景，I/O 另加载实际场景；缺调用链、完成/取消或共享状态条件先记缺口。`Wait-Job -Timeout` 只限制等待，不自动终止后台作业，不等于源任务取消；终止、结果/错误收集与清理按实际源契约处理，不单靠“注明降级”接受差异。
+7. **资料依据（名称/版本/章节）**：C# 12 / .NET 8 Task asynchronous programming model；PowerShell 7.6 Wait-Job 的 Timeout；MS-PS-THREADJOB。
 
 ### 规则 CS-PS-04：C# using/IDisposable 向 PowerShell try/finally 与显式 .Dispose() 映射
 1. **源码触发条件**：C# 源码使用 `using (RegistryKey key = ...)`、`using (SHA256 sha256 = SHA256.Create())` 或 `using` 声明管理 `IDisposable`，或在错误分支手工调用 `Dispose()`。
@@ -99,17 +99,17 @@ description: Use when converting C# source to PowerShell; apply this direction's
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-API-MANAGEMENT）；目标语言 PowerShell 7.6（MS-PS-CIM）。
 3. **原可观察行为**：`Get()` 返回 `ManagementObjectCollection`，属性访问是按名查表（缺失的属性名为 `$null`），`InvokeMethod` 返回方法返回值对象并可被 `Convert.ToInt32` 强转；连接身份通过 `ConnectionOptions`/`ManagementScope` 的显式凭据与计算机名建立。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：查询改 `Get-CimInstance -ClassName Win32_Process -Filter "..."`（WQL 仍可用，主要换 Cmdlet 名与参数名 `-Namespace`、`-ComputerName`、`-Credential`、`-Filter`），属性读取改为 `$_.Name`，方法调用改为 `Invoke-CimMethod -MethodName Terminate -Arguments @{...}` 并读返回对象；无法用 CIM 表达时保留 `System.Management` 类型并显式 `.Dispose()`。
+   - *可选映射*：仅作用域、身份、传输、查询/方法语义一致时考虑 CIM；Get-CimInstance 用 Namespace/ComputerName/CimSession/Filter，没有 Credential 参数。显式凭据在 New-CimSession 中设置，再用 CimSession 传给查询；会话创建/释放也须对应源生命周期。无法表达时记录具体依赖，不只更换 Cmdlet 名。
    - *不适用条件*：严禁依赖单个匹配结果仍为集合——`Where-Object` 过滤出单条时会被自动展开为标量，需 `@(...)` 包裹后再取 `[0]`；严禁把返回对象当作仍具 `Properties["..."]` 集合的对象；严禁把 C# 凭据/命名空间参数省略后按本机身份执行（身份与作用域被静默改变）。
 5. **错误机械替换反例**：
    ```powershell
    # C# 原型：var searcher = new ManagementObjectSearcher(scope, query);
    #           foreach (ManagementObject r in searcher.Get()) { props = r.Properties; ... }
-   # 错误：省略 -ComputerName/-Credential 会静默改为本机身份执行
+   # 对有远端/显式身份的源，省略对应会话会改变作用域；本地源不强制远端
    $r = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = 1234"
    $v = $r.Properties['Name'].Value   # 错误：CIM 对象没有 Properties 集合，得到 $null
-   # 正确：显式作用域与身份，按属性名直接读取
-   $r = @(Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = 1234" -ComputerName $host -Credential $cred)
+   # 候选：$cimSession 是与源作用域/身份/协议对应的已建会话，非新执行授权
+   $r = @(Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = 1234" -CimSession $cimSession)
    if ($r.Count -gt 0) { $name = $r[0].Name }
    ```
 6. **信息不足或实现相关时的处理**：若源码依赖 `ManagementObjectSearcher` 的具体返回类型（用 `InvokeMethod` 的原生返回值做位运算或强转），或目标主机只允许 DCOM 通道，须先确认 CIM 通道可用性并在报告中标为待确认，不要假定两者返回对象等价。
@@ -118,9 +118,9 @@ description: Use when converting C# source to PowerShell; apply this direction's
 ### 规则 CS-PS-06：C# 属性、索引器与 out 参数向 PowerShell 属性访问、Item() 与 [ref] 映射
 1. **源码触发条件**：C# 源码读取计算属性（`this.Result.GetType().Name`、`RawData { get; private set; }`）、用索引器访问（`Properties["sNames"]`、`cred[0]`）、用字典索引判断键存在（`arguments.ContainsKey("/ticket")` 后 `arguments["/ticket"]`），或使用 `TryDequeue(out byte[] bdata)`/`TryParse(out ...)` 这类 `out` 参数自带成功标志的 API。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-PROPS）；目标语言 PowerShell 7.6（MS-PS-OPS）。
-3. **原可观察行为**：C# 属性访问是一次方法调用，键缺失时索引器抛 `KeyNotFoundException`（`Dictionary`）或返回 `null`（`ManagementBaseObject`）；`out` 参数在返回 `false` 时被赋 `default`，成功标志与返回值同时可观察。
+3. **原可观察行为**：属性/索引器按实际 getter 与类型契约求值；不同索引器的缺键、失败与副作用不同。out 在正常返回前须被赋值，但返回 false 并不从语言规则保证 default；按具体 Try API 核成功标志、赋值与源消费。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：属性访问保持 `$obj.Name`（PowerShell 走 PSObject 适配层调用底层 getter）；索引器用 `$obj.Item('sNames')`，但优先改成 `.Properties['sNames'].Value` 形式；字典用 `$dict['/ticket']` 并**同时**判 `$dict.ContainsKey(...)`；`out` 参数改用已初始化变量加 `[ref]`，以返回的布尔值决定是否使用该值。
+   - *可选映射*：按真实 .NET 类型/适配器选择 obj[key]、get_Item 或 Properties 集合，不通用优先 Properties/Item()。缺键失败、ContainsKey 与 getter 求值次数对应源；out 可考虑 [ref]，但正常/失败/异常后值与是否消费按实际 API/源分支保留。
    - *不适用条件*：严禁把 C# 索引器机械写成 `$obj[key]`（对 `.NET` 集合走 `Item` 索引尚可，对自定义对象可能解析成数组下标或字符串按字符取值）；严禁把 C# 索引器抛 `KeyNotFoundException` 的失败语义改成静默 `$null` 后继续执行；严禁把 `out` 参数写成普通返回值的并列赋值（成功标志与值可能不同步）。
 5. **错误机械替换反例**：
    ```powershell
@@ -129,7 +129,7 @@ description: Use when converting C# source to PowerShell; apply this direction's
    if ($ok) { $pipe.Write($bdata, 0, $bdata.Length) }  # $bdata 为 $null -> 方法调用失败
    # 正确：显式 [ref] 容器并尊重布尔成功标志
    $bdata = $null
-   if ($_senderQueue.TryDequeue([ref]$bdata) -and $null -ne $bdata) {
+   if ($_senderQueue.TryDequeue([ref]$bdata)) { # 不为源新增 null 过滤；队列可含 null 时保持源后续行为
        $pipe.Write($bdata, 0, $bdata.Length)
    }
    ```

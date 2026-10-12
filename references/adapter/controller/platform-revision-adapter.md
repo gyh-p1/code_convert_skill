@@ -79,26 +79,28 @@ Capsule 只包含 `source_preflight_manifest.json`、`input_profile.json`、`met
 
 `metadata.json` 是必需的 JSON 对象；无附加元数据时完整内容为 `{}`，不能省文件、写空文本或 null。它不代替 manifest、冻结记录、classification 或授权。存在 fixture 时，每项声明含 relativePath、真实 contentDigest、sizeBytes、mediaType 和可空 sourceArtifactRef，并携带对应既有 fixture 原件；没有 fixture 才使用 `fixtures=[]`。不填写假 hash 或新造 fixture/驱动。
 
-明确仅编译时：mode 改 `build-only`，**删除 runCommand 键**，采用 InputProfile **1.0**，argv=[]、stdin=null、observationPolicy.dimensions=[]、comparisonPolicy={}，无 functionalProfile。已发布 InputProfile 1.1 强制 functionalProfile，与仅编译冲突，不能使用或静默降版本；原本需行为评估的任务不因此降级。分类/源构建门禁及无安全入口例外仍按评估准备契约。
+明确仅编译时：mode 改 `build-only`，**删除 runCommand 键**，采用 InputProfile **1.0**，argv=[]、stdin=null、observationPolicy.dimensions=[]、comparisonPolicy={}，无 functionalProfile。已发布 InputProfile 1.1 强制 functionalProfile，与仅编译冲突，不能直接套用或静默降版本。本轮无法合法行为评估时，用户已允许按[评估准备 §1.3](../../framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)明确冻结 LIB_UNOBSERVABLE_COMPILE_ONLY，再采用上述形状取得源构建及目标语法/编译证据；不改平台 schema、不新增 capability、不补造入口。仅编译支持未知阻止该验证提交，不把已满足条件的生成也停掉。
 
 手工打包与提交形状（满足本项前置门槛后使用；有 fixture 时把既有 fixture 树纳入本项归档）：
 
 ```powershell
 Compress-Archive -Path source,source_preflight_manifest.json,input_profile.json,metadata.json -DestinationPath source-preflight-capsule.zip -Force
-curl.exe -sS -X POST "http://127.0.0.1:8443/api/source-preflights" `
+curl.exe -sS -o source-preflight-submission-body.json -w "%{http_code}" -X POST "http://127.0.0.1:8443/api/source-preflights" `
   -F "file=@source-preflight-capsule.zip;type=application/zip" `
   -F "caseId=<frozen-case-id>" -F "sourceOs=<frozen-source-os>" -F "sourceLang=<frozen-source-lang>" `
   -F "classification=<classification.json" -F "batchAuthorization=<batch-authorization.json" `
-  -F "submissionId=<saved-exact-submission-id>"
+  -F "submissionId=<saved-exact-submission-id>" > source-preflight-submission-http-status.txt
 ```
 
-这是一项一命令的参考形状，不写辅助脚本、循环、打包/请求程序或新驱动。受理可为 202/QUEUED，同步测试形态可为 200/当前状态；保存原 HTTP 状态/body，不假定只有 202 才受理。未准入 403，不手改分类解禁。
+这是一项一命令的参考形状，不写辅助脚本、循环、打包/请求程序或新驱动。先保存本 attempt 的精确材料和 submissionId，再发送；body 与 HTTP 数字分别落盘，并在既有记录记原生工具实际退出码/传输错误。POST 不使用会丢弃错误 body 的 --fail；工具退出码为 0 不证明 HTTP 受理。受理可为 202/QUEUED，同步形态可为 200/当前状态，不假定只有 202 才受理。403/409 等保留原文按实际契约判读；000/超时不证明未接收，转 §5 恢复，不手改分类或盲重投。
 
 本节是获授权任务使用的请求契约，不是某一项的执行批准。classification 和 batchAuthorization 必须来自该项真实分类及适用人工授权，源文件集合、授权有效期/contractHash、当前平台身份和逐例隔离分别核对；已有适用授权可复用，不因本页补充示例重复申请。缺任一适用件时记具体 PREPARATION_GAP/WAITING 并写 result.md，不先生成目标凑包。
 
 ## 3. 新报告 kind 与分层判读
 
 source-only 的 `/api/jobs/{jobId}/report` 返回 **SourcePreflightReport 1.0**，kind=`codeconvert-source-preflight-report`；不是双侧 EvaluationReport。通过相同 job 状态、report.md、evidence/source、closure 路由取证；没有 target bundle 或 comparison，不要求伪造它们。源预检全部原件仍归既有 `job-00-source-buildability/returned-evidence/`。
+
+源原件采信及生成前/双侧提交前的逐项落实消费[评估准备 §1.4](../../framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)。历史占位目标 job 原标签保留，其 comparison 不当转换结论；不将 source-only 缺 target/comparison 误判为缺档。
 
 | 字段 | 判读 |
 |---|---|
@@ -110,7 +112,7 @@ source-only 的 `/api/jobs/{jobId}/report` 返回 **SourcePreflightReport 1.0**�
 | cleanup.status/reason | passed/failed/unknown/not-started，必须关联原清理记录；READY 不替代 |
 | jobStatus/jobPhase | 编排/收尾事实，不等于源可构建或可进入转换模型 |
 
-生成前仍逐项核源 build completed/0、适用有效基线、授权隔离与终止清理；任何缺口不消耗转换模型调用。没有独立 oracle 的平台 UNVERIFIED 不自行改 PASS；其他合法观察口必须有约定状态/原观察的独立可复核依据，否则待准备。
+生成前仍核精确源 build completed/0、授权隔离与适用清理；正常行为分支还须有效源基线，缺口先停该分支。源构建已过而本轮无法合法行为评估时，按评估准备 §1.3 记录 LIB_UNOBSERVABLE_COMPILE_ONLY 后继续生成与目标语法/编译验证，不能把“任何观察缺口”写成禁止转换调用。没有独立 oracle 的平台 UNVERIFIED 不改 PASS，实际观察无有效依据不假称基线通过。
 
 双侧普通报告沿用 3.0/3.1；双侧仅编译为 EvaluationReport **3.2**，kind 不变，逐侧 buildAssessment，execution.performed=false、comparisonRef=null、功能 UNVERIFIED。不能按 source-only 标量读双侧对象，也不能硬把 source-only 报告转成双侧 3.x。旧消费者遇未知 kind/version 停受影响判读。
 
@@ -140,11 +142,25 @@ curl.exe --fail -sS "http://127.0.0.1:8443/api/jobs/<job-id>/artifacts/evidence/
 
 artifactDigests 是派生核对摘要，不替代原件；逐件原生取回/核对到转换输出目录，按[交付 §1.1](../../framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)记录适用清单。原 report、comparison 和观察不因归因不同而覆写。
 
+最低适用回传面按真实 kind/mode/已发生阶段选择；下表只消费现有接口，不建设取证脚本。历史实例缺新路由时保留原记录和缺口，不访问安装目录/jobs 来补件。
+
+| 实际分支/阶段 | 取回并核对的适用面 |
+|---|---|
+| source-only | 源预检 manifest/profile/metadata、分类/授权与真实接收身份，原 source-preflight 报告、源实际角色调用/请求/body/解析响应/bundle（发生才有）、适用状态/日志/清理/closure。没有 target/comparison 不作缺档 |
+| 双侧 build-only | 双侧精确构建请求/原诊断/bundle、3.2 报告及实际清理/closure；核 execution.performed=false、不运行形态。没有行为 comparison/程序输出不补造 |
+| 正常双侧行为 | 精确提交/配置、两侧实际请求及返回原件、有效源与目标 build/execution/观察、comparison/result 与实际适用独立断言、日志/清理/closure；各维度须有真实范围，不拿总 report 代两侧流 |
+| 启动/传输/HTTP/解析失败 | 按已发生阶段保留 call/request/identity、HTTP 状态/实际 body/错误及可生成的失败报告和清理；没有成功解析就不伪造 response.json/bundle。真实空 body 与错误页/占位分列 |
+| 未调用或调用/清理未知 | 保存已发生冻结/接收/失败材料；未知部分继续 WAITING 并查询/取证/终止原 job，不从 closure 摘要推正文存在或从缺 bundle 推定未执行 |
+
+逐件取得状态、原件读取范围与可读副本边界按[交付 §2.3](../../framework/delivery-handoff-contract.md#23-resultmd面向读者的中文报告骨架)记录。report.md 的人读展示不替代 report JSON、实际退出/超时或程序来源；collectorDiagnostics/output.events 为空也不补足缺失流。
+
 ## 5. 提交标识、busy 与恢复
 
 当前两种 POST 支持可选 submissionId（非空、最多 128 字符）。首次提交前保存本项尝试标识和精确材料；相同 ID、相同 case/系统/语言/入口类型、capsule 原字节及分类/授权身份，返回原 jobId/当前状态，不重新执行。重新打包 ZIP 字节不同也可能不匹配；复用须原 capsule，不靠同名或内容印象。
 
 相同 ID 配不同冻结材料为 400；存在 request 但缺 state 返回 RECOVERY_REQUIRED，保持未知并移交获批平台核对，不补造新 job。恢复取回原 job 与申请新执行分开；前者仍保留原失败/清理记录。无 ID 的旧未知提交不天然幂等，不从 caseId/capsule hash 猜找 job，也没有通用列举/查询端点。
+
+本地评估仓库的恢复候选已补 request-only 的可查询失败状态，以及损坏请求/状态/manifest 和报告持久化失败的阻断处理；未部署或回归，不以候选改变当前服务的上述回执判读。原接收材料不可读时仍需获批平台处理，不保证所有孤立记录可自动收尾/解除 busy，不借重启或 runner READY 推清理完成。
 
 409 busy 的新 detail 为对象：error=controller_busy、jobCreated=false、retryAfterSeconds=null、action。它表示本次未建 job，不承诺排队或 ETA；旧字符串 detail 保留原文按实际解释。503 不由标签推断已提交/未提交，按回执事实处理。Controller 只支持单进程共享作业存储，不据提交锁宣称多进程或分布式去重。
 
@@ -156,7 +172,7 @@ artifactDigests 是派生核对摘要，不替代原件；逐件原生取回/核
 
 新服务器 preset=`noise-tolerant-v2` 可配置 workspace_path_pairs：最多 16 对精确绝对目录前缀，带尾分隔符、足够具体、无根目录/父穿越/重复路径。映射只处理已声明前缀，剩余相对路径/文件名与计时值继续比较。`text_tokens=[]`、`system_noise_patterns=[]` 明确禁用其他规则；省略时可能继承 v1 默认，冻结时须读实际完整配置。strict/v1 不接受非空目录对。
 
-目录映射仍是平台服务器配置，不能放进 input_profile 冒充任务字段，不能在失败后自动放宽。例外必须与冻结允许差异、精确部署/配置版本关联。JSON ignoredJsonPaths 的副本修复不增加计时通配、浮点容差或新 oracle。semantic_pass 单列，原始观察与规范化差异分别保留，不并入正式完整功能分子。详见[比较策略适配](comparison-policy-adapter.md)。
+目录映射仍是平台服务器配置，不能放进input_profile冒充任务字段，不能失败后自动放宽。例外与冻结允许差异及部署/配置版本关联。JSON ignoredJsonPaths副本修复不增加计时通配、浮点容差或新oracle。有效matched与有效semantic_pass均可计冻结范围功能比较通过，分别保留两类和原始/规范化差异，不外推完整业务分子；口径见[评估准备§5.1](../../framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)及[比较策略适配](comparison-policy-adapter.md)。
 
 ## 7. 本轮适配边界
 

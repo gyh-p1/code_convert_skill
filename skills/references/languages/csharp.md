@@ -210,8 +210,21 @@
 3. **事实**：ReadKey 返回 ConsoleKeyInfo；无参等同 intercept=false，会显示可显示的按键，true 抑制显示；ReadLine 等待行终止并返回行文本，输入单位不同。.NET 8 Unix 实现对 IsInputRedirected 抛 InvalidOperationException；其他 OS/控制台故障按准确实现/原始回传核，不概括为固定栈或统一 IOException。
 4. **映射条件**：保持实际使用的键、字符、修饰键、阻塞时点、回显、设备选择及错误路径；仅忽略返回值也仍须保持等待单位。
 5. **反例**：改 input/gets 后须按 Enter 才继续；重定向 stdin 的一字符读取不能证明控制台键事件等价。
-6. **未知**：缺合法终端入口记准备缺口，不删调用、不伪造同形源异常；源有效基线和目标适用评估由[评估准备](../../../references/framework/evaluation-readiness-contract.md)决定，不静默降级。
+6. **未知**：缺合法终端入口不删调用、不伪造同形源异常；源可构建时按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)采用 LIB_UNOBSERVABLE_COMPILE_ONLY，继续转换与目标语法/编译验证，明确行为未评估。不因改变验证范围改变键输入语义。
 7. **依据**：Microsoft .NET Console.ReadKey / ConsoleKeyInfo API 说明；dotnet/runtime v8.0.0 的 System.Console / ConsolePal.Unix.cs / ReadKey 实现。必要输入单位、回显与重定向失败条件已在本条正文说明。
+
+## 十、互操作与公开返回形态的选择引导
+
+适用C#12/.NET8及源码实际SDK/ABI。先定位原调用、声明和消费者，再选择托管封装；不是强制所有转换用PInvoke。
+
+| 触发 | 引导 | 反例与未知处理 |
+|---|---|---|
+| 原生可变长结构/缓冲 | 对应StructLayout、字段宽度、对齐、实际元素数、分配容量、API返回长度和A/W单位；资源所有权由真实API决定 | 一元素占位数组不能当固定一元素业务数组，char计数不当byte容量；SDK/架构未知时不猜偏移 |
+| 字符串到原生接口 | 区分UTF-16、具体窄字符编码、NUL与错误替换；看长度是输入容量还是输出有效长度 | 非ASCII被best-fit/替换后显示相似也不能证明原字节保持；源UB单列，不用源风险授权目标忽略容量 |
+| 字典/解析返回 | 区分missing、null、空串、默认值与是否插入；保留首个分隔符、重复键策略、排序稳定性和异常域 | 默认索引器、TryGetValue、Split或排序函数不是互换；只按实际使用点选择 |
+| 权限/身份及注册表封装 | 组成员、有效权限、enabled/deny-only、令牌类型与原始/展开值分别看系统页 | SID字符串存在不等于AccessCheck通过；自动展开的GetValue不等于原始注册表值 |
+
+依据：.NET8 StructLayoutAttribute/Marshal、Dictionary/TryGetValue、字符串/排序API；Win32精确事实按已加载系统页。不新增身份能力、不把托管便利当跨平台等价。
 
 ## 使用边界
 

@@ -53,7 +53,7 @@
 
 #### 4.1.1 四要素判定表
 
-启动、到达被观察状态、采集、终止及合法来源见[评估准备 §2](../framework/evaluation-readiness-contract.md#2-驱动来源与四要素)。驱动不强制 Python；缺合法提供的驱动时待准备，不由 Agent 或配置模型编写辅助程序。
+启动、到达被观察状态、采集、终止及合法来源见[评估准备 §2](../framework/evaluation-readiness-contract.md#2-驱动来源与四要素)。驱动不强制 Python；本轮缺合法驱动时，行为未评估，源构建通过后按该契约 §1.3 继续转换并验证目标语法/编译，不由 Agent 或模型造辅助程序。
 
 #### 4.1.2 按源程序形态选驱动
 
@@ -61,7 +61,7 @@
 
 #### 4.1.3 无安全可观察入口项：补中性入口走完整验证，或仅编译记 PARTIAL
 
-判据、公开测试向量与无安全入口形态见[评估准备 §3](../framework/evaluation-readiness-contract.md#3-无安全可观察入口)。可观察但缺合法入口是准备缺口，不能降级。真正无安全入口才 LIB_UNOBSERVABLE_COMPILE_ONLY，仅编译、PARTIAL、功能 UNVERIFIED；其交付按实际阶段核对。正常 matched/mismatched 不决定 lifecycle，见[任务状态 §4](../framework/task-state-contract.md#4-阶段生命周期与验证结论)。
+判据与流程见[评估准备 §1.3](../framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)及 §3。LIB_UNOBSERVABLE_COMPILE_ONLY 表示本轮无法合法行为评估但仍转换并验证目标语法/编译，包括当前入口缺件，不只限永远无安全观察方式；记录具体原因、PARTIAL、行为未评估/UNVERIFIED。有合法行为路径的仍评估，不为省事省略，不把真实差异改成未评估。正常 matched/mismatched 不决定 lifecycle。
 
 #### 4.1.4 oracle 与驱动的关系（oracle 不设硬门禁）
 
@@ -74,6 +74,8 @@
 #### 4.1.6 matched 不能单独采信
 
 原始观察、非退化基线、三档 verdict 和仅编译采信见[评估准备 §5](../framework/evaluation-readiness-contract.md#5-原始观察采信与归因)。空输出或相同驱动失败标记不支持功能通过；有区分力的退出码/副作用也可构成观察，不机械要求必须打印文本。
+
+宽泛消噪与统计按[评估准备§5.1](../framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)：允许不同语言/系统的表示差异，保护实际行为；有效matched与semantic_pass均计冻结范围功能比较通过，并保留两类与覆盖，不直接外推完整业务。
 
 ### 4.2 装置差异不得与转换差异混算
 

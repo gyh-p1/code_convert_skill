@@ -58,9 +58,9 @@ description: Use when converting C# source to Python; apply this direction's lan
 ### 规则 CS-PY-03：C# async/await (TAP) 向 Python asyncio 协程映射
 1. **源码触发条件**：C# 源码中使用 `async Task<string>` 与 `await` 进行并发异步调用。
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-ASYNC）；目标语言 Python 3.12（PY-REF-DATA）。
-3. **原可观察行为**：基于线程池的非阻塞异步任务执行。
+3. **原可观察行为**：async 不保证另开线程；保持调用至首次未完成 await 的执行、Task 完成/异常与实际调度上下文。Python async def 调用仅构造协程，两者调用时点不能直接视为相同。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：定义为 `async def`，内部调用 `await`；调用顶层使用 `asyncio.run()` 驱动事件循环。
+   - *可选映射*：仅求值/启动/等待/异常时点一致时考虑 async def/await；asyncio.run 只在对应顶层且没有已有事件循环时考虑，不为片段或嵌入调用强加新循环。
    - *不适用条件*：严禁在未进入事件循环的情况下直接调用异步函数（仅返回协程对象而不执行）；严禁在 Python 协程内执行长耗时同步阻塞系统调用（会卡死整个单线程事件循环）。
 5. **错误机械替换反例**：
    ```python
@@ -71,7 +71,7 @@ description: Use when converting C# source to Python; apply this direction's lan
    async def handle():
        await asyncio.sleep(5)
    ```
-6. **信息不足或实现相关时的处理**：若必须调用阻塞库，使用 `asyncio.to_thread()` 将其分流至单独线程。
+6. **信息不足或实现相关时的处理**：阻塞调用、线程/TLS、同步上下文或取消行为未知时记录缺口；to_thread 仅线程边界与消费者允许时考虑，不能作为自动“修复阻塞”的命令。
 7. **资料依据（名称/版本/章节）**：MS-CS-ASYNC。
 
 ### 规则 CS-PY-04：C# NullReferenceException/键缺失失败向 Python 显式 None 判断与等价异常映射
@@ -156,7 +156,7 @@ description: Use when converting C# source to Python; apply this direction's lan
 2. **源/目标事实**：读[C# L1-CS-07](../../references/languages/csharp.md#l1-cs-07-readkey-不是-readline-或普通流字符读取)与[Python L1-PY-09](../../references/languages/python.md#l1-py-09-流读取一个字符不等于读取一个终端键事件)。
 3. **条件映射**：只读普通字符且设备/模式一致时才考虑字符 API；完整键/修饰键、回显、阻塞和模式恢复另保持。平台专用 API 不能一律当可移植方案。
 4. **反例**：input 增加 Enter，read(1) 不自动绕过 canonical 模式；伪造同形异常不是源观察。
-5. **未知/依据**：缺键映射记知识缺口，缺合法 TTY 驱动记准备缺口；遵守评估准备，不删交互或静默改仅编译。依据见两事实页。
+5. **未知/依据**：缺键映射记知识缺口；本轮缺合法 TTY 驱动但源可构建时，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)采用 LIB_UNOBSERVABLE_COMPILE_ONLY，继续转换并验目标语法/编译，注明行为未评估；不删交互或造驱动。依据见两事实页。
 
 ## 转换与验证边界
 

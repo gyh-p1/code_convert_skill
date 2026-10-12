@@ -67,15 +67,15 @@
 - **整数宽度规范**：`[语言规范保证]` `int8`..`int64`, `uint8`..`uint64` 严格定宽；`int`/`uint` 大小取决于架构（32 或 64 位）；`uintptr` 存指针位。
 - **有符号溢出行为**：`[语言规范保证]` **按补码截断回绕**（二进制算术确定行为，非 UB）；**常数表达式溢出属于编译错误**。
 - **无符号溢出行为**：`[语言规范保证]` **按模截断回绕**（二进制算术确定行为）。
-- **隐式提升与转换陷阱**：`[语言规范保证]` **严格禁止隐式类型转换**；即使 `int32` 与 `int` 在 64 位架构下同宽，亦必须显式强制转换。
+- **隐式提升与转换陷阱**：`[语言规范保证]` 不同整数类型的变量不能只因位宽相同就视为可隐式互换；冻结具体类型与实现宽度，不假定 int32 与 x64 实现的 int 同宽。
 - **官方资料依据**：GO-SPEC #Numeric_types, #Arithmetic_operators
 
 ### L1-GO-02 数值文本输出必须钉住位宽与格式
 1. **源码触发条件**：源码把数值转成文本——`strconv.FormatInt/FormatUint/FormatFloat`、`fmt.Sprintf`/`fmt.Printf` 的 `%d`/`%v`、`json.Marshal`，或对定宽整数做宽度依赖的格式化。
 2. **冻结版本/运行时/API 前提**：Go 1.27；`strconv` 与 `fmt` 的格式语义见 `strconv`、`fmt`，`int` 宽度依架构见 GO-SPEC #Numeric_types。
 3. **原可观察行为**：
-   - `int`/`uint` 的宽度**依架构**（32 或 64 位）；`fmt.Sprintf("%d", x)` 的输出宽度随类型与平台变化，`%v` 亦不保证与定宽类型一致。
-   - `strconv.FormatFloat(v, 'g', -1, 64)` 使用**最短往返表示**；`fmt.Sprintf("%v", f)` 采用 `%g` 但不保证相同位数——两者输出**可能不同**。
+   - `int`/`uint` 的范围依实现宽度；普通 `%d` 表示实际数值的十进制文本，不因类型宽度自动加填充。格式字符串的宽度、符号/填充选项与数值范围分别核对。
+   - `strconv.FormatFloat(v, 'g', -1, 64)` 使用最短往返表示；普通浮点的 fmt `%v` 默认 `%g`，默认 `%g` 也取足以唯一识别值的最少位数。不能据两种 API 名称认定必有差异；显式精度/标志、float32/64 或自定义 Formatter/Stringer 等另核，格式依实际调用保持。
    - `json.Marshal` 对 `float64` 使用特定最短表示与转义规则，且对 `int64` 超出 JS 安全整数范围时不报错。
 4. **目标可选写法和不适用条件**：
    - *Go 作为源*：目标语言的数值格式化必须显式选定与源一致的有效位数与区域设置；源用 `strconv` 的往返格式时，目标也须用等价的往返格式。
@@ -86,8 +86,8 @@
    // 错误：用 int 承接源的定宽 64 位量，32 位目标上静默截断语义
    var size int = readSize()                      // 源可能明确是 int64
    fmt.Printf("%d\n", size)
-   // 错误之二：用 %v 冒充源的往返精度
-   s := fmt.Sprintf("%v", 1.0/3)                  // 位数可能与源的 strconv 往返格式不同
+   // 错误之二：固定 6 位小数替换源的最短往返格式
+   s := fmt.Sprintf("%.6f", 1.0/3)                // 精度/尾零策略已改变
    // 正确：类型与格式都显式钉住
    var size int64 = readSize()
    s := strconv.FormatFloat(1.0/3, 'g', -1, 64)   // 最短往返，与源义务一致
@@ -205,6 +205,52 @@
 5. **反例**：TMPDIR 为空、TMP 指向有效目录时，不能把 Ruby Dir.tmpdir 与 Unix os.TempDir 当同义；两个 API 都返回字符串不证明副作用落点相同。
 6. **未知**：Windows API、运行时变更或源自定义算法未明时待核，不从宿主环境代推隔离环境。
 7. **依据**：os.TempDir；Ruby 版本化实现。
+
+## 九、标准库消费点的选择引导
+
+适用于本项目Go知识基线；实际标准库版本、构建标签、GOOS和CGO条件依冻结事实。本节帮助选映射，不新增强测或默认修复。
+
+| 源码触发 | 先理解的语义 | 目标选择与反例 |
+|---|---|---|
+| encoding/json输出 | `encoding/json`的map编码键排序不同于map range的未规定顺序；struct字段/tag/嵌入和自定义Marshal另核。Encoder.Encode在JSON后写换行，Marshal不因此自动带换行 | 保持源的字段集、数值/布尔/null身份、转义、非法UTF-8策略、缩进及终止符；业务只要求对象语义时可用结构比较，但转换不能因比较器宽松而删除源输出义务。不把json/v2或目标库默认当v1契约 |
+| bufio.Scanner/固定容量容器 | 停止条件、Buffer配置、Err检查、已取得token与固定截断范围均是消费者的一部分 | 目标逐行读取不天然有相同长度上限；源忽略Err也不授权丢掉已取得数据或强制抛异常。容量上界未知时保留源定义，不加任意100项上限 |
+| sort.Sort/Stable/SliceStable等 | 核实际函数与Less及同键元素的后续用途 | 不稳定接口不能升级为规定某个同键排列；源稳定性有义务时选稳定映射。冻结输入只有唯一键不取消实现义务 |
+| time/计数器 | 核取时点、时区、布局、累计/增量及采样区间；时间展示与测量定义不同 | 展示时刻可属于允许差异，取时点/窗口/单位不能自动消噪；性能计数器按实际集合和定义映射，不以同名数值互换 |
+| runtime.GOOS/构建标签 | 看源码按平台选了哪些声明、调用和出口；运行平台事实与构建时选择分别核 | 目标按对应平台保留选中分支，不无条件执行原Windows/POSIX分支；未知SDK或未选分支只写对应范围，不凭当前OS证明所有平台可用 |
+| os/user或环境读取 | 后端、CGO/构建标签、缓存和查询来源可能影响结果；os.Getenv的空串与LookupEnv的存在位不同 | 保留源选用的查询与missing/empty分流，不把环境变量默认值当实际账户信息。后端未知只记精确缺口，不声明跨平台同源 |
+| Read及进程双流 | `n>0`与error可同时存在；CombinedOutput合并流不等于分别读完后拼接 | 先消费有效字节再按源处理错误；源需交错观察时选择相同合流模型，无法保证交错顺序则说明条件，不用stdout+stderr拼接冒充 |
+
+依据：Go Language Specification；encoding/json Marshal/Encoder.Encode；bufio.Scanner/Buffer/Err；sort；time；os.Getenv/LookupEnv；os/user；io.Reader；os/exec。版本/后端未核的实现细节不由本表补成保证。
+
+### L1-GO-08 Scanner 的停止边界与已取得结果
+
+源码使用Scanner时，先定位Split函数、Buffer设置、Scan停止后的Err检查及已得token的消费者。Go 1.27标准库默认MaxScanTokenSize为64×1024字节；实际可接受token还受终止符、max与cap(buf)影响，不能据此声称任意64KiB行都成功。Buffer须在开始扫描前配置。Scan返回false可能是EOF，也可能是读取/过长token等错误，Err区分其中非EOF错误。
+
+目标逐行读取通常不天然有相同边界；只有源确实允许扩大接受域时才取消上限。源忽略Err而继续消费先前token时，保持部分结果与后续路径，不额外抛异常，也不将所有结果清空；固定100项等业务截断与Scanner字节边界是不同限制。源Split/Buffer具体配置未知时记对应缺口，不猜一套统一上限。依据：Go 1.27 bufio.Scanner、MaxScanTokenSize、Buffer、Scan、Err。
+
+### L1-GO-09 用户查询后端不等于环境变量
+
+源码使用os/user时，先看Current、Lookup、LookupId或GroupIds及其字段消费者，再核GOOS、CGO、构建标签和账户来源。多数Unix平台有纯Go解析/etc/passwd、/etc/group与cgo调用libc查询两类实现；cgo及所需libc例程可用时采用后者，osusergo标签可强制纯Go。两者可能覆盖不同账户/组来源，不能把本地文件结果或USER环境变量当所有查询的替代。
+
+目标可选同来源的系统/库查询，但还要保持ID与名称、组集合、missing/错误及缓存条件；只输出用户名的一条路径不说明组信息也等价。平台或后端未核时只记录具体映射条件，不根据当前宿主用户名补答案，也不新增身份能力。依据：Go 1.27 os/user包说明及相应查询API。
+
+### L1-GO-10 同键顺序依实际排序接口
+
+sort.Sort与sort.Slice不保证稳定；sort.Stable与sort.SliceStable保持相等元素的原顺序。先看源码选哪个接口、Less何时将元素视作相等及排序后的消费者，再选目标稳定/非稳定方案；不得为了消噪给源有顺序义务的集合重新排列。
+
+源稳定时，可选目标稳定接口或有同等前提的显式原序号策略；源未规定同键顺序时，不从一个样例推定固定排列，也不把额外按名称排序当原规则。比较器是否满足要求、是否依赖实现的具体排列未知时写局部缺口，不把所有排序都升级为稳定保证。依据：Go 1.27 sort.Sort/Slice/Stable/SliceStable及Interface.Less。
+
+### L1-GO-11 截止时刻、取消与等待预算
+
+net.Conn的SetDeadline是绝对时刻，覆盖待执行及当前阻塞的I/O，不仅下一次调用；零值表示不超时，超过截止后需源明确更新才能恢复。目标仅有相对timeout时，按源是否共享截止或每次刷新选择剩余预算，而不是每次调用重新给满同一时长；源本来实现idle timeout时则保持刷新点。
+
+os/exec另有启动、Context取消、直接进程退出和管道排空：CommandContext默认取消直接进程，WaitDelay从Context结束或观察到进程退出的较早时点计时，限制取消后未退出或I/O管道未关闭的等待，不是命令从启动起的总timeout，也不保证后代全树已回收。源自定义Cancel/WaitDelay、目标时钟或树清理能力未知时说明该映射点。具体网络/进程行为继续读对应场景，不新增驱动或测试。依据：Go 1.27 net.Conn、os/exec CommandContext/Cmd.Wait/WaitDelay。
+
+### L1-GO-12 合流与部分读取的消费顺序
+
+io.Reader允许在返回n>0时同时返回错误，也允许最后一块数据先返回err=nil、下次再返回EOF；0,nil本身不是EOF。先对应源实际消费p[:n]和错误的顺序。源按Reader契约消费时保留有效字节后再处理错误；源实际丢弃部分数据时记录源行为/风险，不替源修复。目标异常式API没有天然的n、err二元返回，可选择对应已得块和失败状态的表示，不能从异常猜出未取得字节。
+
+CombinedOutput取得合并stdout/stderr；分别采集后stdout+stderr拼接不保留合流关系。源需要来源分离时也不能反向合并。映射以源的共同输出接收点、已得字节、错误及等待范围为依据，不承诺并发输出跨运行具有固定顺序。仅能分流而无等价合流条件时说明限制，不新增装置代码。依据：Go 1.27 io.Reader、os/exec CombinedOutput；方向映射按实际两语言正文。
 
 ## 使用边界
 

@@ -58,14 +58,12 @@ description: Use when converting Ruby source to C#; apply this direction's langu
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-EXCEPT）；目标语言 C# 12 / .NET 8（MS-CS-EXCEPT）。
 3. **原可观察行为**：默认只捕获 `StandardError` 及其子类，系统级致命错误自动放行。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 C# 中捕获 `catch (Exception ex)`（C# 的 `System.Exception` 对应常规托管异常）。
-   - *不适用条件*：注意在 C# 中不可使用空 catch 块 `catch { }` 吞没异常信息。
+   - *可选映射*：按源 rescue 的异常族及动作映射到具体 C# 类型/过滤器；System.Exception 不自动等于 Ruby StandardError 的全集。只有源实际覆盖的范围可被捕获，记录/重抛/吞掉分别保持。
+   - *不适用条件*：源空 rescue 可保留对应范围的空处理，不为调试添加日志；不能以 catch(Exception) 吞掉源本会传播的失败。
 5. **错误机械替换反例**：
    ```csharp
-   // 错误：空 catch 吞没异常，导致关键调试信息丢失
-   try { Action(); } catch { }
-   // 正确：显式捕获并记录
-   try { Action(); } catch (Exception ex) { Logger.LogError(ex); }
+   // 错误候选：源空 rescue，却新增 Logger.LogError 输出或扩大捕获到全部 Exception。
+   // 映射须逐项保留源异常族与实际处理；空处理不是无条件禁用项。
    ```
 6. **信息不足或实现相关时的处理**：若 Ruby 抛出特定异常，映射至对应的 .NET 异常类型。
 7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；MS-CS-EXCEPT。
@@ -75,18 +73,16 @@ description: Use when converting Ruby source to C#; apply this direction's langu
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-CORE）；目标语言 C# 12 / .NET 8（MS-CS-BOOL、MS-CS-NULL）。
 3. **原可观察行为**：**Ruby 中只有 `nil` 与 `false` 为假**：`0`、`""`、空数组、空 Hash 都是真；`a || b` 在 `a` 为真时返回 `a` 本身（不是 `true`），因此 `'' || 'x'` 得到 `''`，`0 || 5` 得到 `0`。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：`x.nil?` → `x is null`；`x || default`（x 可能是 null）→ `x ?? default`；`x` 用作条件且 x 是字符串/数值时，显式写出业务判据（`!string.IsNullOrEmpty(x)`、`x != 0`）并把判据来源写进报告；`if v` / `unless v` 中的 v 若本身已是 `bool`，直接保留。
-   - *不适用条件*：严禁把 `a || b` 一律翻成 `a ?? b` 后当作"没变"——当 a 是字符串且源码依赖"空串为真"时，`??` 与 Ruby `||` 在 null 与空串上的分流不同，必须回到源码确认；也严禁把非 `bool` 表达式直接放进 C# 的 `if`/`&&`/`||`（C# 要求 `bool` 操作数），更严禁引入隐式 `bool` 转换来"凑合"（会静默改变分流判据）。
+   - *可选映射*：`x.nil?` → `x is null`；可空字符串的 `x || default` 可用 `x ?? default`，两者都保留空串。若 x 还可为布尔 false，须显式区分 null 与 false；对象真值只排除这两者，字符串/数值条件不能替换为非空/非零。已是 bool 的条件直接保留，并保持表达式仅求值一次与默认值短路。
+   - *不适用条件*：不得把 Ruby 的真值改成 `!string.IsNullOrEmpty(x)` 或 `x != 0`，除非源已有该显式判据；不得以 `??` 处理也可能为 false 的对象；非 bool 对象不能直接放进 C# 的 if。
 5. **错误机械替换反例**：
    ```csharp
    // 错误：以为 C# 的 || 与 Ruby 的 || 同义，直接照抄
    string target = datastore["OUTPUT_TARGET"] || GetEnv("TEMP"); // 编译错误：string 不能作 || 操作数
-   // 错误：用 ?? 顶替后，空串与 null 的分流被合并
-   string path = datastore["WRITABLE_DIR"] ?? "/tmp";            // 空串仍返回 ""，语义需回到源码确认
-   // 正确：显式写出判据
-   string target = string.IsNullOrEmpty(datastore["OUTPUT_TARGET"])
-       ? Path.Combine(GetEnv("TEMP"), name)
-       : datastore["OUTPUT_TARGET"];
+   // 可空字符串候选：与 Ruby 一样保留空串，只在 null 时求默认值
+   string path = datastore["WRITABLE_DIR"] ?? "/tmp";
+   string target = datastore["OUTPUT_TARGET"] ?? Path.Combine(GetEnv("TEMP"), name);
+   // 若值域还含布尔 false，此候选不适用，须保持 Ruby 的 null/false 分流。
    ```
 6. **信息不足或实现相关时的处理**：源码中的条件表达式没有显式比较运算符（`if v`、`while v`）而 v 的类型无法从局部源码确定时，必须标注"真值判据待确认"并询问；Ruby 的 `0`、`""`、空集合为真这一事实不能靠 C# 的运行期隐式转换兜底，判据必须由转换者显式写出。
 7. **资料依据（名称/版本/章节）**：RB-DOC-CORE；MS-CS-BOOL；MS-CS-NULL。

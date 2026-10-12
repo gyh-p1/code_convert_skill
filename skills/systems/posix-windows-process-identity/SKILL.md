@@ -40,6 +40,17 @@ description: Use as the source-OS -> target-OS layer when source code starts chi
 - **未知处理**：OS、envp 形态、失败出口或映像替换义务不明则记缺口；不从“子程序同样运行”推断进程身份与生命周期等价。
 - **官方依据**：POSIX fork、exec；Linux fork(2)、execve(2)、exec(3)。
 
+## 原生环境块、令牌与缓冲的选择引导
+
+Windows同OS的语言转换涉及这些API时也适用；只据精确SDK/架构和调用点选择，不增加执行或自审门禁。
+
+- **环境块**：GetEnvironmentStrings返回NUL分隔、双NUL终止的块，使用后按对应FreeEnvironmentStrings释放。块中可有以`=`开头的驱动器当前目录项，按首个等号直接split成普通字典可能丢掉名称；A/W及具体窄字符编码不能凭ASCII样例推定。先看源是否枚举、过滤或原样转交，再选目标环境抽象，复制内容与保持借用生命周期分开。
+- **可变长令牌结构**：TOKEN_PRIVILEGES含PrivilegeCount与LUID_AND_ATTRIBUTES数组；数组实际长度由返回信息决定，SDK声明的占位元素不是长度上限。DWORD、LONG、BOOL及LUID字段不会因为进程指针位宽变化就自动变成指针宽度。目标可采用精确布局/封装，但须对应头部、元素、对齐和返回缓冲长度，不将某结构的偏移数值推广到所有结构。
+- **有效权限**：成员SID、enabled/deny-only属性、线程模拟与进程令牌不同。AccessCheck的安全描述符、模拟令牌、desired access及generic mapping决定结果；BOOL调用结果与AccessStatus输出也不同。先定位源检查对象，再选成员查询或访问判定，不以组名存在替代有效权限，不从“管理员”一词推出全部权限。
+- **缓冲与初始化**：区分容量、有效长度、NUL和字节/字符单位；语言模块或DLL加载不等于对应系统API的初始化成功。源固定容量、初始化失败时机及后续错误路径按原调用保持，原代码越界风险单列，不因源UB省略目标容量分析。
+
+依据：Microsoft Win32 GetEnvironmentStrings/FreeEnvironmentStrings、TOKEN_PRIVILEGES/LUID_AND_ATTRIBUTES、AccessCheck及Access Tokens；布局和编码的精确版本不明时记录缺口，不猜数值。此处只补转换选择知识，不提供权限扩张方法。
+
 ## 核心差异映射表
 
 每行给出必须动手改的点，而不是"名字相近即可"。

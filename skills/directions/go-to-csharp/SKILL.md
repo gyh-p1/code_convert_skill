@@ -18,9 +18,9 @@ description: Use when converting Go source to C#; apply this direction's languag
 ### 规则 GO-CS-01：Go 结构体值传递向 C# struct/class 语义划分映射
 1. **源码触发条件**：Go 源码中定义 `type Data struct` 并以值接收者 `func (d Data)` 传参。
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Struct_types）；目标语言 C# 12 / .NET 8（MS-CS-SPEC）。
-3. **原可观察行为**：纯值复制，方法内修改 `d` 不影响外部调用者。
+3. **原可观察行为**：接收者值复制，直接修改其值字段不改变调用者的结构体；指针、切片、map 等字段仍可能共享底层对象，通过它们写入可被外部观察，不作深复制保证。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：若需保持全量值复制且数据结构较小，声明为 C# `struct`；若为大对象或需支持引用语义，声明为 `class` 并在传参时显式创建副本。
+   - *可选映射*：按字段保留 Go 接收者副本及引用字段的共享。C# struct 只是候选：在可变变量上调用会修改 this 的实例方法不自动产生 Go 值接收者副本，须显式按值参数/副本承接；class 候选也须对应复制与别名行为，不能只按大小选型。
    - *不适用条件*：严禁将值接收者方法所在结构体无脑翻译为 `class`，否则后续调用会产生意外的别名修改副作用。
 5. **错误机械替换反例**：
    ```csharp
@@ -30,7 +30,7 @@ description: Use when converting Go source to C#; apply this direction's languag
        public void SetTimeout(int t) { this.Timeout = t; }
    }
    // Go 原型为值接收者，调用后外部 Config 未变；C# class 会直接修改外部对象！
-   // 正确：使用 struct 保持值语义
+   // 候选数据表示：struct 本身不保证其可变实例方法等价于 Go 值接收者
    public struct Config {
        public int Timeout;
    }
@@ -41,15 +41,15 @@ description: Use when converting Go source to C#; apply this direction's languag
 ### 规则 GO-CS-02：Go error 返回向 C# 结构化异常抛出映射
 1. **源码触发条件**：Go 源码中使用 `return nil, errors.New("not found")`。
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27；目标语言 C# 12 / .NET 8（MS-CS-EXCEPT）。
-3. **原可观察行为**：调用方必须显式判断 `err != nil`。
+3. **原可观察行为**：error 经返回值传递；调用方可以检查或忽略，按源实际分流保留。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为抛出对应的 C# 异常（如 `throw new KeyNotFoundException(...)`）；或者若该错误属于频繁发生的常规分支，提供形如 `bool TryGetValue(...)` 的 Try 模式方法。
-   - *不适用条件*：严禁将业务失败静默忽略。
+   - *可选映射*：保留元组/结果对象及实际调用分支；接口与整条传播边界均允许时才考虑异常或 Try 模式。错误字段、身份与成功零值不能丢失。
+   - *不适用条件*：不得新增或删除源的忽略分支，也不因惯用法禁止元组；频率与风格不能决定是否改接口。
 5. **错误机械替换反例**：
    ```csharp
-   // 错误：为了强行对应多返回值，在 C# 中返回二元元组且不加强制检查
-   public (User, string) FindUser(int id) { ... } // 违背 C# 习惯用法
-   // 正确：使用常规异常或 Try 模式
+   // 候选：源接口与调用方观察两项结果时保留元组；错误对象类型另按实际字段映射
+   public (User, string) FindUser(int id) { ... }
+   // 另一候选：仅接口与错误细节允许 Try 模式时适用
    public bool TryFindUser(int id, out User user) { ... }
    ```
 6. **信息不足或实现相关时的处理**：若源错误代码作为系统进程返回码，映射为带退出码的异常。
@@ -82,9 +82,9 @@ description: Use when converting Go source to C#; apply this direction's languag
 ### 规则 GO-CS-04：Go 切片/string 向 C# T[]、Span<T> 与 List<T> 的长度容量语义映射
 1. **源码触发条件**：Go 源码使用 `make([]T, 0, n)` 预分配容量、`items = append(items, x)` 追加、`metas[:min(len(metas), 15)]` 截断、`string(bytes.ToUpper([]byte(outText)))` 或 `[]byte(content)` 做字节/文本互转（如 `doc_zip_chunk_upload.go` 的 `make([]FileMeta, 0, n)`、`local_tasking_workers.go` 的 `results[:min(30, len(results))]`）。
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Slice_types）；目标语言 C# 12 / .NET 8（MS-CS-ARRAY、MS-CS-COLL）。
-3. **原可观察行为**：`len` 是元素个数，`cap` 是已分配容量，容量只影响是否重分配而不影响可观察内容；子切片与截断结果共享底层数组直到扩容；`[]byte` 与 `string` 的互转按字节与 UTF-8 编码解释，长度按字节计。
+3. **原可观察行为**：len 为元素个数，cap 决定可重切片范围及 append 是否复用数组，别名写入可观察；扩容得到新数组时旧切片仍保留旧数组。Go string 与 []byte 可含非 UTF-8 字节，互转不自动校验/替换这些字节，长度按字节计。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：元素个数固定用 `T[]`，`new T[n]` 的 `Length` 直接对应 `len`；需要追加与容量增长用 `List<T>`，`new List<T>(capacity: n)` 承接 Go 的容量提示而不是长度；只做只读借用时用 `ReadOnlySpan<T>`/`Span<T>` 切片（`span.Slice(offset, length)`）避免拷贝；字符串与字节互转显式用 `Encoding.UTF8.GetBytes/GetString`。
+   - *可选映射*：按固定元素/独立追加/共享视图分别核数组、List 或 Span 候选；List 容量不代 Go 可重切片的 cap。文本确有 UTF-8 契约且错误策略一致时才用 Encoding.UTF8；任意字节保留 byte[]。Span 的保活、后续容器扩容与写入权限仍须对应源。
    - *不适用条件*：严禁把 `new List<T>(capacity)` 的容量当成元素个数——`Count` 仍为 0，凡是用“已有元素”遍历或建索引的代码都会立刻越界；严禁把 Go 子切片的别名共享语义套到 `List<T>` 上，`new List<T>(other)` 与 `other.ToArray()` 都是立即产生的独立副本。
 5. **错误机械替换反例**：
    ```csharp
@@ -94,10 +94,10 @@ description: Use when converting Go source to C#; apply this direction's languag
    // 正确：容量只是提示；先 Add 或按需 AddRange，再按索引读写
    var metas = new List<FileMeta>(capacity: n);
    metas.Add(new FileMeta(...));         // 对应 Go 的 append
-   // 对应 Go 的 metas[:limit] 视图：用切片而不是拷贝
+   // 候选只读视图：仅 limit 合法、借用期间 List 不改长度且源不通过此视图写入时适用
    ReadOnlySpan<FileMeta> head = CollectionsMarshal.AsSpan(metas).Slice(0, limit);
    ```
-6. **信息不足或实现相关时的处理**：若源码依赖子切片与原切片共享底层数组的互相写入，必须先确认目标侧是否有意保留该别名关系，标注“切片别名共享是否需保留待确认”，不得用 `T[]`/`List<T>` 的默认拷贝语义默认承接。
+6. **信息不足或实现相关时的处理**：已知源有可观察别名时必须保留，不问目标是否“有意”保留；具体保活/扩容表示未知则记录实现缺口并停止受影响映射，不以默认拷贝代替。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Slice_types；MS-CS-ARRAY、MS-CS-COLL。
 
 ### 规则 GO-CS-05：Go nil map 与 nil 切片向 C# null 与空集合的可见性区分映射
@@ -105,7 +105,7 @@ description: Use when converting Go source to C#; apply this direction's languag
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Map_types, #Slice_types）；目标语言 C# 12 / .NET 8（MS-CS-NULLABLE、MS-CS-JSON）。
 3. **原可观察行为**：nil map 可读（返回零值）但写入 panic；nil 切片可 `len`/`range`/`append`；`encoding/json` 把 nil map 与 nil 切片编码为 `null`，把空 map 编码为 `{}`、空切片编码为 `[]`；`len(nil)` 与 `len(空)` 同为 0。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：用 `Dictionary<TKey,TValue>` 承接 map，用 `T[]`/`List<T>` 承接切片；若原 Go 代码把 nil 状态对外暴露（写进 JSON、作为返回值被调用方判空），用可空类型（`null`）显式表示 nil，并用 `JsonSerializerOptions` 与 `[JsonIgnore(Condition = ...)]` 之类的显式标注保留 `null` 与 `[]`/`{}` 的区分；需要“读写都要安全”时改用 `new Dictionary<...>()` 并明确写成空集合。
+   - *可选映射*：可空容器候选须分别实现源 nil map 的读零值、写失败和 nil slice 的 len/range/append；序列化须保留 null 与空容器，而不是一律忽略 null 属性。仅源确有初始化时点才物化 map，不为“读写安全”提前初始化。
    - *不适用条件*：严禁用 `Enumerable.Empty<T>()`、`Array.Empty<T>()` 或 `new Dictionary<...>()` 统一承接 nil，除非已确认 nil 与空集合在原程序中不可区分——否则 JSON 输出会由 `null` 变成 `[]`、由 `null` 变成 `{}`，调用方的判空分支随之改变；也不得对可空集合省略空值检查后直接 `foreach`（会抛 `NullReferenceException`）。
 5. **错误机械替换反例**：
    ```csharp
@@ -115,7 +115,7 @@ description: Use when converting Go source to C#; apply this direction's languag
    // 正确：让可空性与原 Go 状态一一对应
    Dictionary<string, string>? obj = null;         // 对应 Go 的 nil map（只读安全）
    report["payload"] = obj;                        // 序列化仍为 null
-   obj ??= new Dictionary<string, string>();       // 真正要写入时才物化为空 map
+   // 源若直接写 nil map，应保留其失败；仅对应源显式 make/字面量初始化时才建立 Dictionary。
    ```
 6. **信息不足或实现相关时的处理**：若无法确认某个 nil 状态是否可被外部观察（例如只在本文件内读写、从未进入序列化或返回值），必须标注“nil 与空集合是否需区分待确认”，不得自行选择统一策略。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Map_types, #Slice_types；MS-CS-NULLABLE、MS-CS-JSON。
@@ -125,7 +125,7 @@ description: Use when converting Go source to C#; apply this direction's languag
 2. **冻结版本/运行时/API 前提**：源语言 Go 1.27（GO-SPEC #Go_statements、GO-MEM）；目标语言 C# 12 / .NET 8（MS-CS-THREADING、MS-CS-CONCCOLL）。
 3. **原可观察行为**：互斥量保护下对共享切片的追加彼此可见且不撕裂；`wg.Wait()` 之后所有工作协程的结果都已汇聚；channel 接收端在发送端 `close` 后结束 `range`；结果集合的内容集合不依赖调度顺序（但顺序可能不同）。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：每任务无共享收集时用 `Task.Run` 配 `Task.WhenAll` 承接 `WaitGroup` 的汇聚语义；确需共享收集时用 `ConcurrentQueue<T>`/`ConcurrentBag<T>`（或 `lock` + `List<T>`、`Interlocked` 计数），在汇聚点之后按需 `ToList()` 并显式排序以固定顺序。
+   - *可选映射*：仅调度与等待义务一致时用 Task/WhenAll；共享追加可考虑 lock + List 或对应并发集合。保持源收集/消费顺序；仅源排序或冻结允许差异明确无序时才考虑排序，不能为输出稳定新加业务排序。
    - *不适用条件*：严禁把 Go 中受 `sync.Mutex` 保护的切片机械写成无同步的 `List<T>.Add`——多线程写入会抛 `InvalidOperationException`（集合迭代 fail-fast）或损坏内部状态；也不得假定 `ConcurrentBag<T>` 等并发集合的枚举顺序稳定，它不承接 Go 侧任何顺序保证。
 5. **错误机械替换反例**：
    ```csharp
@@ -135,7 +135,7 @@ description: Use when converting Go source to C#; apply this direction's languag
    // 正确：用线程安全集合，或在同一把锁下写入
    var results = new ConcurrentQueue<Result>();
    await Task.WhenAll(tasks.Select(t => Task.Run(() => results.Enqueue(Execute(t)))));
-   var ordered = results.OrderBy(r => r.Id).ToList();   // 顺序需显式固定
+   var collected = results.ToList(); // 若顺序可观察，集合选择/入队时点仍须对应源；不自动按 Id 排序
    ```
 6. **信息不足或实现相关时的处理**：若源码依赖 channel 的阻塞/缓冲容量与关闭时机来实现背压或终止条件，必须标注“channel 背压与关闭语义在 C# 中无直接对等物，需重新设计”，交由并发场景 Skill 与架构审阅决定，不得声称行为等价。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Go_statements；MS-CS-THREADING、MS-CS-CONCCOLL。

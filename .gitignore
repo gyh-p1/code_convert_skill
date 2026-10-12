@@ -17,6 +17,12 @@ Thumbs.db
 /docs/test/
 /docs/test/dataset.zip
 
+# 迁移后的一次性用例与退役副本仍仅本地保存；工程审查 Markdown 可提交
+/docs/dataset-2/
+/docs/stages/stage4/reviews/retired-dataset-2-copy-2026-10-12/
+/docs/stages/stage4/reviews/dataset-2-2026-10-12/*
+!/docs/stages/stage4/reviews/dataset-2-2026-10-12/*.md
+
 # 本次一次性测试审查材料，不作为产品或常驻数据集索引提交
 /docs/stages/stage2/
 

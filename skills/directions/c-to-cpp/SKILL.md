@@ -170,12 +170,12 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 > **归属说明**：本条是**目标语言 C++17 自身**的语法合法性预检，属该方向特有；共享的判空/错误/编码义务见语言页。
 
 1. **触发条件**：源码包含（a）字符串字面量传给 `char*` 形参，（b）`register` 存储类或显式寄存器变量，（c）`void**` 类型双关（如 `ComPtr<T>::addr()`），或（d）目标语言不存在的构造。
-2. **适用前提**：目标语言 ISO C++17；**C++11 起字符串字面量的类型是 `const char[N]`**，向 `char*` 的转换在 C 中是历史遗留允许、在 C++17 中**是错误**。
-3. **应保留行为**：这些是**编译期**问题，不影响运行语义，但会阻断目标 build。转换时必须逐处修正以保住可编译性，且**不得**用强制转换掩盖真正的写入企图。
+2. **适用前提**：目标 ISO C++17；普通窄字符串字面量为 const char[N]，并非 C++11 才开始 const。C 的普通字面量类型为 char 数组但写它仍是 UB；C++17 不提供到可写 char* 的标准隐式转换，编译器扩展诊断仍按实际模式记录。
+3. **应保留行为**：语法问题须在冻结标准下处理，涉及接口 const、寄存器/汇编或出参所有权时可能影响行为，不能称纯编译期且保证无语义影响。源码风险和转换引入问题分开，不用强转掩盖。
 4. **可选映射与不适用条件**：
-   - *字面量 `const`*：把形参改为 `const char*`；若源确实要写入该缓冲区，说明源本身是 UB，标为“源已存在”并保留原样，**不得**通过 `const_cast` 制造可行的假象。
+   - *字面量 `const`*：仅确认只读、所有使用点及接口允许时考虑 const char*；不能直接改公开签名/重载关系。源写字面量属于已有 UB，保留原证据与具体缺口，不以 const_cast 或任意改可写缓冲声称已修复。
    - *`register`*：C++17 中 `register` 不再是存储类说明符（C++17 弃用/移除了该用法），须删除该关键字；显式寄存器变量与内联汇编（GCC 扩展）须改为等价的标准写法或标为不可映射。
-   - *`void**` 双关*：`ComPtr<T>::addr()` 之类的 “取地址给 `void**` 由被调方回填” 模式，须改用目标 SDK 的官方访问器（如 `GetAddressOf()`/`ReleaseAndGetAddressOf()`）或显式 `reinterpret_cast`，并说明其前提。
+   - *`void**` 双关*：先核实际封装/SDK、输出接口 T、引用计数与失败后原值；ComPtr 包装对象地址不等于 T**，不能靠 reinterpret_cast 修复。目标 SDK 的访问器/IID_PPV_ARGS/As 等仅在输出类型与所有权对应时选用，未知停止；ReleaseAndGetAddressOf 不能作未知状态默认。
    - *不适用条件*：源码本就以 `const char*` 接收字面量、或未使用 `register` 时，不适用对应子项。
 5. **错误机械替换反例**：
    ```cpp
@@ -245,7 +245,7 @@ description: Use when converting C source code (ISO C11) to C++ (ISO C++17) whil
 
 1. **模型自检与预检**：转换模型生成的代码仅作内部自审，用于筛查声明遗漏、语法冲突与生命周期疑点。模型说“无问题”不等于无缺陷，严禁给模型自检贴上 `syntaxPassed` 或编译通过标签。
 2. **语法结论来源**：语法结论必须由第三方评估机构在目标 MinGW g++ C++17（或批准的工具链）下执行真实编译后回填；未收到结果前一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`。
-3. **功能行为边界**：编译不代表功能正确。需要功能评估时只据冻结 oracle/匹配驱动的真实回传，oracle 是条件义务。入口与驱动合法来源、可观察库准备缺口和真正无安全入口仅编译例外只按[评估准备契约](../../../references/framework/evaluation-readiness-contract.md)，本方向不授权补写辅助驱动。未观察维度 UNVERIFIED，不外推普遍等价。
+3. **功能行为边界**：编译不代表功能正确。能合法功能评估时只据冻结 oracle/匹配驱动的真实回传；本轮缺合法入口等条件但源可构建时，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续转换及目标语法/编译验证，行为未评估/UNVERIFIED。本方向不授权补写驱动，不外推等价。
 
 ---
 

@@ -71,19 +71,15 @@ description: Use when converting C# source to Ruby; apply this direction's langu
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-ASYNC）；目标语言 CRuby 3.4（RB-DOC-THREAD）。
 3. **原可观察行为**：多线程在托管线程池上并行推进，可利用多核 CPU。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：转换为 Ruby `Thread.new` 配合线程安全的 `Thread::Queue` 进行任务分发；注意子线程未捕获异常默认静默终止，建议设置 `Thread.abort_on_exception = true`。
+   - *可选映射*：仅调度、结果/错误保存及源等待点一致时考虑 Thread/Queue；不设置全局 abort_on_exception 来代 Task 错误传播。错误应在源实际观察任务结果的边界对应，报告/中止默认值按冻结 Ruby 运行时核对。
    - *不适用条件*：受 MRI GVL 约束，无法加速纯 CPU 密集计算。
 5. **错误机械替换反例**：
    ```ruby
-   # 错误：子线程发生未捕获异常，主线程 join 之前静默失败无任何提示
-   t = Thread.new { raise "Fatal" }
-   # 若未显式 t.join，错误将被完全吞没！
-   # 正确：设置 abort_on_exception 并在主线程管理生命周期
-   t = Thread.new do
-     Thread.current.abort_on_exception = true
-     do_work()
-   end
-   t.join
+   # 错误候选：为代替 Task 结果边界，打开进程级 abort_on_exception
+   # Thread.abort_on_exception = true
+   # 候选等待仅在源确有对应等待/观察点时使用；还须映射异常范围与结果
+   t = Thread.new { do_work() }
+   t.value
    ```
 6. **信息不足或实现相关时的处理**：若需多核纯并行，声明切换为 `Ractor` 或多进程并记录未验证状态。
 7. **资料依据（名称/版本/章节）**：RB-DOC-THREAD。
@@ -94,19 +90,19 @@ description: Use when converting C# source to Ruby; apply this direction's langu
 3. **原可观察行为**：`??` 只在左值为 `null` 时求值右值，`false` 与 `0`、`""` 都不会触发右值；可空布尔（`bool?`）有"未提供"与"false"两种可区分状态。Ruby 中没有 `null`，缺值用 `nil` 表示，且 **`nil` 与 `false` 同为假值，`0`、`""`、`[]` 全为真值**，`a || b` 在 `a` 为 `false` 时同样取 `b`。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：缺值判定写 `x.nil?`，缺省值写 `x.nil? ? default : x`；空字符串用 `x.to_s.empty?`（同时覆盖 `nil` 与 `""`）；`?.` 链改写为 `x&.member`；可空布尔用 `true/false/nil` 三态并在报告中标注必须显式比较 `== false`。
-   - *不适用条件*：严禁把 `??` 机械替换为 `||`——当右值是 `false` 或 `""` 的有效取值时，`||` 会把"业务假值"一并替换掉；严禁把 `if (path != "")` 之类的空串判定直接搬成 Ruby（`""` 在 Ruby 中为真，判定恒成立）；严禁用 `if (flag)` 语义判定可空布尔（`nil` 与 `false` 在 Ruby 中无法区分）。
+   - *不适用条件*：?? 与 || 的差别在左值 false：默认值若有副作用，false || false 即使结果相同也可能改变求值。path != "" 是比较表达式，结果为 bool，并不因 Ruby 空串为真而恒真；不得把源对 null 与空串的区别改成 to_s.empty?，除非源就是 IsNullOrEmpty。三态值须按实际源分支消费。
 5. **错误机械替换反例**：
    ```ruby
    # C# 原型：bool persist = OptBool("persist") ?? false;   // 只对 null 回退
-   persist = opt_bool("persist") || false   # 错误：|| 把 false 也当成需要回退的缺值
+   persist = opt_bool("persist") || false   # 此字面默认且无额外副作用时结果可相同，不能作必错反例
    # C# 原型：if (path != "" && !path.StartsWith("\"")) { ... }
-   if path != ""                            # 错误：Ruby 中空字符串为真，条件恒成立
+   if path != ""                            # 比较结果为布尔；null/字符串值域与后续操作仍须对应源
      report(path)
    end
    # 正确：区分 nil 与 false，空串用 empty? 判定
    persist = opt_bool("persist")
    persist = false if persist.nil?
-   report(path) unless path.to_s.empty?
+   report(path) if path != "" # 仅对应这项不等比较；完整源条件含 StartsWith 时仍保留该项及其 null 失败
    ```
 6. **信息不足或实现相关时的处理**：若字段在源语言里是"可空"而目标侧的 `nil` 会被下游按 `false` 处理，或 C# `bool?` 的三态必须保留，先确认每个字段的缺值语义（未提供 / false / 0），不得统一折叠成一种假值。
 7. **资料依据（名称/版本/章节）**：RB-DOC-CORE。
@@ -168,7 +164,7 @@ description: Use when converting C# source to Ruby; apply this direction's langu
 2. **源/目标事实**：读[C# L1-CS-07](../../references/languages/csharp.md#l1-cs-07-readkey-不是-readline-或普通流字符读取)与[Ruby L1-RB-10](../../references/languages/ruby.md#l1-rb-10-getchgetc-与-gets-的输入单位不同)。
 3. **条件映射**：io/console 的 getch 仅为字符/模式候选；源 Key/Modifiers、特殊键、回显、EOF/失败和设备仍需对应，不因使用 getch 就获得完整键对象。
 4. **反例**：gets 或 gets.chomp 会增加整行/Enter 义务；getch 字符直接代完整 ConsoleKeyInfo 会丢分支。
-5. **未知/依据**：缺合法终端入口待准备，不伪造源异常、不删暂停、不自写驱动；官方依据见两事实页，效果由准确版本证据定。
+5. **未知/依据**：本轮缺合法终端入口但源可构建时，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)采用 LIB_UNOBSERVABLE_COMPILE_ONLY，继续转换并验目标语法/编译，注明行为未评估；不伪造源异常、不删暂停、不造驱动。官方依据见两事实页，效果由精确版本证据定。
 
 ## 转换与验证边界
 

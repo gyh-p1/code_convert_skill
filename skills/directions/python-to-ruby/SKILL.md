@@ -63,8 +63,8 @@ description: Use when converting Python source to Ruby; apply this direction's l
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-DATA §3.2）；目标语言 CRuby 3.4（RB-DOC-EXCEPT）。
 3. **原可观察行为**：捕获所有从 `Exception` 派生的非系统退出异常（`SystemExit`、`KeyboardInterrupt` 继承自 `BaseException` 不被捕获）。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 Ruby 中使用 `rescue => e` 或 `rescue StandardError => e`（Ruby 默认 rescue 的正是 `StandardError` 及其子类）。
-   - *不适用条件*：**致命禁区**：绝对不要在 Ruby 中写 `rescue Exception => e`！在 Ruby 中 `Exception` 是最顶层基类，盲捕获它会导致系统中断信号（`SignalException`）、语法错误（`SyntaxError`）和内存耗尽（`NoMemoryError`）全部被意外吞没，导致进程无法正常终止！
+   - *可选映射*：按源实际异常族建立对应捕获，Ruby 默认 rescue StandardError 只是候选；Python Exception 可含 MemoryError/SyntaxError，而 Ruby 对应类别不都在 StandardError 内，不能全称同构。BaseException/系统退出与源处理动作分别核。
+   - *不适用条件*：rescue Exception 可能扩大捕获范围，StandardError 也可能缩小；不得仅按基类名选择或全禁一个基类，具体源族/目标映射不明时停止该边界。
 5. **错误机械替换反例**：
    ```ruby
    # 错误：捕获了最顶层 Exception，导致 kill 信号或内存耗尽被吞没
@@ -73,14 +73,14 @@ description: Use when converting Python source to Ruby; apply this direction's l
    rescue Exception => e # 致命错误：屏蔽了系统致命信号！
      puts "error: #{e}"
    end
-   # 正确：捕获 StandardError
+   # 条件候选：仅所有实际源捕获类别对应 StandardError 且处理/输出一致时适用
    begin
      do_work()
    rescue StandardError => e
      puts "error: #{e}"
    end
    ```
-6. **信息不足或实现相关时的处理**：若 Python 捕获了专有异常，定义对应的 Ruby 异常派生自 `StandardError`。
+6. **信息不足或实现相关时的处理**：专有异常的继承、身份、字段、捕获顺序和传播须对应实际消费者；不默认全部继承 StandardError。源范围未明记录缺口，不新增日志/吞错。
 7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT。
 
 ### 规则 PY-RB-04：Python `/` 真除法向 Ruby `Integer#/` 整除（向下取整）映射
@@ -127,13 +127,13 @@ description: Use when converting Python source to Ruby; apply this direction's l
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-LIB-STDTYPES）；目标语言 CRuby 3.4（RB-DOC-HASH）。
 3. **原可观察行为**：Python `d[k]` 缺键抛 `KeyError`（可被 `except KeyError` 捕获而改变控制流）；`d.get(k, default)` 缺键返回 `default`，但键存在而值为 `None` 时仍返回 `None`；`d[k] or default` 在值为 `0`/`""`/`[]` 时同样走兜底。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：`d.get(k, default)` 映射为 `h.fetch(k, default)`；`k in d` 映射为 `h.key?(k)`；依赖 `KeyError` 的控制流映射为 `begin ... rescue KeyError ... end`（Ruby `Hash#fetch` 缺键同样抛 `KeyError`）；要复现 `d[k] or default` 的兜底写 `h.fetch(k, nil) || default`。`defaultdict(list)` 一类共享默认容器写 `Hash.new { |hash, key| hash[key] = [] }`，不要写 `Hash.new([])`。
+   - *可选映射*：d[k] 用无默认值的 fetch 保留缺键失败；d.get(k, default) 用 fetch(k, default)，但 default 的求值时点仍须一致。d[k] or default 先 fetch，再按 Python 源值域判真；Ruby || 不会把 0/空串/空集合当假。defaultdict(list) 可考虑每个缺键新建并存回的默认块，不能共享一个数组。
    - *不适用条件*：严禁把 `d[k]`、`d.get(k, default)` 一律机械替换为 `h[k]`——Ruby `Hash#[]` 缺键返回 `nil` 且**不抛错**，源中“缺键即失败/即走异常分支”的路径会带着 `nil` 继续向后传，直到算术、`strip`、字符串插值处才以 `NoMethodError` 或静默空值暴露；反之 `h[k] || default` 也不是 `get` 的等价物：`get` 只在缺键时取默认值，而 `||` 在值为 `nil`/`false` 时也取默认值（Ruby 中 `0`、`""` 为真，故这两者不触发兜底）。
 5. **错误机械替换反例**：
    ```ruby
    # Python 原型：url = (row["url"] or "").strip() ；count = row["visit_count"] or 0
    url   = row["url"].strip                     # 错误：缺键得 nil，nil.strip 抛 NoMethodError
-   url   = (row.fetch("url", "") || "").strip   # 仅空值候选；strip 还须核两侧集合，不是完整等价
+   # 对应 row["url"] or ""：先用无默认值 fetch 保留缺键失败，随后按源值域处理 Python 真值；strip 另核两侧集合。
    count = row["visit_count"]                   # 错误：对应 d.get(k, 0)，缺键得 nil 而不是 0
    count = row.fetch("visit_count", 0)          # 正确：默认值语义与 dict.get 一致
    reason = row.fetch("reason", "")             # 对应 Python 的 r.get("reason", "")

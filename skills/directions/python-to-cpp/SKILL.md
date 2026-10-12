@@ -20,7 +20,7 @@ description: Use when converting Python source to C++; apply this direction's la
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-YIELD）；目标语言 ISO C++17（WG21-N4659 Clause 27）。
 3. **原可观察行为**：调用生成器返回迭代器对象，通过 `next()` 逐步执行并在退出时触发清理。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 C++17 中手动编写一个包含状态枚举、局部变量和 `next()` 或满足迭代器协议 `operator++`/`operator*` 的类；或者重构为一次性批量生成 `std::vector`。
+   - *可选映射*：C++17 状态机/迭代器候选须保持每次推进、局部状态、停止/关闭、异常与清理时点。仅源码已完整消费且提前生成的副作用、异常和内存行为不可观察时才考虑一次性 vector；不能因目标没有 generator 就自动物化。
    - *不适用条件*：严禁使用 C++20 协程关键字（`co_yield`, `co_return`），超出 C++17 冻结基线。
 5. **错误机械替换反例**：
    ```cpp
@@ -93,19 +93,18 @@ description: Use when converting Python source to C++; apply this direction's la
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-LIB-STRUCT）；目标语言 ISO C++17（WG21-N4659 Clause 6.9.1, Clause 24.3）。
 3. **原可观察行为**：`struct` 格式字符锁定"宽度 + 字节序"：`<i` 为 4 字节小端有符号、`<H` 为 2 字节小端无符号、`!` 为网络序；`pack` 写入超出该格式表示范围的值抛 `struct.error`；解包结果是 Python 任意精度 `int`，不会溢出。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：按格式字符选定宽类型（`<i`→`std::int32_t`，`<H`→`std::uint16_t`，`<Q`→`std::uint64_t`，`!B`→`std::uint8_t`），读取与写回统一用定宽类型配合 `std::memcpy`，字节序按格式字符**显式重组**（小端用 `std::uint32_t` 逐字节移位累加后 `static_cast`，不使用依赖宿主的类型双关），无符号写回再施加宽度掩码；确实需要任意精度时声明改用大数库。
+   - *可选映射*：按格式宽度/符号/端序、输入完整长度及源失败边界选表示，显式逐字节组合/输出；memcpy 仅复制表示，不能转换端序。pack 超范围须保失败，只有源已有掩码/截断时才做相同截断；解包后的算术仍可能需任意精度，不能因字段定宽就截断所有中间值。
    - *不适用条件*：严禁用 `int`/`long`/`unsigned` 代替格式字符对应的宽度（C++ 标准不保证 `int` 为 32 位，宽度由实现裁定）；严禁用 `(int32_t*)ptr` 或类型双关从字节缓冲直接取值（对齐与严格别名约束下是未定义行为，须 `std::memcpy`）；严禁把有符号字段按无符号重组或反之（负值位模式被重新解释）。
 5. **错误机械替换反例**：
    ```cpp
    // Python 原型：flItms['MachineType'] = struct.unpack('<H', binary.read(2))[0]
    int machine_type;                              // 错误：宽度不保证是 16 位
    std::memcpy(&machine_type, buf + off, 2);      // 错误：小端缓冲区被按宿主字节序解释
-   // 正确：定宽 + 复制字节 + 显式按小端重组
-   std::uint16_t raw16 = 0;
-   std::memcpy(&raw16, buf + off, sizeof(raw16));
-   const std::uint16_t machine_type = static_cast<std::uint16_t>(raw16); // 需小端时逐字节重组
+   // 条件示意：已按源 unpack 的失败边界核输入至少两个 uint8_t 字节
+   const std::uint16_t machine_type = static_cast<std::uint16_t>(buf[off])
+       | (static_cast<std::uint16_t>(buf[off + 1]) << 8);
    // Python 原型：f.write(struct.pack("<I", len(cert)))
-   const std::uint32_t cert_len = static_cast<std::uint32_t>(cert.size()); // 超范围时静默截断
+   // 错误候选：直接 uint32_t(cert.size()) 截断会丢源 struct.error；先按 <I 范围核并保失败。
    ```
 6. **信息不足或实现相关时的处理**：若源字段宽度来自运行期读取（例如按 `Magic` 值选择 4 字节或 8 字节分支），必须保留该分支结构而不能先固定宽度；字节序、目标平台 `int` 宽度或是否需要大数语义未冻结时标注为待确认。
 7. **资料依据（名称/版本/章节）**：PY-LIB-STRUCT；WG21-N4659 Clause 24.3。
@@ -115,17 +114,16 @@ description: Use when converting Python source to C++; apply this direction's la
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-SUBSCRIPTIONS）；目标语言 ISO C++17（WG21-N4659 Clause 26.3）。
 3. **原可观察行为**：Python 负索引等价于 `len + i`；切片超界被静默裁剪（`b > len` 取到末尾，负边界从末尾折算），不抛异常；`seek` 的负偏移是相对文件末尾的有符号偏移；进程退出码语义受平台约束（POSIX 只有低 8 位可观察）。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：切片改写为 `start`/`count` 两个显式变量并先做 `start >= 0 && count >= 0 && start + count <= v.size()` 校验；负索引先换算（`i += static_cast<std::ptrdiff_t>(v.size())`）再校验 `i >= 0`；越界访问使用 `v.at(i)` 以保留"抛异常"的可观察失败；文件定位用 `tellg()/seekg()` 配合有符号 `std::streamoff`。
+   - *可选映射*：步长为 1 的切片先将负边界按长度换算，再分别裁剪到 `[0, len]`，起点不小于终点时返回空结果；不得用超界报错代替源裁剪。单项负索引另行换算并保留越界失败，不能与切片混用。文件定位用 `tellg()/seekg()` 配合有符号 `std::streamoff`；外部任意精度边界还需先安全归一化再收窄。
    - *不适用条件*：严禁把负下标直接传给 `operator[]`（`size_t` 转换后成为极大正数，越界访问属未定义行为，比源语言的取末尾元素语义完全不同）；严禁用 `operator[]` 代替 Python 的边界检查语义（`std::vector::operator[]` 不做检查）；严禁假定"切片越界会被裁剪"（C++ 侧必须自己裁剪或改用迭代器区间）。
 5. **错误机械替换反例**：
    ```cpp
    // Python 原型：cert = data[-2:]                       // 取末尾两个字节
    std::vector<std::uint8_t> cert(data[-2], data[-1]);    // 错误：负下标 -> size_t 极大值，UB
-   // 正确：显式换算并校验
+   // 保留 data[-2:] 的裁剪：不足两个元素时取全部
    std::vector<std::uint8_t> cert;
-   if (data.size() >= 2) {
-       cert.assign(data.end() - 2, data.end());
-   }
+   const auto count = std::min<std::size_t>(2, data.size());
+   cert.assign(data.end() - count, data.end());
    // Python 原型：f.seek(-flItms['CertSize'], io.SEEK_END)
    f.seekg(-static_cast<std::streamoff>(cert_size), std::ios::end); // 正确：有符号偏移 + 末尾基准
    ```
@@ -137,7 +135,7 @@ description: Use when converting Python source to C++; apply this direction's la
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-EXCEPT）；目标语言 ISO C++17（WG21-N4659 Clause 18, Clause 15.4）。
 3. **原可观察行为**：Python 按异常类层次匹配 `except` 子句，`finally` 在所有出口执行；异常对象携带消息与回溯，未被捕获时解释器打印回溯并设置退出码。C++ 异常沿栈逆序析构已构造对象，未捕获异常调用 `std::terminate()`；C++ 没有 `finally` 语句。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：失败类型映射到标准异常类（缺键/越界→`std::out_of_range`，非法取值→`std::invalid_argument`，运行期失败→`std::runtime_error`，内存不足→`std::bad_alloc`），并按"派生类在前"的 `catch` 顺序排列；`finally` 清理改写为 RAII 包装（`std::ifstream`/`std::lock_guard`/自定义析构函数），需要 `catch` 后重抛时用裸 `throw;`。
+   - *可选映射*：只有源不区分类型/字段/身份时才合并到标准异常；源分别捕获 KeyError 与 IndexError 时不能都改 out_of_range 后丢区分。finally 的动作、覆盖原异常/返回值与失败传播须显式对应；默认 noexcept 析构不能代会抛错的清理。RAII 仅其退出点与无新增失败条件一致时适用。
    - *不适用条件*：严禁让异常跨越 C ABI 边界（以 C 调用约定导出的函数或回调中抛出的异常必须就地 `catch (...)` 并转成错误码）；严禁用 `std::terminate` 或 `abort()` 模拟 Python 未捕获异常的输出行为而不核对退出码与诊断信息；严禁在 `catch` 中先吞掉异常再返回默认值（失败路径拓扑被改变）。
 5. **错误机械替换反例**：
    ```cpp
@@ -146,7 +144,7 @@ description: Use when converting Python source to C++; apply this direction's la
    FILE* f = std::fopen(path, "rb");
    parse(buf);                 // 抛出 std::out_of_range -> f 永不关闭
    std::fclose(f);
-   // 正确：RAII 负责清理，异常只在本编译单元内传播
+   // 条件候选：仅文件关闭失败不被源观察/传播且退出作用域一致时适用
    std::ifstream f(path, std::ios::binary);
    if (!f) { throw std::runtime_error("open failed"); }
    parse(buf);                 // 异常向上传播，f 的析构函数保证关闭

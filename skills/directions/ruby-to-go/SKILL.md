@@ -121,8 +121,8 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    // 正确：显式初始化、二值取值、保序键序列
    values := make(map[string]string)
    v, ok := values["Disk"]
-   keys := make([]string, 0, len(values))
-   for _, name := range keys { out += name + "=" + values[name] + "\n" }
+   // 保序必须从源对应的首次插入/删除/重插入时维护键序列；只建空 keys 再遍历会丢掉全部输出。
+   // 不能事后从 Go map 的 range 恢复 Ruby 的插入顺序。
    ```
 6. **信息不足或实现相关时的处理**：Ruby `Hash` 的遍历顺序是否被外部观察（输出、文件名、报告内容）必须从源码判断——被观察时需保留顺序并写入报告，未确认时标注"顺序是否可观察待确认"；`Array#flatten!`/`compact` 这类方法是否在源码里承担"去空值"职责要逐点确认，Go 的切片不会自动剔除零值元素。
 7. **资料依据（名称/版本/章节）**：RB-DOC-HASH；RB-DOC-ARRAY；GO-SPEC #Map_types, #Slice_types。
@@ -130,10 +130,10 @@ description: Use when converting Ruby source to Go; apply this direction's langu
 ### 规则 RB-GO-06：Ruby 二进制打包与字节处理（pack/unpack、整数取字节）向 Go 定宽类型与 encoding/binary 映射
 1. **源码触发条件**：Ruby 源码做二进制编解码或逐字节处理，例如 `[encoded_payload.length].pack('I<') + encoded_payload`、`scrambled = [hex].pack('H*')`、`h['pMacAddr'].unpack('C*').map { |e| '%02x' % e }.join(':')`、`data.unpack('V')`、`perm.map { |i| scrambled[i] }.join`、`gsub("\x00", '')`。
 2. **冻结版本/运行时/API 前提**：源语言 CRuby 3.4（RB-DOC-ARRAY、RB-DOC-STRING）；目标语言 Go 1.27（GO-PKG-BINARY、GO-PKG-HEX、GO-SPEC #String_types）。
-3. **原可观察行为**：Ruby `String` 是字节序列（可含 `\0`，显式长度），`Integer#[n]` 与 `unpack('C*')` 都给出 **0–255 的整数**；`pack('I<')` 按小端写出 4 字节，`pack('H*')` 按十六进制把字符串解成字节，`unpack('V')` 按小端读 32 位；这些格式字符把宽度与字节序写在源码里，与运行平台无关。
+3. **原可观察行为**：Ruby String 带编码标签且可含 NUL；Integer 单下标取一位，结果为 0/1，unpack('C*') 才逐字节给出 0–255。I 是平台 C unsigned int 宽度，< 只指定小端；V/L< 是 32 位小端，不能把 I< 无条件当 4 字节。H* 解十六进制文本为字节，格式与源平台宽度须分别冻结。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：字节序列统一用 `[]byte`（`string` 是不可变只读字节头部，二者互转要显式拷贝）；定宽小端编解码用 `encoding/binary` 的 `binary.LittleEndian.PutUint32`/`Uint32` 并配 `[4]byte` 缓冲区；十六进制用 `hex.DecodeString`/`hex.EncodeToString`；逐字节十六进制展示用 `fmt.Sprintf("%02x", b)`；单字节取值为整数时用 `b := data[i]`（类型已是 `byte`），参与算术前显式转 `int`。
-   - *不适用条件*：严禁用 `int`/`uint` 顶替 Ruby 里显式定宽的量——Go 的 `int` 宽度随架构变化，`PutUint32`/`binary.LittleEndian` 这类 API 要求精确类型，宽度不明的 `int` 既编译不过也破坏格式约定；严禁用 `string` 承载二进制数据后按下标取字符（`s[i]` 得到 `byte` 但 `for range s` 按 UTF-8 解码出 `rune`，含 `\0` 或非 UTF-8 字节时结果完全不同）；严禁用 `strconv`/`strings` 家族解析二进制串代替 `encoding/hex`、`encoding/binary`。
+   - *可选映射*：需修改的原始字节可用 []byte，只读 Go string 也可存任意字节；按实际冻结 pack 格式/宽度选择 encoding/binary，不一律 PutUint32。Integer 位索引另保持任意精度、偏移与取位，不能按字节索引承接；文本十六进制 API 的大小写及非法输入接受集合须对应源。
+   - *不适用条件*：不得丢失源定宽或平台宽度约定；Go string 的 s[i] 正是字节访问，不能将它与 range 的 UTF-8 码点遍历混淆。NUL 本身可正常解码；非 UTF-8 字节的 rune 解码不能承接逐字节义务。封装解析 API 还须核源失败/截断行为。
 5. **错误机械替换反例**：
    ```go
    // 错误：Ruby 的 [n].pack('I<') 用平台宽度 int + 字符串拼接顶替
@@ -141,7 +141,7 @@ description: Use when converting Ruby source to Go; apply this direction's langu
    buf := fmt.Sprintf("%d", n) + string(payload)  // 错误：不是 4 字节小端，长度前缀变成十进制文本
    // 错误：用 for range 遍历二进制串（按 UTF-8 解码，逐字节语义丢失）
    for _, ch := range macBytes { fmt.Printf("%02x", ch) } // 错误：macBytes 含非 UTF-8 字节时得到码点而非字节
-   // 正确：定宽小端编码 + 显式字节遍历
+   // 候选：仅已确认源前缀为 32 位小端且输入范围/截断与源一致时适用
    var hdr [4]byte
    binary.LittleEndian.PutUint32(hdr[:], uint32(len(payload)))
    frame := append(hdr[:], payload...)

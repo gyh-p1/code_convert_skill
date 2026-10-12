@@ -7,13 +7,13 @@ description: Use for single-file code conversion when a source file is large or 
 
 仅用于**单文件转换**；片段任务不需要整文件盘点。语言方向 Skill 决定语言映射，实际场景 Skill 决定要保留的行为，系统方向 Skill（若存在）决定平台差异；本 Skill 只负责组织全文件分析、转换和收尾。计划中的 700 个 LF 归一化物理源代码行是项目试验上限，不代表此流程已通过该规模验证。试验另记录有效 LOC 与 token/context 规模；行数不能替代结构复杂度判断。
 
-先按根入口第 1 步读取全部必读契约和使用渠道的适配；本页在建立源码地图/规划分段前加载。地图与分段规划属于生成前准备，可以在源预检前完成；任何生成/自审请求均须等根第 5 步的适用门禁通过，不用规划动作冒充模型调用授权。
+先按[根入口](../../../SKILL.md)第 1 步读取全部必读契约和使用渠道的适配，执行红线见[安全边界](../../../references/framework/safety-boundary.md)；本页在建立源码地图/规划分段前加载。地图与分段规划属于生成前准备，可以在源预检前完成；任何生成/自审请求均须等根第 5 步的适用门禁通过，不用规划动作冒充模型调用授权。生成前及完整目标双侧提交前落实[评估准备 §1.4](../../../references/framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)，分段观察不替代完整源基线与两侧条件对齐。
 
 ## 0. 准入与边界
 
 开始处理本项即必读[统一收尾入口](../../../references/framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)。准入、分段、合并、审阅或评估任一阶段结束/提前停止/暂停，都写本项 result.md 并核实际适用产物、范围与版本/指针，保存核对结果。没有完整目标或属于非可转换去向也不能免报告；WAITING 是暂停记录，不是终态。
 
-先读[根入口](../../../SKILL.md)、[任务状态契约](../../../references/framework/task-state-contract.md)、[评估准备契约](../../../references/framework/evaluation-readiness-contract.md)与[安全边界](../../../references/framework/safety-boundary.md)。完整顺序为冻结→分类 ALLOWED→源侧预检（build completed/exitCode=0 + 适用运行基线）→生成/分段→自审→适用评估准备→提交/取证→交付门禁。需行为评估时，在任何生成/分段前按[评估准备 §1.1](../../../references/framework/evaluation-readiness-contract.md#11-生成前源侧预检)取得冻结条件下的有效源运行基线；无基线先停，不用片段运行冒充完整源基线。文本/仅编译例外依该契约记录理由。分段不提前生成、不重置预算。驱动仅引用合法提供版本，缺入口待准备，不由 Agent 或模型新写辅助程序。
+先读根入口、任务状态、评估准备与安全边界。顺序为冻结→分类 ALLOWED→源预检→生成/分段→自审→适用验证→交付门禁。正常行为分支生成前取得完整源的有效基线，不用片段运行冒充；本轮无法合法行为评估但源构建通过时，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续完整目标转换和语法/编译验证，行为未评估/UNVERIFIED。分段不绕过门禁或重置预算，缺入口不由 Agent/模型造驱动，不把库强改独立程序。
 
 - 先形成源码画像：任务模式、source/target 语言与系统、架构/ABI、编译器/标准、条件编译分支、真实场景标签，以及 ATT&CK tactic/technique（无证据时记录 `none`）。多平台源文件必须明确本次选用的源分支和目标分支。关键条件缺失且会改变方案时先询问或明确待确认假设。
 - 按源码画像选择语言、场景、系统和长文件 Skill；ATT&CK 索引仅帮助核对分类/覆盖，不根据战术反推 API 或隐藏行为。列出每个 Skill 对应的事实和覆盖缺口。

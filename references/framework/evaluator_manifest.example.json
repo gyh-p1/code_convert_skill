@@ -7,7 +7,7 @@
     "targetLang": "<目标语言，如 cpp>"
   },
   "taskMetadata": {
-    "sourceLanguage": "<同 languagePair.sourceLang；控制器 schema 在此用长名，保留冗余不要改>",
+    "sourceLanguage": "<同 languagePair.sourceLang；项目移交清单沿用长名，不是 Controller capsule 字段>",
     "targetLanguage": "<同 languagePair.targetLang>",
     "attackTactic": "<ATT&CK 战术；无则 none 或 unknown>",
     "sceneTags": [
@@ -18,7 +18,7 @@
     "sourceArch": "<如 x64>",
     "targetArch": "<如 x64>",
     "riskLevel": "<low / medium / high / unknown>",
-    "evidenceMode": "static-and-runtime",
+    "evidenceMode": "<按本轮实际证据范围及移交消费方契约填写，不从模板推定已运行>",
     "supportLevel": "<experimental / unclassified 等，按契约>"
   },
   "targetDir": "<run 输出目录绝对路径>",
@@ -36,7 +36,7 @@
       "replayArtifactPath": null,
       "success": false,
       "artifacts": {
-        "hasSource": true,
+        "hasSource": false,
         "hasTranslatedCode": false,
         "hasEvaluationNotes": false,
         "hasReplayArtifact": false
@@ -49,7 +49,8 @@
     "status": "pending-conversion-and-vm-acceptance",
     "executionApproved": false,
     "prerequisites": [
-      "translatedCodePath 由转换器写入后，files[].success 与 artifacts.hasTranslatedCode 才置真",
+      "实际源文件存在且与冻结版本对应，artifacts.hasSource 才置真；完整模型目标落盘并回读后，files[].success 与 artifacts.hasTranslatedCode 才置真，不表示编译或行为通过",
+      "模板坐标、argv/stdin/cwd/env/超时及证据范围按本项冻结和实际输入核对，不照抄默认示例；执行批准依据实际回执，不复制分类器同名字段",
       "实际源码、目标工具链、运行入口和隔离边界逐项核对",
       "功能比较时冻结行为 oracle；仅编译结论仍需真实双侧 build 证据"
     ],

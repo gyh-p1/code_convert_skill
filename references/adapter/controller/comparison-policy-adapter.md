@@ -2,7 +2,7 @@
 
 > 文档类型：第三方比较策略的提交与证据适配（reference）
 > 状态：ACTIVE，按当前平台协议及实际 comparison 配置冻结比较规则。
-> 更新：2026-10-11（文本收口）
+> 更新：2026-10-12（宽泛消噪引导、冻结范围比较通过与证据对象口径；候选源码未部署/回归）
 > 历史部署和消噪取证见[Runner 能力矩阵](runner-capability-matrix.md) §1.3；本次任务保存实际 health、schema、启动身份与回传，不沿用历史版本/哈希作为当前固定值。
 
 本页供 Agent 冻结比较需求、组装现役 capsule、核对回传。比较由第三方 Controller 执行；本项目不新增比较器、运行时、Schema 或独立评分。连接、提交与未知回执恢复沿用[Controller 适配](remote-controller-adapter.md)，执行授权与隔离沿用[安全边界](../../framework/safety-boundary.md)。
@@ -38,13 +38,13 @@
 | 任务事实 | `comparisonPolicy.output` 的选择 | 边界 |
 |---|---|---|
 | 允许临时位置、记录时间或动态端口不同，且整条输出流都适用服务器已启用的规则 | 对该流用 `normalized-text` | 该流会应用全部启用的 token 类别；没有逐字段的文本消噪开关 |
-| 输出包含需保留的文件名、时间值/有效期、固定端口、签名或其它关键文本 | 对该流用 `exact` | 不应用新增 token 消噪；平台按流 digest 比较，digest 已规范化 CRLF→LF，不能声称逐原始字节相同 |
+| 输出包含需保留的文件名、时间值/有效期、固定端口、签名或其它关键文本 | 对该流用 `exact` | 不应用token消噪；按流digest对应的对象比较。旧文本builder曾先归一CRLF，而字节采集producer取原始流；须核实际producer/版本。候选源码已统一builder按未进行比较归一化的编码字节取摘要与size，未部署/回归；没有准确来源仍不宣称原始字节相同 |
 | 输出是完整可解析 JSON，任务接受对象键顺序/展示格式差异 | 对该流用 `json-structural` | 沿用平台结构/值比较；本版不增加字段豁免、浮点容差、数组重排或 API 行为映射 |
 | 同一流既有可忽略动态值又有必须精确保留的同类值 | 用 `exact`，或将已确认的混合比较需求交平台 | 不能把整个流设为 normalized-text 后声称其中关键字段仍精确检查 |
 
 stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stderr 错误诊断时，可用 `stdoutMode="normalized-text"`、`stderrMode="exact"`。省略 mode 时平台默认 exact；提交方应显式冻结模式，不能因总分低而事后换模式。
 
-二进制/协议载荷或 CRLF、编码本身属于业务义务时，需向平台确认相应原始字节证据与 oracle；本版 stdout 文本 digest 不足以承诺此类原始字节义务。不要把本页的模式选择变成对所有程序的统一等价标准。
+二进制/协议载荷或CRLF、编码本身属于业务义务时，核原始字节采集、摘要对象、截断和实际oracle。文本解码后的摘要不自动证明原始协议字节；不能凭字段名digest推定producer一致。展示换行允许不同时优先选择对应normalized-text或结构策略，exact不会因此自动接受差异。
 
 ### 2.1 文本消噪的实际边界
 
@@ -52,13 +52,13 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 - `timestamps`：识别 `YYYY-MM-DD[T或空格]HH:MM:SS` 形态及可选小数秒/时区后缀，保留同一值的重复关系；不校验日期合法性、时区换算、时差、超时或有效期。关键时间义务用 exact 或由平台禁用该类规则。
 - `ephemeral-ports`：识别 `port` 后可带空格、冒号或等号的五位十进制值，仅 `49152–65535` 范围可被抽象；保留重复端口关系。`8080→9090`、范围外/非法数字仍是差异；固定高位端口也不能因处于该范围就接受消噪。其它 OS 实际分配范围或 `host:port` 格式不自动纳入。
 
-这些规则减少已认可的展示差异，不证明端口真实动态分配或资源/业务行为等价。允许的原始输出差异会留下 `minor` diff，文本规则为 `noise-tolerant-v1:text-tokens:<启用类别>`；消噪前的输出在 EvidenceBundle 中保留，diff 摘要仅保留前 240 字符，完整性仍须核对实际采集长度、截断与原始引用。当前 `diff.path=stream.normalizedText` 和对应 evidenceRefs 不单独标明 stdout/stderr，定位反馈时需回查双侧 execution.stdout/execution.stderr 与冻结模式。
+这些规则减少已认可的展示差异，不证明端口真实动态分配或资源/业务行为等价。允许的原始输出差异会留下minor diff；核实际rule/版本。diff摘要只保存有限前缀，不能代替完整观察。旧版path/ref未分stdout/stderr，候选源码已按execution.stdout/stderr及双侧引用分别定位，未部署/回归；消费旧job仍按其实际回传回查，不能改写旧diff。
 
 ## 3. 文件消噪：观察范围与保护范围都要声明
 
 `observationPolicy.filesystemInclude/filesystemExclude` 决定 Agent 采集范围；`comparisonPolicy.filesystem.include/exclude` 决定比较范围。只在比较 include 中写业务文件，不能补回 Agent 没有采集的事件；在任一排除列表中排掉业务文件也不能证明其行为保持。
 
-**先决定申请哪些观察维度（我方冻结口径，2026-10-10 补入）**：`observationPolicy.dimensions` 必须覆盖该程序**实际产生的可观察行为**。程序有文件副作用（写文件、建目录、改内容）时**必须申请 `["output","filesystem"]`**，**不得**只申请 `["output"]` 再靠驱动把文件内容回显到 stdout 代偿——那样把文件行为挤进 output 维度，且两侧回显一旦不对称即假 FAIL（见[行为保持 §4.1.5](../../workflow/behavior-preservation-contract.md)）。`filesystem` 维度平台**已完整可用**（采集 + 打分 + 内容 digest 比对、能检出真实差异）；只申请 output 是反例（dataset-2 曾 105/106 份只申请 output，文件类用例只能靠驱动回显代偿）。涉及子进程行为按需加 `processes`（**采集可用、比较暂为平台软缺口**）；`network`/`registry` 维度平台暂不支持，不盲目申请。此口径是**我方申请问题，不是平台能力缺失**，不得据此报平台阻塞。
+**先决定申请哪些观察维度（我方冻结口径，2026-10-10 补入）**：`observationPolicy.dimensions` 与本轮冻结的行为义务对应。行为评估含文件副作用（写文件、建目录、改内容）时申请 `filesystem` 与适用 `output`，不得只申请 output 再靠驱动回显代文件证据，两侧回显不对称还会引入装置差异。已有平台记录支持文件采集、打分和内容 digest 比较；须逐项核实际路径/内容、捕获限制及现役能力，不把维度可用写成所有文件形态都已完整采集。未申请是提交准备缺口，已申请却未支持/未采得则分别记具体能力/证据缺口，不笼统禁止报告平台阻塞。涉及子进程时核 `processes` 的实际采集与比较范围；network/registry 的缺口及当前支持按能力矩阵，不盲目申请或声称覆盖。
 
 当前默认噪声规则只包含 §1 列出的五种模式，不默认忽略 `.cache` 或锁文件。正常比较产生的文件缺失、额外或内容差异若仅涉及配置噪声路径，降为 `minor` 并保留 `noise-tolerant-v1:filesystem-noise` diff；原事件不从 EvidenceBundle 删除。重命名涉及任何非噪声路径时仍是 major。
 
@@ -105,13 +105,15 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 
 当前进程差异仍由平台生成为 major，没有新增“不同语言子进程自动等价”的豁免。network/registry 不因本次升级获得采集能力；Profile、Attestation、Permit 与 fixture runtime 也未在本次实现。
 
-`semantic_pass` 在本试用配置下已包含上述显式消噪，不再仅指 host/user/cwd_items。它不替代目标侧 build 证据、不增加观察覆盖，不直接记作本项目功能验收通过。若归一化掩盖任务关键值，保留平台原 verdict，另记策略不适用及具体源/目标证据，交平台修正配置后重评；不能在本机重算或反写原报告。
+有效matched与有效semantic_pass均可计本冻结范围的功能比较通过小计，分列两类及策略/覆盖；先按[评估准备§5.1](../../framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)核有效性。它们不替代目标build、不增加观察覆盖，不宣称完整业务或普遍等价。归一化掩盖关键值时保留原verdict，另记策略不适用及依据，交平台修正后按新冻结条件重评，不本机重算或反写报告。
+
+宽泛消噪的关系选择与保护项同样消费评估准备 §5.1。archive_bytes、host:port、错误堆栈、集合顺序只能按具体业务义务提出允许关系；本页列出的 token/模式/文件配置就是适配支持范围，不从提案推定已实现错误类别映射、数值容差、解压内容 oracle 或跨流资源对应。
 
 ## 5. 冻结、提交与取证
 
 1. 读取 `/api/health` 与 `/api/runners`，保存完整响应；核对 ready、契约哈希、comparison 配置及实际 runner。`health.version=1.0.0` 是组件版本，不是 releaseVersion；部署发布身份见能力矩阵，不能仅凭 version 或 contractSetHash 判断消噪是否启用。comparison 缺失、未知 preset 或读取失败时，不补写本页示例当作实际配置；确认平台身份与策略后再使用受影响的消噪评估。
 2. 在原冻结记录中写明 stdout/stderr 模式、文件采集/比较范围、接受差异依据、关键值保护及所依据的服务器 comparison 对象。授权与逐例隔离照原安全门槛核对；消噪配置不提供网络隔离证明。
-3. 按原 `/api/jobs` 契约提交；接收回执保存 jobId。继续采用获批双侧执行形态：编译结论取对应目标侧 build，行为一致性按冻结 oracle 与 comparison 分层给出；两类结论分开记录，不合成单一功能率、不把平台 `semantic_pass` 当作功能验收通过。
+3. 按原 `/api/jobs` 契约提交；接收回执保存jobId。编译取目标build，行为按适用oracle与comparison分层；有效matched/semantic_pass均可计冻结范围比较通过，未经有效性核对不直接按标签计入，不合成转换成功率。
 4. 保存原 report、双侧 EvidenceBundle、comparison、logs 和终态；正常比较核对 `verdictReason` 的 `Comparator=...` 与冻结配置及各 diff.rule。早期基线/执行失败可能不带该配置后缀，此时保留前置 health 和原诊断，不能猜补实际比较规则。
 5. 对账 source/target、job/case、输入/目标版本、观察范围与清理。提交前后配置变化或回传配置与冻结不一致时，保留该结果并记配置疑点；已知新配置不能覆盖冻结的行为义务时暂停相关评估，交平台处理后另记变体重评，不自动归因目标代码。
 

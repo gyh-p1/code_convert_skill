@@ -38,17 +38,17 @@ description: Use when converting PowerShell source to C#; apply this direction's
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-ARRAY）；目标语言 C# 12 / .NET 8（MS-CS-COLL）。
 3. **原可观察行为**：每次 `+=` 都在底层分配新数组并全量拷贝旧元素。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：直接转换为 C# `List<T>`，调用 `.Add(item)` 获得均摊 $O(1)$ 的扩容性能。
-   - *不适用条件*：严禁在 C# 中使用 `Array.Resize(ref arr, arr.Length + 1)` 机械模拟 PS 的 `+=` 行为。
+   - *可选映射*：无可观察旧数组别名/数组类型要求时可用 List.Add；需要保持变量重新绑定、新数组与旧别名时可用对应的数组复制/Resize，元素引用仍按源浅拷贝保留。
+   - *不适用条件*：List 的就地 Add 会让其他持有同一 List 的消费者看到追加，不能自动承接 PS 数组 += 的旧数组别名；性能偏好不构成禁止数组复制或改行为的理由。
 5. **错误机械替换反例**：
    ```csharp
-   // 错误：在 C# 中每次循环 Array.Resize
+   // 数组候选：保留每次重新绑定与旧数组别名，不因复杂度就判错误
    int[] arr = Array.Empty<int>();
    for (int i = 0; i < 10000; i++) {
        Array.Resize(ref arr, arr.Length + 1); // 性能极其低下，O(N^2) 全量内存拷贝
        arr[^1] = i;
    }
-   // 正确：使用 List<int>
+   // 另一候选：仅无可观察旧别名且消费者允许 List 时适用
    var list = new List<int>();
    for (int i = 0; i < 10000; i++) list.Add(i);
    ```

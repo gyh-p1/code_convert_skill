@@ -29,13 +29,13 @@ runnerId、语言与当前快照只在 [Runner 能力矩阵](runner-capability-m
 
 Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2](../../framework/task-state-contract.md#22-冻结落盘门禁)回读本项本 run 的 `01-frozen/frozen-inputs.md` 并核身份/版本、适用内容与当前条件；缺失、空白或错位不 POST。此检查是提交端的手工前置要求，未新增 multipart 字段或服务端 frozen-inputs 校验，不把文件塞入 source/ 树冒充源码。未知提交的恢复查询、已发生 job 的取证及终止/清理不因缺件延后。
 
-**提交前消费者的引用核对**：Agent 调用 `POST /api/jobs` 前，先按[分类结果准入](../../workflow/classifier-agent-gate.md)确认准入判定为 `ALLOWED`、提交内容与被分类输入的身份/哈希一致、独立授权/隔离记录齐备，并持久化逐项记录和提交尝试。**`classification` 与 `batchAuthorization` 两个表单字段是提交契约的固定组成，每次提交一律随附**（单文件任务按"批次为一"附最小 `batch-authorization.json`，见[分类结果准入 §3](../../workflow/classifier-agent-gate.md)）。**2026-10-10 起平台已实现服务端硬门禁**（[Spec05](../../../docs/stages/stage1/specs/submission-and-batch-authorization.md) / [接入记录](../../../docs/stages/stage1/reports/平台提交端准入闭环接入-2026-10-10.md)）：现役 1.0.28 Controller 已强制校验，未准入直接 **403**（body 含 `blockingReason`）；历史 1.0.26 会**忽略**这两个多出的字段、不报错，因此一律随附既安全、又免去判断"门禁是否已生效"。不要把分类器的 `executionApproved` 当作服务器许可；身份/哈希核对与逐项留证仍由 Agent 执行。
+**提交前消费者的引用核对**：Agent 调用 POST /api/jobs 前，按[分类准入](../../workflow/classifier-agent-gate.md)核 ALLOWED、精确源集合/哈希和独立授权/隔离，并保存逐项提交记录。classification 与 batchAuthorization 每次提交均随附，单项亦按最小同形授权；这不免现役身份/协议核验。2026-10-10 的[接入记录](../../../docs/stages/stage1/reports/平台提交端准入闭环接入-2026-10-10.md)记录1.0.28拒收及403 blockingReason，1.0.26忽略额外字段仅属历史；页首最后已知部署为1.0.29，实时能力仍按[当前协议适配](platform-revision-adapter.md)核。不得把旧版本结论或分类器 executionApproved 当当前服务器许可，不从本次文本修订推定服务端运行验证。
 
 | 方法 | 路径 | 作用 |
 |---|---|---|
 | `GET` | `/api/health` | 服务/组件版本、contractSetHash、ready 与服务器 comparison 配置；字段形状见[比较策略适配 §1](comparison-policy-adapter.md#1-区分服务器配置与任务输入) |
 | `GET` | `/api/runners` | 当前 runner、工具链登记、快照与生命周期；不构成网络隔离证明 |
-| `POST` | `/api/jobs` | multipart 提交 job：`file=<capsule.zip>`、`caseId`、`targetOs`、`targetLang`；**必附** `classification`、`batchAuthorization`（JSON 串，每次提交都附；现役 1.0.28 服务端强制校验）。**identity 硬门禁按文件集合校验 `source/` 树（非按扩展名过滤）：`source/` 每个文件——含源侧驱动 `source/run_case.py`——须被 `classification.details.files[]` 覆盖**，否则返回 `403 {detail:{blockingReason:"identity_mismatch"}}`（2026-10-10 实测）；未准入亦 `403 {detail:{blockingReason,…}}`。成功返回 `202 {jobId, jobStatus:"QUEUED"}` |
+| `POST` | `/api/jobs` | multipart 的 file/caseId/targetOs/targetLang 及必附 classification/batchAuthorization 按当前协议核；identity 按完整 source/ 树覆盖（含实际源侧驱动），不是按扩展名过滤。2026-10-10 的 identity_mismatch/403 与202/QUEUED记录属原版本证据，现役响应/提交身份按协议及本次原回执保存 |
 | `GET` | `/api/jobs/{jobId}` | 轮询状态；`COMPLETED` / `FAILED_COMPILE` / `FAILED_RUNTIME` / `TIMEOUT` / `INFRA_ERROR` 标签须联合 closureBlocked、phase 和真实清理核收尾，阻断/未知保持 WAITING |
 | `GET` | `/api/jobs/{jobId}/report` | 按 jobKind/evaluationMode 判读：普通双侧 3.0/3.1、双侧仅编译 3.2、独立源预检 SourcePreflightReport 1.0；不能仅按 InputProfile 版本选择报告 |
 | `GET` | `/api/jobs/{jobId}/report.md` | 人读报告 |
@@ -133,7 +133,7 @@ capsule.zip
 - **`input_profile.json`** 通过 `validate_evaluation_contract` 校验：`argv`、`stdin`、`observationPolicy.dimensions`（如 `["output"]`）、`comparisonPolicy`（如 `output.stdoutMode="json-structural"`）、`timeoutSeconds`、`workingDirectory`。
 - **本版比较策略接入**：按[比较策略适配](comparison-policy-adapter.md)分别冻结 stdout/stderr 模式、文件采集与比较范围以及服务器实际 comparison 配置。`normalized-text` 会采用服务器启用的消噪规则，关键值需选择适当的严格模式/文件保护；服务器 preset、token 或容忍开关不是任务输入字段。
 - **`run_case.py`**（若该次契约采用 Python 驱动，两侧各一份）：定位实际构建出的程序，按冻结输入调用并记录输出、退出状态和所需副作用。驱动不得空跑或只输出固定值；`stdoutLen`/`stderrLen` 摘要不能替代行为 oracle。网络、进程和文件权限按安全边界核对。**源侧驱动 `source/run_case.py` 位于 `source/` 树，须随源文件一同提交给分类器并被 `classification.details.files[]` 覆盖**——平台 identity 门禁按 `source/` 文件集合校验（非按扩展名），未覆盖即 `403 identity_mismatch`（见[分类结果准入 §3](../../workflow/classifier-agent-gate.md)）。驱动改名为非源扩展名（如 `.txt`）不绕过门禁；**驱动放 capsule 根不生效**——平台只解压 `source/`、`target/`，根级文件不落盘、执行 `exitCode=2`（2026-10-10 实测）。
-- 驱动/中性入口仅引用用户或获批平台已提供版本，保存来源/哈希；不由 Agent 编写或委托模型生成辅助程序。可安全观察但缺入口待准备；无安全入口仅编译按[评估准备 §3](../../framework/evaluation-readiness-contract.md#3-无安全可观察入口)，不以带 runCommand 的普通运行 job 冒充仅编译。现役只编译接口/安全 skip 语义未核实时不得提交。
+- 驱动/中性入口仅引用合法提供版本，不由 Agent 或模型新造。本轮无法合法行为评估但源构建通过时，按[评估准备 §1.3](../../framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续转换并验证目标语法/编译；本轮缺入口与结构性无安全观察分别记原因。不以带 runCommand 的普通运行 job 冒充仅编译，支持未知只停受影响验证。
 - 组装临时目录里**不要**留 `__pycache__`/`*.pyc`；打包前清理，避免污染 zip 与 git。
 
 项目清单 `evaluator_manifest.json` 是移交记录，**不可直接当作**本接口所需的 comparison capsule；以当前 Controller 的实际 schema 组装，原输入与回传证据落于任务输出位置。
@@ -144,7 +144,7 @@ capsule.zip
 
 ## 提交—轮询—取证流程（本会话实测）
 
-PowerShell 5.1 无 `Invoke-RestMethod -Form`；用 `curl.exe -F` 做 multipart。以下为已跑通的形态（占位处按实际替换）：
+PowerShell 5.1 无 `Invoke-RestMethod -Form`；用 `curl.exe -F` 做 multipart。以下基于已有请求形态补充手工保存回执，保存参数未在本轮实测；占位处按本项冻结事实替换。正常双侧用例按下例，仅编译按当前协议删 runCommand、核实际不运行支持；本例的运行/比较件不强加给 LIB 分支。
 
 ```powershell
 # 0) 只读取证，保存服务器比较配置与 runner；同时按安全边界逐例核对授权/隔离
@@ -152,13 +152,13 @@ curl.exe --fail -sS "http://127.0.0.1:8443/api/health" -o controller-health-befo
 curl.exe --fail -sS "http://127.0.0.1:8443/api/runners" -o runners-before.json
 # 核对 ready、comparison、契约与本次任务策略；配置不适用时先处理受影响项
 
-# 1) 打包（先清 __pycache__）
+# 1) 核完整源/目标树和清单，仅归档冻结输入，不修改只读源来清缓存
 Compress-Archive -Path source,target,comparison_manifest.json,input_profile.json,metadata.json -DestinationPath capsule.zip -Force
 
 # 2) 提交 → 202 {jobId, jobStatus}
 #    每次提交**必附**两份已准备好的 JSON（重新部署后服务端强制，之前被忽略）：
 #    - classification：本项（单个 taskId）的分类器输出行——从该项 01-frozen 的
-#      classification-1.json 中取出**对应这一 taskId 的那一个对象**（不是整个数组），
+#      当前适用的 classification-<N>.json 中取出**对应这一 taskId 的那一个对象**（不是整个数组；不固定沿用编号 1），
 #      其 id/dir/case 必须与本 capsule 一致，details.files[].sha256 必须覆盖
 #      **本 capsule source/ 树的每个文件（含源侧驱动 run_case.py）**——
 #      identity 门禁按文件集合校验，缺任一 source/ 文件即 403 identity_mismatch；
@@ -166,13 +166,14 @@ Compress-Archive -Path source,target,comparison_manifest.json,input_profile.json
 #      **单文件任务按"批次为一"附一份覆盖该单项的最小 batch-authorization.json**。
 #    curl 的 `=<文件名` 形态把文件内容作为该表单字段的文本值发送。
 #    未准入时返回 403 {detail:{blockingReason,...}}，据原因修复，不手改 JSON 绕过。
-curl.exe -sS -X POST "http://127.0.0.1:8443/api/jobs" `
+curl.exe -sS -o submission-body.json -w "%{http_code}" -X POST "http://127.0.0.1:8443/api/jobs" `
   -F "file=@capsule.zip;type=application/zip" `
   -F "caseId=<frozen-task-id>" `
   -F "targetOs=windows" `
   -F "targetLang=cpp" `
   -F "classification=<this-task-classification.json" `
-  -F "batchAuthorization=<batch-authorization.json"
+  -F "batchAuthorization=<batch-authorization.json" `
+  -F "submissionId=<saved-exact-submission-id>" > submission-http-status.txt
 
 # 3) 轮询并核 closureBlocked/phase/清理；阻断或未知继续 WAITING
 curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>"
@@ -188,15 +189,19 @@ curl.exe -sS "http://127.0.0.1:8443/api/jobs/<jobId>/logs"            # controll
 curl.exe --fail -sS "http://127.0.0.1:8443/api/health" -o controller-health-after.json
 ```
 
+POST 前保存本 attempt 精确材料/版本及适用 submissionId；回读 submission-http-status.txt 与原 body，并记实际工具退出码/传输诊断，不能把 curl 退出码 0 当 HTTP 成功。错误 body 同样保留；无有效回执、000/超时等按当前协议恢复原尝试，不盲重投。上方取证命令展示路由，每件用该命令的 `-o` 保存到 returned-evidence 的实际落点并核 HTTP/正文身份；仅在屏幕打印不算落盘，不把错误页面充作原件。
+
 ## 回传证据布局与结论回填规则
 
-- 全部真实回传落于该 run 的 `04-evaluation/<job-dir>/returned-evidence/`（`job-id.txt`、`evaluation_report.json`、`evaluation_report.md`、`evidence-source.json`、`evidence-target.json`、`comparison.json`、`controller.log`，以及本次 health/runner 适配留证）。
+- 全部真实回传落于该 run 的 `04-evaluation/<job-dir>/returned-evidence/`；`job-id.txt` 留在 job 目录。按实际 jobKind/evaluationMode 保存报告、适用侧 evidence、logs、closure 及 health/runner 留证：源预检不要求目标件，双侧仅编译不要求 execution/comparison，不能按普通双侧清单造件。
 - **结论只从真实回传证据回填**，不得伪造：
   - `syntaxVerdict`：仅据**目标侧** evidence bundle 的 `build.status=completed` 且 `exitCode=0` 判 `PASS`；只有已实际构建且有代码相关非零退出/编译诊断才判 `FAIL`；未构建、跳过、环境/权限/缓存初始化失败、身份不符或证据不足均为 `UNVERIFIED`，不能仅凭 `failed` 状态归因代码。源侧 build 作对照基线，用于区分“源本身编不过”与“转换引入”。
   - `thirdPartyCompileStatus`：`THIRD-PARTY-COMPILE-PASSED` / `FAILED_COMPILE` / 未提交时 `AWAITING-THIRD-PARTY-COMPILE`。
   - `executionApproved`：复用已有授权并逐例通过隔离核对，本次 capsule 被获批 Controller 接收且取得回执后置 `true`；接收回执本身不创建运行授权，证据未返回时编译/行为仍为 `UNVERIFIED`。
-  - `behaviorVerdict`：**后续默认收集双侧执行与行为一致性证据**——每个 dual-build 都取回源/目标两侧的 `execution` 与 `comparison`，按已冻结的行为 oracle 与实际观察范围解释一致/差异，并给出该 oracle 覆盖内的行为结论；无冻结 oracle、平台未观察到对应维度或证据不足时写 `UNVERIFIED`。始终分层（build / execution / comparison 分开），不合成单一功能率、不外推普遍等价、不以编译或自审推断功能。
+  - `behaviorVerdict`：正常双侧行为 job 取回源/目标两侧的 `execution` 与 `comparison`，按已冻结的行为 oracle 与实际观察范围解释一致/差异；双侧仅编译分支不要求这些未发生件，功能 `UNVERIFIED`。源预检只支持源基线，不产生目标功能结论。无冻结 oracle、平台未观察到对应维度或证据不足时写 `UNVERIFIED`。始终分层（build / execution / comparison 分开），不合成单一功能率、不外推普遍等价、不以编译或自审推断功能。
 - **消噪证据**：按[比较策略适配 §4–5](comparison-policy-adapter.md#4-次要差异容忍与结果解释)保存平台原 `semantic_pass`、minor diff、原始观察及实际配置；job COMPLETED 不等于代码通过，semantic_pass 不等于 build PASS，配置不适用不自动进入模型修复。
+
+功能统计消费[评估准备§5.1](../../framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)：有效matched和semantic_pass都计冻结范围比较通过，仍保留两类、允许差异与未覆盖。候选评估源码的原始摘要/通道引用/人读小计修订不证明在线版本已更新；先核部署/producer身份。缺state的接受记录属于恢复故障，不据查不到状态判断未提交；清理未知仍等待，不触及Controller安装目录手改原件或自动重投。
 - **功能反馈移交**：行为 FAIL/不一致可按[闭环 §3.1](../../workflow/conversion-evaluation-loop.md#31-语法与功能修复反馈分支)进入模型功能修复，但先核对 `report`、双侧 `evidence` 与 `comparison` 的版本身份、输入/状态、预期/实际观察及已接受差异。仅有总 verdict 或缺可定位反例时记待补证据，不假设平台已有字段，也不据此盲修；接口不足向平台反馈。修订后提交新目标版本并取新 job 证据，旧报告不回改，本机不执行比较。
 - 自审放行统一按[闭环 §2、§4.1](../../workflow/conversion-evaluation-loop.md)核对原始审阅、追加裁决和剩余阻断项，不以 `NO-REPAIR-IDENTIFIED` 标签单独决定提交；内部预检**不是语法结论**，授权、隔离与评估就绪仍须分别满足。
 
