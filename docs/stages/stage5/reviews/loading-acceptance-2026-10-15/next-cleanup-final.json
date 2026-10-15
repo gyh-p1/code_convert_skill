@@ -1,0 +1,1 @@
+{"action":"cleanup","createdAt":"2026-10-15T05:46:20.533394+00:00","exception":"existing-job-query-evidence-cleanup","executionAuthorized":false,"findings":[],"kind":"next","schema":"loading-preflight/v1","scope":"loading-only","status":"PASS","toolSha256":"58e334711d65456c3da6560a98b4de60c64f031eed688769f0eca4bd1f1e1217","toolVersion":"1.0.0"}

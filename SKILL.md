@@ -30,15 +30,15 @@ metadata:
 3. 提交前核安全/独立授权/逐例隔离及评估范围；行为分支核合法驱动四要素、两侧对称和 oracle，LIB_UNOBSERVABLE_COMPILE_ONLY 核具体行为缺口与不运行的目标语法/编译命令。ALLOWED、READY、clean、快照不替代适用条件。
 4. 开始处理该项就读取[统一收尾入口](references/framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)；正常结束、任何提前失败/阻断及暂停都必须走它。每项写 result.md 并逐件核实际适用产物、版本/内容/指针，将清单及核对结果留在报告，缺应有件不得记终态。未发生 job 不伪造；未知提交/活动或未确认清理的 job 保持 WAITING，即使已有暂停报告也不例外。DONE 可包含真实失败，PARTIAL 与 matched/mismatched 分开。
 
-| 必读真源 | 负责什么 | 何时消费 |
-|---|---|---|
-| [任务状态契约](references/framework/task-state-contract.md) | 身份、冻结落盘门禁、版本关联/复用、接入去向、phase/lifecycle 与变体 | 冻结/分类前；源预检、每次模型请求、提交/重提及恢复/收尾 |
-| [分类准入](references/workflow/classifier-agent-gate.md) | 分类输入、ALLOWED、重新分类与精确身份 | 冻结/分类前、源预检前及每次提交/重提 |
-| [构建前提](references/workflow/build-prerequisites.md) | 冻结构建条件及真实源诊断分流 | 冻结前、源预检与目标评估 |
-| [单项闭环](references/workflow/conversion-evaluation-loop.md) | 生成、自审、有限修复、取证分流 | 开始处理该项时；正式生成、自审/修订和证据判读前 |
-| [评估准备契约](references/framework/evaluation-readiness-contract.md) | 源预检适用运行基线、驱动来源、四要素、oracle、仅编译、观察采信 | 冻结评估计划、源预检前、生成前及双侧提交/证据判读 |
-| [交付契约](references/framework/delivery-handoff-contract.md) | 统一收尾入口、全去向 result.md、适用件核对、目录及移交清单 | 开始处理每项时必读；结束/失败/阻断/暂停前再次核对 |
-| [安全边界](references/framework/safety-boundary.md) | 本机/同机/VM、网络和数据红线 | 全程 |
+| 契约标识 | 必读真源 | 负责什么 | 何时消费 |
+|---|---|---|---|
+| task-state | [任务状态契约](references/framework/task-state-contract.md) | 身份、冻结落盘门禁、版本关联/复用、接入去向、phase/lifecycle 与变体 | 冻结/分类前；源预检、每次模型请求、提交/重提及恢复/收尾 |
+| classifier | [分类准入](references/workflow/classifier-agent-gate.md) | 分类输入、ALLOWED、重新分类与精确身份 | 冻结/分类前、源预检前及每次提交/重提 |
+| build | [构建前提](references/workflow/build-prerequisites.md) | 冻结构建条件及真实源诊断分流 | 冻结前、源预检与目标评估 |
+| loop | [单项闭环](references/workflow/conversion-evaluation-loop.md) | 生成、自审、有限修复、取证分流 | 开始处理该项时；正式生成、自审/修订和证据判读前 |
+| evaluation | [评估准备契约](references/framework/evaluation-readiness-contract.md) | 源预检适用运行基线、驱动来源、四要素、oracle、仅编译、观察采信 | 冻结评估计划、源预检前、生成前及双侧提交/证据判读 |
+| delivery | [交付契约](references/framework/delivery-handoff-contract.md) | 统一收尾入口、全去向 result.md、适用件核对、目录及移交清单 | 开始处理每项时必读；结束/失败/阻断/暂停前再次核对 |
+| safety | [安全边界](references/framework/safety-boundary.md) | 本机/同机/VM、网络和数据红线 | 全程 |
 
 [行为指导](references/workflow/behavior-preservation-contract.md)用于单文件目标/允许差异说明，不自设裁决标准；门禁以评估准备契约为准。[Controller 适配](references/adapter/controller/remote-controller-adapter.md)只在使用该渠道时加载，规定外部字段与命令；适配内容不产生执行授权。
 
@@ -89,13 +89,15 @@ metadata:
 
 | 顺序 | 调度前读什么、做什么 | 允许继续的依据；不足时的去向 |
 |---|---|---|
-| 5.1 分类 | 分类准入 §1–3；检查已落盘冻结及完整源树，手工准备分类输入，在获准临时目录调用登记分类器并保存原文 | 本项身份/源集合匹配且 ALLOWED/null；缺件不调用，BLOCKED/损坏结果不预检、不生成，转第 6 步 |
+| 5.1 分类 | 分类准入 §1–3；检查已落盘冻结及完整源树，手工准备分类输入，经已提供系统入口逐项请求登记分类器并保存原文；脚本暂存/执行由系统侧承担 | 本项身份/源集合匹配且 ALLOWED/null；缺件或无系统入口不调用，BLOCKED/损坏结果不预检、不生成，转第 6 步 |
 | 5.2 源预检与分支 | 评估准备 §1.1/§1.3，并逐项落实[§1.4 核对清单](references/framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)；读构建前提和渠道适配，核支持形态、安全/授权/隔离及精确源构建；先辨本轮合法行为入口/观察条件 | 源 build completed/0 和适用清理是必需；正常行为分支还需有效源基线；本轮行为无法评估则记录 LIB_UNOBSERVABLE_COMPILE_ONLY 继续生成。不造目标凑源预检，源构建未过不生成 |
 | 5.3 正式生成 | 单项闭环 §2；回读冻结/源预检原件，核配置模型调用协议和脱敏请求正文、源范围、适用知识与行为义务 | 生成前条件均适用且响应完整、来源与目标版本可回读；实际发送后才记知识已注入。失败/截断按有限重试留原文，仍失败转第 6 步 |
 | 5.4 自审与有限修订 | 单项闭环 §2/§4；独立请求审当前目标，提供源/目标及适用知识正文，逐条归因 | 覆盖/必要记录完整且无未解决可定位转换问题；有限有效 NO-REPAIR-IDENTIFIED 可推进，不反复求保证。有依据的转换问题由配置模型有限修订，新稿关联父版本并复审 |
 | 5.5 评估就绪与提交 | 评估准备 §1–4（按 §1.4 回读源原件并对齐目标条件）、分类准入 §3及渠道适配；核精确版本、安全/授权/隔离及范围；行为分支核驱动/对称/oracle，LIB 核不运行命令；先保存本 attempt 精确材料与适用 submissionId，再 POST | 适用条件通过才提交并保留 HTTP 状态/body/传输诊断；LIB 只验目标语法/编译。支持未知只停该验证，交已有目标并记 UNVERIFIED，不伪造 job，不盲重投 |
 | 5.6 回执、轮询与取证 | 渠道适配；取得 jobId 后查原 job，终态后手工逐件取真实报告、各适用侧 evidence、comparison/logs及清理依据 | 无回执且可能已接收则 WAITING/SUBMISSION_UNKNOWN，不盲重投；不适用/未返回件不伪造，中途快照不作最终证据 |
 | 5.7 归因、必要修复或收尾 | 评估准备 §5（含 §5.1 消噪/分类及[§5.2 统计单位](references/framework/evaluation-readiness-contract.md#52-功能比较统计的集合与单位)）、单项闭环 §3；按分支回读精确版本原件。正常行为分支核两侧原始观察，LIB 分支核源构建与目标语法/编译，不要求运行观察或 comparison | 只将可定位转换引入问题交配置模型有限修复；新稿重核自审/准备并取得新证据，不借旧稿 PASS。停止或无修复需求均转第 6 步 |
+
+加载完成、开始画像前核 `start`；批量首项前包含批量工作流，长文件建图/分段前核 `map`，冻结前核 `freeze`。后续源预检、正式模型请求、提交和恢复前分别核对应动作的加载条件，沿用既有冻结/阶段记录及原件指针。[加载工具](tools/README-loading.md)仅由转换系统侧运行，第三方智能体不得调用脚本；系统提供报告时以原生工具回读、核对并引用，系统能力不可用时逐项手工核对并注明 manual 和证据限制。工具只核加载，不替代本表的分类、构建、安全、评估及交付依据；缺件停止受影响新增动作并走步骤 6，已发生 job 的查询/取证/终止/清理不因此阻断。
 
 纯文档审阅/架构优化不属于代码转换，不触发分类、模型转换、构建或运行。明确文本交付不触发后续行为 job，但正式目标代码生成仍须生成前门禁。无对应知识的探索转换保留假设、差异和未验证范围。
 
@@ -109,4 +111,4 @@ metadata:
 - 目标及修订必须来自配置模型；Agent 仅机械应用其确定性补丁并核对父版本、保存来源，不在模型失败时自主代写。
 - 保存完整脱敏请求/原始响应的关联记录、实际模型名、状态、参数、token、输入/输出哈希及失败 attempt。模型完成不是编译或行为通过。
 - 请求不发送 max_tokens；截断先按闭环响应完整性/分块协议处理，仍计用量，不据截断擅自换模型。配置缺失、请求失败或不完整时如实阻断。
-- 全程用原生工具手工单项操作，不写可复用或临时辅助脚本。唯一许可常驻脚本是登记钉 SHA 的分类器，且仅按准入页在获准外部临时目录调用。
+- 第三方智能体不得使用辅助脚本，转换调度仍手工逐项操作；仅转换系统本身可执行已登记脚本，范围按 AGENTS.md §1。分类器继续按准入页在获准外部临时目录调用；加载 PASS 不授权模型请求或样本执行。

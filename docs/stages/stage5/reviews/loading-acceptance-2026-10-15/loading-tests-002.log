@@ -1,0 +1,55 @@
+test_append_log_does_not_invalidate (test_loading_preflight.LoadingChecks.test_append_log_does_not_invalidate) ... ok
+test_atomic_no_overwrite (test_loading_preflight.LoadingChecks.test_atomic_no_overwrite) ... ok
+test_bad_anchor (test_loading_preflight.LoadingChecks.test_bad_anchor) ... ok
+test_cli_exit_codes_and_unavailable_no_fake_artifact (test_loading_preflight.LoadingChecks.test_cli_exit_codes_and_unavailable_no_fake_artifact) ... ok
+test_compaction_invalidates_old_ranges (test_loading_preflight.LoadingChecks.test_compaction_invalidates_old_ranges) ... ok
+test_controller_directory_blocked_before_access (test_loading_preflight.LoadingChecks.test_controller_directory_blocked_before_access) ... ok
+test_cross_session (test_loading_preflight.LoadingChecks.test_cross_session) ... ok
+test_duplicate_call_rejected (test_loading_preflight.LoadingChecks.test_duplicate_call_rejected) ... ok
+test_duplicate_identity (test_loading_preflight.LoadingChecks.test_duplicate_identity) ... ok
+test_duplicate_record_block (test_loading_preflight.LoadingChecks.test_duplicate_record_block) ... ok
+test_empty_file (test_loading_preflight.LoadingChecks.test_empty_file) ... ok
+test_failed_publish_cleans_temp (test_loading_preflight.LoadingChecks.test_failed_publish_cleans_temp) ... ok
+test_false_workflow_without_reason (test_loading_preflight.LoadingChecks.test_false_workflow_without_reason) ... ok
+test_foreign_agents_remain_manual (test_loading_preflight.LoadingChecks.test_foreign_agents_remain_manual) ... ok
+test_forged_offer_range (test_loading_preflight.LoadingChecks.test_forged_offer_range) ... ok
+test_four_task_shapes_and_all_actions (test_loading_preflight.LoadingChecks.test_four_task_shapes_and_all_actions) ... ok
+test_heading_uses_rendered_inline_text (test_loading_preflight.LoadingChecks.test_heading_uses_rendered_inline_text) ... ok
+test_headings_unicode_duplicates (test_loading_preflight.LoadingChecks.test_headings_unicode_duplicates) ... ok
+test_inline_fence_history_not_blacklist (test_loading_preflight.LoadingChecks.test_inline_fence_history_not_blacklist) ... ok
+test_late_read_does_not_retroactively_pass (test_loading_preflight.LoadingChecks.test_late_read_does_not_retroactively_pass) ... ok
+test_live_incomplete_tail_ignored_but_middle_invalid (test_loading_preflight.LoadingChecks.test_live_incomplete_tail_ignored_but_middle_invalid) ... ok
+test_log_tampering (test_loading_preflight.LoadingChecks.test_log_tampering) ... ok
+test_long_applicability_deferred_only_before_profiling (test_loading_preflight.LoadingChecks.test_long_applicability_deferred_only_before_profiling) ... ok
+test_malformed_log_shape_is_unavailable (test_loading_preflight.LoadingChecks.test_malformed_log_shape_is_unavailable) ... ok
+test_manual_statement_cannot_pass_automated_gate (test_loading_preflight.LoadingChecks.test_manual_statement_cannot_pass_automated_gate) ... ok
+test_middle_gap_and_overlap (test_loading_preflight.LoadingChecks.test_middle_gap_and_overlap) ... ok
+test_missing_conditional_workflow (test_loading_preflight.LoadingChecks.test_missing_conditional_workflow) ... ok
+test_missing_contract_coverage (test_loading_preflight.LoadingChecks.test_missing_contract_coverage) ... ok
+test_missing_file (test_loading_preflight.LoadingChecks.test_missing_file) ... ok
+test_missing_final_payload (test_loading_preflight.LoadingChecks.test_missing_final_payload) ... ok
+test_modified_text_rejected (test_loading_preflight.LoadingChecks.test_modified_text_rejected) ... ok
+test_multiple_host_results_select_exact_document (test_loading_preflight.LoadingChecks.test_multiple_host_results_select_exact_document) ... ok
+test_nested_and_plain_host_returns (test_loading_preflight.LoadingChecks.test_nested_and_plain_host_returns) ... ok
+test_non_markdown_offer_rejected (test_loading_preflight.LoadingChecks.test_non_markdown_offer_rejected) ... ok
+test_offer_unicode_crlf_and_bom (test_loading_preflight.LoadingChecks.test_offer_unicode_crlf_and_bom) ... ok
+test_path_escape (test_loading_preflight.LoadingChecks.test_path_escape) ... ok
+test_real_repository_structure (test_loading_preflight.LoadingChecks.test_real_repository_structure) ... ok
+test_recovery_needs_no_loading_artifacts (test_loading_preflight.LoadingChecks.test_recovery_needs_no_loading_artifacts) ... ok
+test_ref_tampering (test_loading_preflight.LoadingChecks.test_ref_tampering) ... ok
+test_registered_digest_mismatch_rejected (test_loading_preflight.LoadingChecks.test_registered_digest_mismatch_rejected) ... ok
+test_route_missing (test_loading_preflight.LoadingChecks.test_route_missing) ... ok
+test_same_count_replacement (test_loading_preflight.LoadingChecks.test_same_count_replacement) ... ok
+test_self_declared_not_strong (test_loading_preflight.LoadingChecks.test_self_declared_not_strong) ... ok
+test_source_arguments_are_not_host_return (test_loading_preflight.LoadingChecks.test_source_arguments_are_not_host_return) ... ok
+test_structure_baseline_exact_scope (test_loading_preflight.LoadingChecks.test_structure_baseline_exact_scope) ... ok
+test_unknown_document_rejected (test_loading_preflight.LoadingChecks.test_unknown_document_rejected) ... ok
+test_unknown_table_no_fallback (test_loading_preflight.LoadingChecks.test_unknown_table_no_fallback) ... ok
+test_unknown_workflow (test_loading_preflight.LoadingChecks.test_unknown_workflow) ... ok
+test_version_change_requires_new_report_and_reads (test_loading_preflight.LoadingChecks.test_version_change_requires_new_report_and_reads) ... ok
+test_windows_return_line_endings (test_loading_preflight.LoadingChecks.test_windows_return_line_endings) ... ok
+
+----------------------------------------------------------------------
+Ran 50 tests in 17.170s
+
+OK

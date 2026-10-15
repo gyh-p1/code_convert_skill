@@ -1,0 +1,107 @@
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.py', isolated=False, order=['metadata.py', 'consumer.py'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 295, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertBlocked(result, "public_network_unverified")
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 35, in assertBlocked
+    self.assertEqual(result.admission_status, "BLOCKED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'ALLOWED' != 'BLOCKED'
+- ALLOWED
++ BLOCKED
+
+
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.py', isolated=False, order=['consumer.py', 'metadata.py'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 295, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertBlocked(result, "public_network_unverified")
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 35, in assertBlocked
+    self.assertEqual(result.admission_status, "BLOCKED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'ALLOWED' != 'BLOCKED'
+- ALLOWED
++ BLOCKED
+
+
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.py', isolated=True, order=['metadata.py', 'consumer.py'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 296, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertTrue(result.requires_network_isolation)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.py', isolated=True, order=['consumer.py', 'metadata.py'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 296, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertTrue(result.requires_network_isolation)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.cs', isolated=False, order=['metadata.cs', 'consumer.cs'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 295, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertBlocked(result, "public_network_unverified")
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 35, in assertBlocked
+    self.assertEqual(result.admission_status, "BLOCKED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'ALLOWED' != 'BLOCKED'
+- ALLOWED
++ BLOCKED
+
+
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.cs', isolated=False, order=['consumer.cs', 'metadata.cs'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 295, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertBlocked(result, "public_network_unverified")
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 35, in assertBlocked
+    self.assertEqual(result.admission_status, "BLOCKED")
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'ALLOWED' != 'BLOCKED'
+- ALLOWED
++ BLOCKED
+
+
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.cs', isolated=True, order=['metadata.cs', 'consumer.cs'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 296, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertTrue(result.requires_network_isolation)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_metadata_network_guard_covers_the_complete_source_set (test_safety_classifier_v2.StaticClassifierChecks.test_metadata_network_guard_covers_the_complete_source_set) (suffix='.cs', isolated=True, order=['consumer.cs', 'metadata.cs'])
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "E:\�����ĵ�\Agents System\code_convert\tools\test_safety_classifier_v2.py", line 296, in test_metadata_network_guard_covers_the_complete_source_set
+    self.assertTrue(result.requires_network_isolation)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 70 tests in 0.884s
+
+FAILED (failures=8)
+{"input": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpq9adt0pm\\batch.json", "total": 1, "classes": {"LOW_SIGNAL": 1}, "admissionSummary": {"allowed": 1, "blocked": 0, "allowedRate": "100.0%", "byBlockingReason": {}}, "networkIsolationConfigured": false, "executable": 0, "output": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpq9adt0pm\\out.json"}
+{"input": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmppy9q38dq\\batch.json", "total": 2, "classes": {"BLOCKED_INPUT": 2}, "admissionSummary": {"allowed": 0, "blocked": 2, "allowedRate": "0.0%", "byBlockingReason": {"input_error": 2}}, "networkIsolationConfigured": false, "executable": 0, "output": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmppy9q38dq\\out.json"}
+{"input": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpnl6liaeu\\c-to-go\\batch.json", "total": 2, "classes": {"LOW_SIGNAL": 2}, "admissionSummary": {"allowed": 2, "blocked": 0, "allowedRate": "100.0%", "byBlockingReason": {}}, "networkIsolationConfigured": false, "executable": 0, "output": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpnl6liaeu\\out-rel.json"}
+{"input": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpdxv1vbld\\batch.json", "total": 2, "classes": {"REVIEW_NETWORK": 1, "BLOCKED_INPUT": 1}, "admissionSummary": {"allowed": 1, "blocked": 1, "allowedRate": "50.0%", "byBlockingReason": {"input_error": 1}}, "networkIsolationConfigured": false, "executable": 0, "output": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpdxv1vbld\\out.json"}
+{"input": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpx8b5utcz\\dataset\\batch-99\\batch.json", "total": 1, "classes": {"LOW_SIGNAL": 1}, "admissionSummary": {"allowed": 1, "blocked": 0, "allowedRate": "100.0%", "byBlockingReason": {}}, "networkIsolationConfigured": false, "executable": 0, "output": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmpx8b5utcz\\out-parent.json"}
+{"input": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmptnj3ks6g\\batch.json", "total": 1, "classes": {"BLOCKED_INPUT": 1}, "admissionSummary": {"allowed": 0, "blocked": 1, "allowedRate": "0.0%", "byBlockingReason": {"input_error": 1}}, "networkIsolationConfigured": false, "executable": 0, "output": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmptnj3ks6g\\out.json"}
+{"input": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmp7ibbex1z\\dataset\\batch.json", "total": 1, "classes": {"BLOCKED_INPUT": 1}, "admissionSummary": {"allowed": 0, "blocked": 1, "allowedRate": "0.0%", "byBlockingReason": {"input_error": 1}}, "networkIsolationConfigured": false, "executable": 0, "output": "C:\\Users\\86135\\AppData\\Local\\Temp\\tmp7ibbex1z\\out-escape.json"}

@@ -1,0 +1,7 @@
+# Keep registered system component byte identities stable across Windows checkouts.
+/tools/loading_preflight.py text eol=lf
+/tools/test_loading_preflight.py text eol=lf
+/tools/requirements-loading.txt text eol=lf
+/tools/loading-registration.json text eol=lf
+# Evidence references hash exact bytes; Git must not rewrite their line endings.
+/docs/stages/stage5/reviews/loading-acceptance-2026-10-15/** -text

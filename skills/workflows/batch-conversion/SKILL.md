@@ -5,7 +5,7 @@ description: Use when one request contains multiple conversion tasks. Manually s
 
 # 批量转换工作流
 
-一次请求包含多项时加载。本页只管手工编排、持久化、恢复和对账；知识选择走[根入口](../../../SKILL.md)，执行红线见[安全边界](../../../references/framework/safety-boundary.md)与 [AGENTS.md](../../../AGENTS.md)。不编写、生成、保存或运行辅助脚本，不自建批量运行时。
+一次请求包含多项时加载。本页只管手工编排、持久化、恢复和对账；知识选择走[根入口](../../../SKILL.md)，执行红线见[安全边界](../../../references/framework/safety-boundary.md)与 [AGENTS.md](../../../AGENTS.md)。第三方智能体不编写、生成、保存或运行辅助脚本，不自建批量运行时。系统登记加载工具可提供共享结构/正文原件；首项前核 batch 工作流版本、范围和时点，每项引用适用原件，无系统支持时手工核对并注明限制。
 
 整个数据集保持一个 batchId，不按 40 项切批。新增材料另记 intakeId，追加集合版本与依据，已完成项不重编号；规则由[任务状态契约](../../../references/framework/task-state-contract.md)维护。批量任务手工串行逐项推进；队列 CLOSED 或条目数量不代表转换质量，结论按逐项实际证据与覆盖范围报告。
 

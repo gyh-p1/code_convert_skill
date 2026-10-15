@@ -1,6 +1,6 @@
 # 转换交付与移交契约：收尾产物与 evaluator_manifest.json
 
-本文件在开始处理单项任务时必读，每次结束或暂停该项前再次按 §1.1 核对；规定适用产物、布局、报告和 evaluator_manifest.json 的字段来源。身份/冻结/状态见[任务状态契约](task-state-contract.md)，评估准备与观察采信见[评估准备契约](evaluation-readiness-contract.md)，批次节奏见批量工作流。本机不编译或运行；实际语法与行为结论只能来自获批隔离环境的精确版本证据。evaluator_manifest.json 是本仓库移交清单，Controller 的 capsule schema 只见适配页，二者不能等同。
+本文件在开始处理单项任务时必读，每次结束或暂停该项前再次按 §1.1 核对；规定适用产物、布局、报告和 evaluator_manifest.json 的字段来源。身份/冻结/状态见[任务状态契约](task-state-contract.md)，评估准备与观察采信见[评估准备契约](evaluation-readiness-contract.md)，批次节奏见批量工作流。本机不编译或运行样本源码、目标及构建；实际语法与行为结论只能来自获批隔离环境的精确版本证据。evaluator_manifest.json 是本仓库移交清单，Controller 的 capsule schema 只见适配页，二者不能等同。
 
 它与转换本身的维度分开：语言方向/场景/系统方向 Skill 管映射与应保留行为，长单文件工作流管防偏移，本契约只管**收口与移交**，不重复它们的内容。
 
@@ -21,6 +21,8 @@
 result.md 在该项约定的 run 输出根保存；尚无 run 目录时只创建合法约定的输出目录与报告，不为报告伪建冻结或评估阶段。非可转换去向同样交报告，但不要求目标或未发生的动态产物。WAITING 报告明确“暂停记录，尚未终态”；恢复后在同项报告更新当前速览并保留原停止说明/依据，不覆盖原始证据或裁决。报告自身未写出、无法回读或缺原因/核对记录时，收尾核对未完成，保持实际非终态并登记补件动作，不能宣布收尾。
 
 这是 Markdown 对 Agent 的必经操作要求，不是自动执行的检查器。加载路径与人工核对记录支持静态可达性；只有实际任务记录能证明该次已遵守，不据文本宣称任意 Agent 一定执行。
+
+系统侧登记的[加载工具](../../tools/README-loading.md)可保存结构报告、正文提供原件和动作前加载核对；实际产生的原件归本 run 的 `01-frozen/` 或既有批次级位置，不覆盖旧件，冻结/阶段记录和 result.md 引用路径及摘要。第三方智能体不得运行辅助脚本，只用原生工具逐件回读；无系统支持时保存 manual 核对及证据限制。加载 PASS 不替代本节全去向适用件核对，也不授权 DONE/PARTIAL 或执行。
 
 Controller 的收尾字段与原件下载消费[当前协议适配 §4](../adapter/controller/platform-revision-adapter.md#4-平台收尾与原件取回)。closureBlocked/CLEANING 或清理/调用未知保持 WAITING，不能只按 jobStatus 终态标签收尾；closure 通过也不能免本契约的 result.md 与转换端适用件核对。历史 job 缺 closure 则按真实原件和逐项清理核对，不补造“完整性通过”。报告 kind/source-only/仅编译不同，按实际阶段核件，不强制无适用 comparison/target。
 

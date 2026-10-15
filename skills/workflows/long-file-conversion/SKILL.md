@@ -11,6 +11,8 @@ description: Use for single-file code conversion when a source file is large or 
 
 ## 0. 准入与边界
 
+建图/分段前按根入口核 map 加载条件。系统侧可提供登记工具的正文范围/版本/时序原件，第三方智能体只以原生工具回读和引用，不运行辅助脚本；无系统支持时手工核对并记录限制，不把事后补读追认为此前已满足。
+
 开始处理本项即必读[统一收尾入口](../../../references/framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)。准入、分段、合并、审阅或评估任一阶段结束/提前停止/暂停，都写本项 result.md 并核实际适用产物、范围与版本/指针，保存核对结果。没有完整目标或属于非可转换去向也不能免报告；WAITING 是暂停记录，不是终态。
 
 先读根入口、任务状态、评估准备与安全边界。顺序为冻结→分类 ALLOWED→源预检→生成/分段→自审→适用验证→交付门禁。正常行为分支生成前取得完整源的有效基线，不用片段运行冒充；本轮无法合法行为评估但源构建通过时，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续完整目标转换和语法/编译验证，行为未评估/UNVERIFIED。分段不绕过门禁或重置预算，缺入口不由 Agent/模型造驱动，不把库强改独立程序。
