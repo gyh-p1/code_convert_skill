@@ -310,6 +310,41 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertFalse(result.requires_network_isolation)
         self.assertFalse(any(file["network_targets"] for file in result.details["files"]))
 
+    def test_source_set_network_guard_does_not_leak_between_tasks(self):
+        metadata = self.root / "metadata.py"
+        consumer = self.root / "consumer.py"
+        metadata.write_text('document = \'<root xmlns="https://example.com/ns"/>\'', encoding="utf-8")
+        consumer.write_text('requests.get(document)', encoding="utf-8")
+        first = self.classifier.classify_files("T1", "python-to-go", "fixture", [metadata, consumer])
+        self.assertBlocked(first, "public_network_unverified")
+        second = self.classifier.classify_files("T2", "python-to-go", "fixture", [metadata])
+        self.assertAllowed(second)
+        self.assertFalse(second.requires_network_isolation)
+        self.assertTrue(second.details["files"][0]["excluded_network_literals"])
+
+    def test_batch_source_set_guard_preserves_output_identity(self):
+        source = self.root / "source"
+        source.mkdir()
+        metadata = source / "metadata.py"
+        consumer = source / "consumer.py"
+        metadata.write_text('document = \'<root xmlns="https://example.com/ns"/>\'', encoding="utf-8")
+        consumer.write_text('requests.get(document)', encoding="utf-8")
+        batch = self.root / "batch.json"
+        batch.write_text(json.dumps({"taskCount": 1, "tasks": [{
+            "taskId": "A", "direction": "python-to-go", "caseId": "fixture", "sourceDir": "source",
+        }]}), encoding="utf-8")
+        output = self.root / "classification.json"
+        rows = module.reclassify_batch(batch, output, self.root)
+        row = rows[0]
+        self.assertEqual(row["admissionStatus"], "BLOCKED")
+        self.assertEqual(row["blockingReason"], "public_network_unverified")
+        self.assertEqual(row["classifierVersion"], "2.5")
+        self.assertEqual(row["classifierSha256"], hashlib.sha256(MODULE.read_bytes()).hexdigest())
+        self.assertEqual(row["inputManifestSha256"], hashlib.sha256(batch.read_bytes()).hexdigest())
+        self.assertEqual({file["sha256"] for file in row["details"]["files"]},
+                         {hashlib.sha256(path.read_bytes()).hexdigest() for path in (metadata, consumer)})
+        self.assertEqual(json.loads(output.read_text(encoding="utf-8")), rows)
+
     def test_tiered_policy_priorities_and_flags_stay_fixed(self):
         cases = (
             # isolated, scope, credential, input error, groups, exact policy result

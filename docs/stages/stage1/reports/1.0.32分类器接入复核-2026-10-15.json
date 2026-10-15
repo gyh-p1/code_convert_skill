@@ -1,0 +1,10 @@
+{
+    "submissionClassifierPath":  "C:\\Users\\Administrator.DESKTOP-LRHSLVD\\Desktop\\code-convert-skill\\tools\\safety_classifier_v2.py",
+    "previousClassifierAccepted":  false,
+    "trustedClassifierSha256":  "299f339b57dfb83ce2b9bf1fe640c2b32ccdb6badf8c898a7116f7613d26f57f",
+    "releaseVersion":  "1.0.32",
+    "checkedAt":  "2026-10-15T07:42:15.0479274Z",
+    "verificationScope":  "installed source pin and exact distributed bytes; no live executable submission",
+    "trustedClassifierVersion":  "2.5",
+    "submissionClassifierSha256":  "299f339b57dfb83ce2b9bf1fe640c2b32ccdb6badf8c898a7116f7613d26f57f"
+}

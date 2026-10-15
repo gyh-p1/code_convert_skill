@@ -8,7 +8,7 @@ ALLOWED is classification only, not execution authorization or proof of isolatio
 
 Ambiguous hostname:port/service literals follow hostname admission rules.
 Explicit XML-literal namespace and C# assembly-version metadata exclusions apply
-only in a file without detected network signals; method names establish no exemption.
+only in a source set without detected network signals; method names establish no exemption.
 Known file suffixes without network API context can identify path literals.
 Input paths resolve within the manifest-directory and declared-source-base bounds.
 Samples are read as text, never imported, compiled, or executed.
@@ -294,7 +294,8 @@ class SafetyClassifierV2:
     def is_private_ip(self, target: str) -> bool:
         return address_scope(target) == "private"
 
-    def analyze_behavior(self, source_code: str, file_path: str, language_hint: str = "") -> dict[str, Any]:
+    def analyze_behavior(self, source_code: str, file_path: str, language_hint: str = "", *,
+                         source_set_has_network: bool = False) -> dict[str, Any]:
         suffix = Path(file_path).suffix.lower()
         if suffix in {".text", ".txt"} and language_hint == "powershell":
             suffix = ".ps1"  # Declared batch direction; record the basis below.
@@ -327,7 +328,7 @@ class SafetyClassifierV2:
                 literal_start = match.start(1) if pattern is QUOTED_HOST else match.start()
                 metadata_reason = next((reason for begin, end, reason in metadata_spans
                                         if begin <= match.start() and match.end() <= end), None)
-                if metadata_reason is None and not signals["network"]:
+                if metadata_reason is None and not signals["network"] and not source_set_has_network:
                     metadata_reason = _metadata_literal_reason(code, literal_start, suffix)
                 if metadata_reason:
                     excluded_literals.append({"value": value, "line": line, "reason": metadata_reason})
@@ -373,6 +374,7 @@ class SafetyClassifierV2:
     def classify_files(self, task_id: str, direction: str, case_id: str,
                        source_paths: list[Path], expected_hashes: dict[Path, str] | None = None) -> SafetyClassification:
         files, errors = [], []
+        analyzed_sources = []
         expected_hashes = expected_hashes or {}
         if not source_paths:
             errors.append("missing_source")
@@ -396,9 +398,19 @@ class SafetyClassifierV2:
                     raise ValueError("binary_or_unsupported_encoding")
                 files.append({"name": path.name, "sha256": digest,
                               **self.analyze_behavior(text, str(path), direction.split("-to-", 1)[0])})
+                analyzed_sources.append((files[-1], text, str(path)))
             except (OSError, UnicodeError, ValueError) as exc:
                 errors.append({"file": path.name, "type": type(exc).__name__,
                                "reason": str(exc) if isinstance(exc, ValueError) and not isinstance(exc, UnicodeError) else "unreadable_or_missing_source"})
+        # Metadata may be consumed by a network API in another submitted file.
+        # Reuse the validated text, independent of input order; retain filename
+        # and malformed-address exclusions rather than promoting every literal.
+        if any(file["signals"]["network"] for file in files):
+            for file, text, file_path in analyzed_sources:
+                if any(entry["reason"] in {"xml-namespace", "assembly-version"}
+                       for entry in file["excluded_network_literals"]):
+                    file.update(self.analyze_behavior(
+                        text, file_path, direction.split("-to-", 1)[0], source_set_has_network=True))
         groups = sorted({name for file in files for name, lines in file["signals"].items() if lines})
         if any(file["has_network"] for file in files) and "network" not in groups:
             groups.append("network")

@@ -1,0 +1,19 @@
+{
+  "scope": "classifier-maintenance-regression",
+  "status": "ACCEPTED_FOR_PLATFORM_INTEGRATION",
+  "date": "2026-10-15",
+  "classifierVersion": "2.5",
+  "classifierSha256": "299f339b57dfb83ce2b9bf1fe640c2b32ccdb6badf8c898a7116f7613d26f57f",
+  "testSha256": "25b939546c478979152137219168c9b5827e1fcb84fa06e173a81f284823f4f8",
+  "beforeClassifierSha256": "e81ceab16f237ffe5316e7fe0d5b6f3856ca53339ab35e46873d5f47522a6313",
+  "beforeTestSha256": "197d4d1fd18f1397c45d87f9d2565a4b54cadbf0be1d613b04ac26f41c0348cc",
+  "runtime": "CPython 3.12.10 x64, remote Windows maintenance directory",
+  "before": {"tests": 70, "failedSubtests": 8, "exitCode": 1, "log": "before-tests.log"},
+  "afterExistingSuite": {"tests": 70, "exitCode": 0, "log": "after-tests.log"},
+  "final": {"tests": 72, "exitCode": 0, "log": "final-tests.log"},
+  "platformTrustUpdated": false,
+  "deployed": false,
+  "validCapsuleSubmitted": false,
+  "conversionSamplesExecuted": false,
+  "productionTrustedClassifierSha256": "009a6f31177b08334663340321494ace1e430de13f8a5687e6843ab26839f3a4"
+}
