@@ -1,4 +1,4 @@
-> 现场部署更新（2026-10-12 09:46，北京时间）：四角色统一 1.0.29，原包 health-only 验收通过；Controller ready=true，三 Runner READY/clean，契约 `8090cfcc…` 一致，四角色实现身份可用且 restartRequired=false。新快照已实际恢复，macOS 自动登录通过；comparison/source-preflight 两入口缺字段 422、非法 JSON 400，零新 job。见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.29部署与快照更新记录-2026-10-12.md)。版本/哈希是本次现场事实，样本执行与网络隔离仍逐例核对。
+> 现场部署更新（2026-10-12 20:47，北京时间）：四角色统一 1.0.30，原包 health-only 验收通过；Controller ready=true，三 Runner READY/clean，契约 `8090cfcc…` 一致，四角色实现身份可用且 restartRequired=false。新快照已实际恢复，macOS 自动登录通过；非执行提交探测返回预期 400 无效 ZIP，未遇到 busy。见[部署与快照记录](../../../docs/stages/stage1/reports/1.0.30部署与快照更新记录-2026-10-12.md)。版本/哈希是本次现场事实，样本执行与网络隔离仍逐例核对。
 
 # 远端 Controller 适配与连接
 
@@ -29,7 +29,7 @@ runnerId、语言与当前快照只在 [Runner 能力矩阵](runner-capability-m
 
 Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2](../../framework/task-state-contract.md#22-冻结落盘门禁)回读本项本 run 的 `01-frozen/frozen-inputs.md` 并核身份/版本、适用内容与当前条件；缺失、空白或错位不 POST。此检查是提交端的手工前置要求，未新增 multipart 字段或服务端 frozen-inputs 校验，不把文件塞入 source/ 树冒充源码。未知提交的恢复查询、已发生 job 的取证及终止/清理不因缺件延后。
 
-**提交前消费者的引用核对**：Agent 调用 POST /api/jobs 前，按[分类准入](../../workflow/classifier-agent-gate.md)核 ALLOWED、精确源集合/哈希和独立授权/隔离，并保存逐项提交记录。classification 与 batchAuthorization 每次提交均随附，单项亦按最小同形授权；这不免现役身份/协议核验。2026-10-10 的[接入记录](../../../docs/stages/stage1/reports/平台提交端准入闭环接入-2026-10-10.md)记录1.0.28拒收及403 blockingReason，1.0.26忽略额外字段仅属历史；页首最后已知部署为1.0.29，实时能力仍按[当前协议适配](platform-revision-adapter.md)核。不得把旧版本结论或分类器 executionApproved 当当前服务器许可，不从本次文本修订推定服务端运行验证。
+**提交前消费者的引用核对**：Agent 调用 POST /api/jobs 前，按[分类准入](../../workflow/classifier-agent-gate.md)核 ALLOWED、精确源集合/哈希和独立授权/隔离，并保存逐项提交记录。classification 与 batchAuthorization 每次提交均随附，单项亦按最小同形授权；这不免现役身份/协议核验。2026-10-10 的[接入记录](../../../docs/stages/stage1/reports/平台提交端准入闭环接入-2026-10-10.md)记录1.0.28拒收及403 blockingReason，1.0.26忽略额外字段仅属历史；页首最后已知部署为1.0.30，实时能力仍按[当前协议适配](platform-revision-adapter.md)核。不得把旧版本结论或分类器 executionApproved 当当前服务器许可，不从本次文本修订推定服务端运行验证。
 
 | 方法 | 路径 | 作用 |
 |---|---|---|

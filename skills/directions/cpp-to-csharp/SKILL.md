@@ -58,7 +58,7 @@ description: Use when converting C++ source to C#; apply this direction's langua
        public void ActionB() => _b.ActionB();
    }
    ```
-6. **信息不足或实现相关时的处理**：若接口存在默认实现依赖，记录抽象层次降级并在转换日志中说明。
+6. **信息不足或实现相关时的处理**：默认实现、基类状态或调用分派存在依赖时，定位源实现及消费者并核组合候选能否保持；未知部分记缺口，停止受影响映射。不以“记录抽象层次降级”允许删实现或改变分派，采用差异须有生成前许可。
 7. **资料依据（名称/版本/章节）**：MS-CS-SPEC。
 
 ### 规则 CPP-CS-03：C++ std::future/std::thread 向 C# Task-based Asynchronous Pattern (TAP) 映射

@@ -223,8 +223,9 @@
 | 字符串到原生接口 | 区分UTF-16、具体窄字符编码、NUL与错误替换；看长度是输入容量还是输出有效长度 | 非ASCII被best-fit/替换后显示相似也不能证明原字节保持；源UB单列，不用源风险授权目标忽略容量 |
 | 字典/解析返回 | 区分missing、null、空串、默认值与是否插入；保留首个分隔符、重复键策略、排序稳定性和异常域 | 默认索引器、TryGetValue、Split或排序函数不是互换；只按实际使用点选择 |
 | 权限/身份及注册表封装 | 组成员、有效权限、enabled/deny-only、令牌类型与原始/展开值分别看系统页 | SID字符串存在不等于AccessCheck通过；自动展开的GetValue不等于原始注册表值 |
+| 继承抽象类/接口 | C#12/.NET8的具体类须实现其仍未实现的抽象/接口成员，核精确目标API、声明及所有消费者；Stream.Length等属性与方法不是同一形状 | CS0534修复须遵源能力与错误路径，不填固定0或删除调用求编译；新成员/重命名引入的CS1061等新诊断按新稿处理。未知返回契约不猜默认值，不能从一个诊断消失推完整API已保持 |
 
-依据：.NET8 StructLayoutAttribute/Marshal、Dictionary/TryGetValue、字符串/排序API；Win32精确事实按已加载系统页。不新增身份能力、不把托管便利当跨平台等价。
+依据：.NET8 StructLayoutAttribute/Marshal、Dictionary/TryGetValue、字符串/排序API；C#抽象类与接口实现、dotnet/runtime v8.0.0 System.IO.Stream的抽象成员声明；Win32精确事实按已加载系统页。不新增身份能力、不把托管便利当跨平台等价。
 
 ## 使用边界
 

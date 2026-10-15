@@ -1,0 +1,9 @@
+{
+    "httpStatus":  400,
+    "checkedAt":  "2026-10-12T12:47:56.9709522Z",
+    "validCapsuleSubmitted":  false,
+    "payload":  "release-manifest.json as diagnostic-invalid.zip; non-executable",
+    "response":  {
+                     "detail":  "comparison capsule is not a valid zip file"
+                 }
+}

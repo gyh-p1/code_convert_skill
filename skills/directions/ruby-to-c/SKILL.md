@@ -77,7 +77,7 @@ description: Use when converting Ruby source to C; apply this direction's langua
    free(buf);
    return ret;
    ```
-6. **信息不足或实现相关时的处理**：记录异常消息传递降级。
+6. **信息不足或实现相关时的处理**：定位异常类别/消息的消费者及ensure/rescue边界，错误码候选须保持相应传播与清理。消息契约不明则记缺口并停止受影响映射；不以“登记降级”允许丢失源会观察的异常内容。
 7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；WG14-N1570 §7.5。
 
 ### 规则 RB-C-04：Ruby 任意精度 Integer 的位运算与 pack 定宽编码向 C 定宽整数与显式掩码映射

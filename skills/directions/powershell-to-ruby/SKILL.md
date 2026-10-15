@@ -48,7 +48,7 @@ description: Use when converting PowerShell source to Ruby; apply this direction
      # 源若不输出诊断则不新增 warn；实际捕获族仍须对应具体 Cmdlet 失败。
    end
    ```
-6. **信息不足或实现相关时的处理**：在报告中列出所有被降级为静默忽略的错误点。
+6. **信息不足或实现相关时的处理**：对应源实际静默继续的错误点及作用域；错误类别/捕获范围不明时记具体缺口，停止受影响映射。不因报告已列错误点就允许新增静默忽略，源会传播的失败仍须保留。
 7. **资料依据（名称/版本/章节）**：RB-DOC-EXCEPT；MS-PS-PREF。
 
 ### 规则 PS-RB-03：PowerShell 字符转义反引号向 Ruby 双引号标准转义映射

@@ -171,8 +171,8 @@ description: Use when converting Go source to C#; apply this direction's languag
    - Go `ServeMux` 的 `mux.HandleFunc("/task", ...)` **不限定 HTTP 方法**——`POST /task` 与 `GET /register` 都会被接受；若目标把路由硬编码成“方法 + 路径”相等，服务面即被**收窄**。
 4. **目标可选写法和不适用条件**：
    - *元数据字符串*：逐字段重建源的**完整集合与顺序**（标志集合、环境条目集合、用户名形式），不得只实现“常见的那几个”。Windows 用户名形式用 `WindowsIdentity.GetCurrent().Name`，或当域非空时拼 `Environment.UserDomainName + "\\" + Environment.UserName`，并保留失败时的原兜底值。
-   - *路由契约*：Go `ServeMux` 不限定方法时，目标路由**只按路径匹配**（镜像 `ServeMux`）；若确实要有意收窄，必须**显式登记为有意差异**，不得默认当作等价。
-   - *超时*：源无超时时写 `HttpClient { Timeout = Timeout.InfiniteTimeSpan }`；**不得**静默引入 100 秒默认值。若确实需要引入超时，须登记为**显式差异**。
+   - *路由契约*：Go `ServeMux` 不限定方法时，目标不得无依据增加方法限制；完整路由接受域、重定向及路径处理仍按实际源注册保持，不把“只按路径相等”当完整ServeMux实现。收窄须有生成前明确许可及冻结范围，事后登记不构成许可。
+   - *超时*：源无超时时可用 `HttpClient { Timeout = Timeout.InfiniteTimeSpan }` 保持该设置；**不得**静默引入 100 秒默认值。新增超时须有源语义依据或生成前明确许可，记录其影响；不能仅登记为差异就采用。
    - *不适用条件*：若源码本就给定了超时（`http.Client{Timeout: ...}`），则按源值设置；若源码自身就过滤了某些环境条目、或已按方法分派（显式检查 `r.Method`），则保留源码的逻辑，**不要**以“目标 API 的行为”为由增删过滤或放宽路由。
 5. **错误机械替换反例**：
    ```csharp
@@ -189,15 +189,15 @@ description: Use when converting Go source to C#; apply this direction's languag
    username = Environment.UserName;                  // 缺少域前缀 → JSON 与摘要行字节不同
    // 错误六：把不限定方法的路由收窄为“方法 + 路径”相等
    if (path == "/task" && method == "GET") { ... } else { WriteResponse(stream, 404, ...); }
-   // 正确
+   // 局部候选：下列各行分别须满足对应源字段/消费者前提，不构成整段等价实现
    if (nic.SupportsMulticast) flags.Add("multicast");       // 按 Go 的顺序追加
    if (nic.OperationalStatus == OperationalStatus.Up) flags.Add("running");
    var httpClient = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
    if (key.Length == 0) continue;                            // 仅处理空键，不按 '=' 过滤
    username = WindowsIdentity.GetCurrent().Name;              // DOMAIN\user 形式
-   if (path == "/task") { ServeTask(); }                      // 镜像 ServeMux：只按路径匹配
+   if (path == "/task") { ServeTask(); }                      // 仅示意不额外限制method；完整路由接受域另核
    ```
-6. **信息不足或实现相关时的处理**：若目标 API **无法**surface 源的某个派生值（如 .NET 可能取不到 `=C:` 条目、`NetworkInterfaceType` 无法精确表达 broadcast 能力），必须**登记为不可恢复差异**并在交付说明中列明，**不得**把近似实现当作等价，也不得用注释把过滤/近似描述成源的行为。“按能力推导”的启发式须标注为**须由 oracle 验证的近似**。
+6. **信息不足或实现相关时的处理**：目标API不能取得源派生值时，定位具体字段与消费者，记未映射/知识缺口，不凭一个API缺值断言永远不可恢复。没有源语义依据或生成前许可时停止受影响映射，不用近似值补成完整实现；已有目标中的确认误译按根闭环有限修复或明确未解决交付。启发式只作有条件提案，有限oracle匹配不构成采用近似的许可。
 7. **资料依据（名称/版本/章节）**：Go `net.Flags`、`os.Environ`、`os/user.Current`、`http.Client`、`ServeMux`；.NET `HttpClient.Timeout`、`NetworkInterface`、`Environment.GetEnvironmentVariables`、`WindowsIdentity.Name`。
 
 ## 转换与验证边界

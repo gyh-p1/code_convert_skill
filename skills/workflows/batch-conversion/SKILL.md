@@ -91,6 +91,8 @@ description: Use when one request contains multiple conversion tasks. Manually s
 
 ## 5. 状态与结论分列
 
+按[单项闭环 §3.1](../../../references/workflow/conversion-evaluation-loop.md#31-语法与功能修复反馈分支)分别跟踪已确认转换缺陷与 oracle/装置阻塞；matched、LIB 或 ORACLE_NOT_FREEZABLE 不自动关闭前者。收尾与对账回读 result.md 中未修复/已修订未验证/已验证解决的依据，同项可有多个责任问题；按唯一 taskId 计任务，问题数与任务数分列，不重复计项、不用主因覆盖次因。
+
 phase/pendingAction/lifecycle、阻断原因、版本结论的唯一语义见[任务状态 §4](../../../references/framework/task-state-contract.md#4-阶段生命周期与验证结论)。DONE 可包含真实编译/行为失败；PARTIAL 不是 mismatched 的同义词。修订后旧证据属于旧版本，新版本无证据保持 UNVERIFIED。恢复 PARTIAL 追加重入依据、保留累计预算。
 
 ## 6. 收尾

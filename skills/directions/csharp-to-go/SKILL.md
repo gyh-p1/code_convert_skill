@@ -121,7 +121,7 @@ description: Use when converting C# source to Go; apply this direction's languag
 2. **冻结版本/运行时/API 前提**：源语言 C# 12 / .NET 8（MS-CS-STRING）；目标语言 Go 1.27（GO-SPEC #String_types、GO-PKG-UTF8）。
 3. **原可观察行为**：`string.Length` 计的是 UTF-16 代码单元数，`Substring` 与 `s[i]` 按代码单元定位；BMP 外字符（如 emoji）在 C# 中占 2 个长度单位、1 个用户可见字符。Go 侧 `len(s)` 计 UTF-8 字节、`s[i]` 取单字节，`for range` 按码点迭代，`os.Args[0]` 是程序路径（`len(os.Args)` 为 1 时代表无参数）。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：需要"字符个数"时用 `utf8.RuneCountInString(s)` 并显式声明与 C# 的差异；需要按位置截取时统一改用字节下标（`s[3:]`），或先 `[]rune(s)` 再切片；参数校验改为 `len(os.Args) > 1` 并把 `args[i]` 改写为 `os.Args[i+1]`；判断包含关系时优先 `strings.Contains` 而不是 `idx != -1`。
+   - *可选映射*：按两语言页的字符串单位保持UTF-16代码单元长度、索引和截取；RuneCount、[]rune及字节下标均不直接等价。只有源输入域/消费者已证明相应单位一致时才采用简化表示；孤立代理项等在目标表示中不能保持的情况须定位缺口，不靠“声明差异”继续。命令行数组另按不含/含程序名联合映射计数、守卫及全部下标；只有源确为包含关系且比较规则一致时才考虑strings.Contains，源消费位置值则仍须保持其单位。
    - *不适用条件*：严禁把 `s[i]`（字节）当作字符访问后再用 `string(...)` 拼接，非 ASCII 输入会被拆成多个无效字节；严禁依赖 `len(s)` 与 C# `Length` 相等（BMP 外字符使 Go 字节数大于 C# 代码单元数，纯 ASCII 时又恰好相等而掩盖问题）。
 5. **错误机械替换反例**：
    ```go
@@ -130,10 +130,9 @@ description: Use when converting C# source to Go; apply this direction's languag
        arg := os.Args[i] // 错误：i=0 时取到的是可执行文件路径
        _ = arg
    }
-   // 正确：显式跳过程序名，字符/字节语义按需声明
+   // 局部示意：仅展示跳过程序名，不能据此决定字符串长度/下标表示
    for _, arg := range os.Args[1:] {
-       n := utf8.RuneCountInString(arg) // 码点数；与 C# string.Length 不保证相等
-       _ = n
+       _ = arg // 长度、截取及错误路径另按源的UTF-16单位对应
    }
    ```
 6. **信息不足或实现相关时的处理**：源字符串是否可能包含 BMP 外字符、源码逻辑究竟按字符还是按字节计数，无法从局部源码判定时，在报告里写明"长度单位未冻结"并请求确认，不得默认两者相等。
@@ -160,7 +159,7 @@ description: Use when converting C# source to Go; apply this direction's languag
        return s, true
    }
    ```
-6. **信息不足或实现相关时的处理**：若源类型名被用作序列化键或分支判据，需先确认它在目标侧必须保持的稳定形态（接口、结构体标签还是反射类型名），无法确认时标注为待确认；C# 泛型约束在 Go 泛型约束下无表达方式的部分，在报告中声明为降级。
+6. **信息不足或实现相关时的处理**：源类型名被用作序列化键或分支判据时，核实际消费者所需稳定形态，未知则停止受影响映射并记缺口。泛型约束不能直接表达时，先核实例集合、接受域及运行时检查是否可保持；不能仅报告降级就删除源约束，采用不同语义须有生成前许可。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Type_assertions；GO-PKG-REFLECT。
 
 ## 转换与验证边界

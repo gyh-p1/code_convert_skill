@@ -225,6 +225,7 @@ PowerShell7.6的管道对象、输出流和外部进程是不同语义层。先�
 - Cmdlet非终止错误与.NET抛异常分开；只在源捕获的相应调用上考虑ErrorAction Stop，不无条件改变作用域。源静默兜底时不额外Write-Error/Verbose，以免增加可观察诊断。
 - .NET字符串、char数组、byte数组及Base64文本分层；文本写入须看编码/BOM/换行，源写编码结果时不能改写成原始byte数组。返回管道时还看数组展开、单项/空项和是否混入诊断对象。
 - 数值强转的舍入与源整除、原生字段宽度及容器值类型分别判断；不因为一项默认值相同就统一类型。环境展开、注册表原始值及身份查询依精确API，不能用惯用Trim或大小写忽略抹掉源条件。
+- class方法中区分局部/参数与属性，PowerShell变量名不靠大小写区分。迁入源的区分大小写名称时核每个绑定/写入；属性明确用实例或静态成员访问，局部采用不冲突名称并更新全部引用，不能仅改大小写。实际出现Cannot assign property等诊断时按精确作用域/成员归因，不把它当普通运行时属性错误、也不删除赋值绕过。反例是源局部计数与类属性被合并后修改了共享状态；版本/绑定不明记缺口，不全局替换输出文本。依据：PowerShell7.6 about_Variables、about_Classes_Properties/Methods。
 
 依据：PowerShell7.6 about_Automatic_Variables、Start-Process、about_Preference_Variables、about_Pipelines、about_Character_Encoding；.NET对应类型/API。示例是选择引导，非语法/行为验证记录。
 

@@ -7,6 +7,8 @@ description: Use for code conversion tasks in this repository. Load the project 
 
 先读取 [AGENTS.md](../../../AGENTS.md) 和仓库根 [SKILL.md](../../../SKILL.md)。根入口维护必读契约与按事实加载的知识索引，本页不维护第二份规则。
 
+已确认转换缺陷与评估范围/阻塞分别处理：依根入口及[单项闭环](../../../references/workflow/conversion-evaluation-loop.md)有限修复并核源行为保持；oracle 不可冻结、仅编译或有限 matched 不关闭已定位误译。停止时按交付契约明示未修复/修后未验证，不以 residualRisk 替代。知识与观察范围按源码触发选择，比较能力只据现役适配，不新增驱动、比较器或无限自审。
+
 正式转换必须手工、串行、逐项推进，不写任何辅助脚本/工具/驱动或自动化程序。顺序：冻结→分类 ALLOWED→源侧预检（构建 + 适用运行基线）→生成→自审→适用评估→取证/归因→交付门禁。能合法评估行为的先取有效源基线；本轮无法合法评估行为但源构建通过的，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续生成、自审与目标语法/编译验证，行为未评估/UNVERIFIED。不因缺 main、可执行文件、stdout 或合法入口直接跳过，不补造 main/驱动；不免冻结、分类、源构建与安全门禁。纯文档审阅不触发转换步骤。
 
 冻结完成必须先写出并回读本项本 run 的 `01-frozen/frozen-inputs.md`；缺失、空白、错项/错版本不分类、不推进，不能等收尾补写。源预检、每次正式模型请求、提交/重提及恢复新增动作前再核，完整规则只消费[任务状态 §2.2](../../../references/framework/task-state-contract.md#22-冻结落盘门禁)；已发生 job 的查询/取证/终止不因缺件延后。不新增检测脚本或平台校验。

@@ -181,7 +181,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 ## 五、模型自检与质量结论声明
 
 1. **模型自审边界**：转换生成的 Python 代码应核对位掩码截断是否存在、异常捕获是否对齐、`bytes` 与 `str` 是否混用。该项自审为模型自评，不得标记为语法通过。
-2. **证据状态声明**：本项目当前无 Python 目标构建与功能验收证据，状态严格保持为 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`，不宣称转换等价。
+2. **证据状态声明**：本项精确目标版本尚无对应第三方构建证据时保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；取得后按实际编译、执行与观察范围分层报告。不从本页静态知识推定通过，也不把历史未验证状态当作新任务永久结论。
 
 ---
 

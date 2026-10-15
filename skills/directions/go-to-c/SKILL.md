@@ -239,7 +239,7 @@ description: Use when converting Go source code (Go 1.27) to C (ISO C11) while p
 ## 五、模型自检与质量结论声明
 
 1. **模型自检重点**：核对切片边界、共享数组保活、`defer` 注册时参数与函数退出时 LIFO 动作是否对应源，常量位宽是否符合冻结标准。不得为清理便利改变循环内 `defer` 的释放时点。该自检属于模型自评，严禁作为编译通过证据。
-2. **证据状态声明**：当前 Go→C 方向处于 `未验证/阻断` 状态，在未经独立第三方工具链真实编译之前，一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`，绝对不宣称转换成功或行为等价。
+2. **证据状态声明**：本项精确目标版本未经独立第三方工具链真实编译时保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；取得后据实分列编译与功能覆盖。本页静态规则不证明方向全面验收，历史未验证状态也不覆盖新任务实际证据。
 
 ---
 

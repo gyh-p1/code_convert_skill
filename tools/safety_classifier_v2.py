@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
-"""Static review triage, v2.4 with tiered admission policy (Spec 04).
+"""Static review triage, v2.5 candidate with tiered admission policy (Spec 04).
 
 Reads text only; implements "block only highest-risk" instead of "executable=False for all".
 Classification determines ALLOWED vs BLOCKED based on VM isolation capabilities.
+
+v2.5 candidate (not a deployment or admission-trust update):
+  * Validate colon-shaped IP candidates without discarding ambiguous hostname:port
+    or hostname:service literals; those keep the legacy hostname admission path.
+  * Exclude explicit XML-literal namespace attributes / C# assembly-version
+    metadata only when the source has no detected network consumer. Method names
+    such as SetAttribute never establish a trusted XML consumer. Record exclusions.
 
 v2.4 change over v2.3:
   * Hostname heuristic no longer promotes a bare file-name literal (e.g.
@@ -36,7 +43,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-VERSION = "2.4"
+VERSION = "2.5"
 MAX_BYTES = 2 * 1024 * 1024
 MAX_FILES = 128
 SOURCE_EXTENSIONS = {".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".cs",
@@ -119,9 +126,9 @@ def url_host(value: str) -> str:
 
 # Bare file-name literals (data/config/log/source files) share the
 # `label.label` shape of a DNS name, so QUOTED_HOST matches e.g. "demo.txt".
-# These extensions are file suffixes, never meaningful network hosts; a value
-# ending in one is treated as a path, not a target, UNLESS the surrounding line
-# shows a real network API (see analyze_behavior).
+# These common file suffixes support a lexical path candidate; they are not a
+# hostname whitelist. A surrounding network API keeps the value as a target
+# (see analyze_behavior); data flow outside that context remains unproven.
 FILENAME_EXTENSIONS = {
     "txt", "text", "json", "yaml", "yml", "xml", "csv", "tsv", "log", "bak",
     "tmp", "ini", "cfg", "conf", "dat", "lock", "md", "pdf", "html", "htm",
@@ -135,6 +142,31 @@ def _looks_like_filename(value: str) -> bool:
         return False
     _, dot, ext = value.rpartition(".")
     return bool(dot) and ext.lower() in FILENAME_EXTENSIONS
+
+
+def _metadata_literal_reason(code: str, start: int, suffix: str) -> str | None:
+    """Recognize literal metadata syntax, never infer receiver types from method names.
+
+    Deliberately not a data-flow/reachability proof. Ambiguous URL assignments stay
+    network candidates, and another occurrence used by a network API is examined
+    independently. Caller disables these exclusions when any network signal is
+    present in this source; a local statement alone cannot prove data-flow safety.
+    """
+    prefix = code[max(0, start - 512):start]
+    statement = re.split(r"[;\n]", prefix)[-1]
+    if COMPILED["network"].search(statement):
+        return None
+    if re.search(
+        r'''<[A-Za-z_][\w:.-]*(?:\s+[A-Za-z_][\w:.-]*\s*=\s*(?P<xml_quote>\\?["'])(?:(?!(?P=xml_quote)|<).)*(?P=xml_quote))*\s+xmlns(?::[A-Za-z_][\w.-]*)?\s*=\s*\\?["']$''',
+        statement,
+    ):
+        return "xml-namespace"
+    if suffix == ".cs" and re.search(
+        r'''\[\s*assembly\s*:\s*(?:System\.Reflection\.)?Assembly(?:File|Informational)?Version(?:Attribute)?\s*\(\s*["']$''',
+        statement,
+    ):
+        return "assembly-version"
+    return None
 
 
 
@@ -291,12 +323,34 @@ class SafetyClassifierV2:
                                  for m in pattern.finditer(code)})
                    for name, pattern in COMPILED.items()}
         targets = {}
+        excluded_literals = []
+        metadata_spans: list[tuple[int, int, str]] = []
         for pattern in (URL, IPV4, QUOTED_HOST):
             for match in pattern.finditer(code):
                 value = match.group(1) if pattern is not IPV4 else match.group()
                 if pattern is URL:
                     value = url_host(value)
                     value = value.split("]", 1)[0] + "]" if value.startswith("[") else value.split(":", 1)[0]
+                line = code.count("\n", 0, match.start()) + 1
+                # Failure to parse an IP does not rule out hostname:port/service.
+                # Keep ambiguous single-colon candidates on the legacy hostname
+                # path; punctuation and unambiguous malformed IPs are not hosts.
+                if pattern is QUOTED_HOST and ":" in value:
+                    try:
+                        ipaddress.ip_address(value.strip("[]"))
+                    except ValueError:
+                        if not re.fullmatch(r"[A-Za-z0-9]+:[A-Za-z0-9]+", value):
+                            excluded_literals.append({"value": value, "line": line, "reason": "not-an-ip-address"})
+                            continue
+                literal_start = match.start(1) if pattern is QUOTED_HOST else match.start()
+                metadata_reason = next((reason for begin, end, reason in metadata_spans
+                                        if begin <= match.start() and match.end() <= end), None)
+                if metadata_reason is None and not signals["network"]:
+                    metadata_reason = _metadata_literal_reason(code, literal_start, suffix)
+                if metadata_reason:
+                    excluded_literals.append({"value": value, "line": line, "reason": metadata_reason})
+                    metadata_spans.append((match.start(), match.end(), metadata_reason))
+                    continue
                 # Do not confuse numeric version fragments or empty string with a hostname.
                 if pattern is QUOTED_HOST and ":" not in value and "." not in value and value.lower() != "localhost":
                     continue
@@ -315,7 +369,6 @@ class SafetyClassifierV2:
                     if not (strong_network or re.search(
                             r"\b(?:host|hostname|server|endpoint|url|uri|destination|target)\b", context, re.I)):
                         continue  # e.g. open("result.txt") is not a DNS target
-                line = code.count("\n", 0, match.start()) + 1
                 targets[(line, value)] = {"value": value, "line": line, "scope": address_scope(value),
                                           "provenance": "literal", "redirectVerified": False}
         scopes = sorted({target["scope"] for target in targets.values()})
@@ -324,6 +377,7 @@ class SafetyClassifierV2:
         credentials = detect_high_confidence_real_credential(code)
         return {"signals": signals, "network_mode": mode,
                 "network_targets": list(targets.values()), "limitations": limitations,
+                "excluded_network_literals": excluded_literals,
                 "credentialFindings": credentials,
                 "has_high_confidence_credential": bool(credentials),
                 "has_network": has_network, "has_file_ops": bool(signals["filesystem"]),

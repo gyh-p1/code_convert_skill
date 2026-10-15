@@ -37,7 +37,7 @@ description: Use when converting Python source to C++; apply this direction's la
        }
    };
    ```
-6. **信息不足或实现相关时的处理**：若生成器包含复杂的异常双向传递（`gen.throw()`），必须在报告中声明该复杂控制流降级。
+6. **信息不足或实现相关时的处理**：源使用gen.throw等双向异常/恢复路径时，定位消费者和生成器内部捕获/清理，核状态机是否能保持；契约未知则停止受影响映射，记缺口。不以“声明降级”允许删除异常传递，采用不同语义须有生成前许可。
 7. **资料依据（名称/版本/章节）**：PY-REF-YIELD；WG21-N4659 Clause 27。
 
 ### 规则 PY-CPP-02：Python 函数返回 None 作为可选值向 C++17 std::optional 映射

@@ -51,6 +51,11 @@
 | 枚举值、类型、未知数值、Flags 或名称输出 | [C# L1-CS-06](languages/csharp.md#l1-cs-06-enum-的类型值域与显示分别保持)、[Python L1-PY-08](languages/python.md#l1-py-08-enumintenum-与普通常量的身份不同)及实际两语言页；C#→Python 读 CS-PY-07；不因枚举加载并发 |
 | 读键/读字符/整行、回显与终端模式 | [C# L1-CS-07](languages/csharp.md#l1-cs-07-readkey-不是-readline-或普通流字符读取)、[Python L1-PY-09](languages/python.md#l1-py-09-流读取一个字符不等于读取一个终端键事件)、[Ruby L1-RB-10](languages/ruby.md#l1-rb-10-getchgetc-与-gets-的输入单位不同)；按方向读 CS-PY-08/CS-RB-07；无子进程也读取 |
 | 去空白集合、nil/空串/全空白判定 | 两语言实际谓词；[Ruby L1-RB-08](languages/ruby.md#l1-rb-08-strip-不是通用-unicode-空白删除)、[Go L1-GO-06](languages/go.md#l1-go-06-unicode-空白不等于其他语言的-strip-集合)、C# L1-CS-01；Ruby→Go 读 RB-GO-07 |
+| 环境变量未设置/空串、默认回退与继承 | [C §九](languages/c.md#九容量借用与默认值的选择引导)、[C++ §八](languages/cpp.md#八库抽象替换的选择引导)、[Ruby §十二](languages/ruby.md#十二标准库替换的选择引导)；环境profile语义另核评估准备契约，不用真假值合并缺失/空值 |
+| 路径存在/目录/普通文件守卫与后续失败 | [C++ L1-CPP-06](languages/cpp.md#l1-cpp-06-存在性谓词不能收窄为目录谓词)、[Ruby §十二](languages/ruby.md#十二标准库替换的选择引导)及[file-io](../scenes/file-io/SKILL.md)；按实际两语言API读取 |
+| 原生API指针对象、ctypes返回/参数及权限判定 | [Python L1-PY-15](languages/python.md#l1-py-15-ctypes-的-abi-声明与业务判定分别保持)、[进程身份系统页](../systems/posix-windows-process-identity/SKILL.md#原生环境块令牌与缓冲的选择引导)；C/C++/C#原生类型事实同时读 |
+| 类内名称碰撞、抽象成员、源文本迁入注释 | [PowerShell §十](languages/powershell.md#十对象管道与外部状态的选择引导)、[C# §十](languages/csharp.md#十互操作与公开返回形态的选择引导)、[C L1-C-06](languages/c.md#l1-c-06-字面量内容终止-nul-与显式长度分别保持)；所有引用点、成员契约和目标文本定界分别保持 |
+| 网卡枚举/流量累计与逐接口统计 | [网络场景的测量范围](../scenes/network-io/SKILL.md#网络统计的测量范围)；对象、范围、单位与采样先对应，不能用消噪代替语义映射 |
 | 临时目录候选、校验/回退及环境优先级 | [Ruby L1-RB-09](languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)、[Go L1-GO-07](languages/go.md#l1-go-07-ostempdir-选路径不检查目录可用性)，另一语言按实际 API；Ruby→Go 读 RB-GO-08，实际文件副作用还读文件场景 |
 | optparse、Unicode分行/制表、deque操作组合与解析接受域 | [Python §九](languages/python.md#九解析器文本边界与容器的选择引导)；不套其他解析器或同名容器默认 |
 | JSON编码/终止符、Scanner上限、稳定排序、时间/计数器及用户后端 | [Go §九](languages/go.md#九标准库消费点的选择引导)，另一语言同读；对象键序与文本义务分开 |

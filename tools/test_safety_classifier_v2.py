@@ -161,6 +161,206 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertEqual(result.classification, "REVIEW_NETWORK")
         self.assertBlocked(result, "public_network_unverified")
 
+    # Candidate v2.5: text-only maintenance regressions, never execute fixtures.
+    def test_punctuation_is_not_an_ipv6_host(self):
+        for literal in (":", ":::f", "[:::]"):
+            with self.subTest(literal=literal):
+                result = self.classify(f'endpoint = "{literal}"')
+                self.assertAllowed(result)
+                self.assertEqual(result.details["files"][0]["network_targets"], [])
+
+    def test_valid_ipv6_hosts_remain_network_targets(self):
+        for literal, scope in (("::1", "loopback"), ("::", "wildcard"),
+                               ("2001:4860:4860::8888", "public")):
+            with self.subTest(literal=literal):
+                result = self.classify(f'socket.connect(("{literal}", 80))')
+                self.assertIn(scope, [target["scope"] for target in
+                                    result.details["files"][0]["network_targets"]])
+                if scope == "public":
+                    self.assertBlocked(result, "public_network_unverified")
+
+    def test_unknown_namespace_method_receiver_does_not_exempt_a_hostname(self):
+        # A method name cannot establish that node is a trusted XML consumer.
+        for method in ("SetAttribute", "WriteAttributeString"):
+            with self.subTest(method=method):
+                result = self.classify(f'node.{method}("xmlns:xs", "https://schemas.microsoft.com/test");', ".cs")
+                self.assertBlocked(result, "public_network_unverified")
+                self.assertIn("schemas.microsoft.com", [target["value"] for target in
+                                                       result.details["files"][0]["network_targets"]])
+
+    def test_xml_literal_namespace_is_metadata(self):
+        result = self.classify('document = \'<root xmlns="https://schemas.example.test/ns"/>\'')
+        self.assertAllowed(result)
+        self.assertEqual(result.details["files"][0]["network_targets"], [])
+        self.assertTrue(any(entry["reason"] == "xml-namespace" for entry in
+                            result.details["files"][0]["excluded_network_literals"]))
+
+    def test_xml_attribute_name_must_be_exactly_xmlns(self):
+        result = self.classify('document = \'<root data-xmlns="https://example.com/ns"/>\'')
+        self.assertBlocked(result, "public_network_unverified")
+
+    def test_xmlns_text_inside_another_attribute_value_is_not_metadata(self):
+        source = '''document = """<root note='xmlns="https://example.com/ns"'/>"""'''
+        self.assertBlocked(self.classify(source), "public_network_unverified")
+
+    def test_namespace_after_complete_attribute_keeps_source_quote_boundaries(self):
+        for source, suffix in (
+            ('document = \'<root id="fixture" xmlns="https://schemas.example.test/ns"/>\'', ".py"),
+            (r'var document = "<root id=\"fixture\" xmlns=\"https://schemas.example.test/ns\"/>";', ".cs"),
+        ):
+            with self.subTest(source=source):
+                self.assertAllowed(self.classify(source, suffix))
+
+    def test_namespace_ip_uri_is_not_rediscovered_as_a_bare_ip(self):
+        result = self.classify('document = \'<root xmlns="https://8.8.8.8/ns"/>\'')
+        self.assertAllowed(result)
+        self.assertEqual(result.details["files"][0]["network_targets"], [])
+        network_use = self.classify('node.SetAttribute("xmlns", "https://8.8.8.8/ns");\n'
+                                    'socket.connect(("8.8.8.8", 80))', ".cs")
+        self.assertBlocked(network_use, "public_network_unverified")
+
+    def test_single_colon_hostname_endpoint_is_not_discarded_as_invalid_ipv6(self):
+        for isolated in (False, True):
+            self.classifier = module.SafetyClassifierV2(batch_network_isolation_configured=isolated)
+            for endpoint in ("cafe:443", "dead:80", "FACE:1234", "abc:de"):
+                with self.subTest(isolated=isolated, endpoint=endpoint):
+                    result = self.classify(f'conn, _ := net.Dial("tcp", "{endpoint}")', ".go")
+                    if isolated:
+                        self.assertAllowed(result)
+                    else:
+                        self.assertBlocked(result, "public_network_unverified")
+                    self.assertTrue(result.requires_network_isolation)
+                    self.assertTrue(any(target["value"] == endpoint and target["scope"] == "hostname"
+                                        for target in result.details["files"][0]["network_targets"]))
+
+    def test_custom_xml_named_method_cannot_hide_a_network_consumer(self):
+        for method in ("SetAttribute", "WriteAttributeString"):
+            with self.subTest(method=method):
+                source = (f'class Sender:\n    def {method}(self, name, value):\n'
+                          '        return requests.get(value)\n'
+                          f'Sender().{method}("xmlns", "https://example.com/ns")')
+                self.assertBlocked(self.classify(source), "public_network_unverified")
+
+    def test_metadata_exclusions_do_not_hide_cross_statement_network_consumers(self):
+        for source, suffix in (
+            ('document = \'<root xmlns="https://example.com/ns"/>\'\n'
+             'requests.get(parse_namespace(document))', ".py"),
+            ('[assembly: AssemblyVersion("1.0.0.0")]\n'
+             'socket.connect((args.host, 80))', ".cs"),
+        ):
+            with self.subTest(source=source):
+                result = self.classify(source, suffix)
+                self.assertBlocked(result, "public_network_unverified")
+                self.assertFalse(any(entry["reason"] in ("xml-namespace", "assembly-version")
+                                     for entry in result.details["files"][0]["excluded_network_literals"]))
+
+    def test_review_categories_still_allow_by_default(self):
+        for source, suffix, expected_category in (
+            ('x = 1', ".py", "LOW_SIGNAL"),
+            ('open("result.txt", "w")', ".py", "REVIEW_SIDE_EFFECTS"),
+            ('subprocess.run(argv)', ".py", "REVIEW_SIDE_EFFECTS"),
+            ('eval(value)', ".py", "REVIEW_SENSITIVE"),
+            ('VirtualAlloc(p, n, MEM_COMMIT, PAGE_EXECUTE_READWRITE);', ".c", "REVIEW_SENSITIVE"),
+            ('class MetasploitModule\nend', ".rb", "REVIEW_DEPENDENCY"),
+            ('$x = @"\nfixture\n"@', ".ps1", "REVIEW_UNCERTAIN"),
+            ('socket.connect((args.host, args.port))', ".py", "REVIEW_NETWORK"),
+            ('socket.connect(("10.9.1.6", 80))', ".py", "REVIEW_NETWORK"),
+            ('socket.connect(("127.0.0.1", 80))', ".py", "REVIEW_NETWORK"),
+        ):
+            with self.subTest(source=source):
+                result = self.classify(source, suffix)
+                self.assertAllowed(result)
+                self.assertEqual(result.classification, expected_category)
+
+    def test_metadata_network_guard_covers_the_complete_source_set(self):
+        cases = (
+            ('document = \'<root xmlns="https://example.com/ns"/>\'', ".py",
+             'import requests\nrequests.get(document.split(\'"\')[1])', "python-to-go"),
+            ('[assembly: AssemblyVersion("1.0.0.0")]', ".cs",
+             'var client = new HttpClient();\nclient.GetAsync(address);', "csharp-to-go"),
+        )
+        for metadata_text, suffix, consumer_text, direction in cases:
+            metadata = self.root / ("metadata" + suffix)
+            consumer = self.root / ("consumer" + suffix)
+            metadata.write_text(metadata_text, encoding="utf-8")
+            consumer.write_text(consumer_text, encoding="utf-8")
+            for isolated in (False, True):
+                classifier = module.SafetyClassifierV2(batch_network_isolation_configured=isolated)
+                for paths in ([metadata, consumer], [consumer, metadata]):
+                    with self.subTest(suffix=suffix, isolated=isolated, order=[p.name for p in paths]):
+                        result = classifier.classify_files("T", direction, "fixture", paths)
+                        if isolated:
+                            self.assertAllowed(result)
+                        else:
+                            self.assertBlocked(result, "public_network_unverified")
+                        self.assertTrue(result.requires_network_isolation)
+                        metadata_file = next(file for file in result.details["files"]
+                                             if file["name"] == metadata.name)
+                        self.assertTrue(metadata_file["has_network"])
+                        self.assertIn(metadata_file["network_mode"], ("public", "hostname"))
+                        self.assertEqual(metadata_file["excluded_network_literals"], [])
+
+    def test_source_set_guard_does_not_promote_legacy_non_targets(self):
+        metadata = self.root / "metadata.py"
+        consumer = self.root / "consumer.py"
+        metadata.write_text('document = \'<root xmlns="demo.txt"/>\'', encoding="utf-8")
+        consumer.write_text('requests.get(args.url)', encoding="utf-8")
+        result = self.classifier.classify_files("T", "python-to-go", "fixture", [metadata, consumer])
+        self.assertAllowed(result)
+        self.assertFalse(result.requires_network_isolation)
+        self.assertFalse(any(file["network_targets"] for file in result.details["files"]))
+
+    def test_tiered_policy_priorities_and_flags_stay_fixed(self):
+        cases = (
+            # isolated, scope, credential, input error, groups, exact policy result
+            (False, "public", True, True, ["sensitive"], ("BLOCKED", "input_error", False, False)),
+            (True, "public", True, True, [], ("BLOCKED", "input_error", False, False)),
+            (False, "public", True, False, [], ("BLOCKED", "public_network_unverified", True, False)),
+            (False, "hostname", False, False, [], ("BLOCKED", "public_network_unverified", True, False)),
+            (True, "hostname", True, False, [], ("BLOCKED", "real_credential_suspected", True, True)),
+            (True, "hostname", False, False, [], ("ALLOWED", None, True, False)),
+            (False, "private", False, False, [], ("ALLOWED", None, True, False)),
+            (False, "loopback", False, False, [], ("ALLOWED", None, False, False)),
+            (True, "loopback", True, False, [], ("BLOCKED", "real_credential_suspected", False, True)),
+            (False, "", False, False, ["sensitive"], ("ALLOWED", None, False, True)),
+            (False, "", False, False, ["dynamic_code"], ("ALLOWED", None, False, True)),
+            (False, "", False, False, ["framework"], ("ALLOWED", None, False, False)),
+        )
+        for isolated, scope, credential, input_error, groups, expected in cases:
+            with self.subTest(isolated=isolated, scope=scope, credential=credential,
+                              input_error=input_error, groups=groups):
+                classifier = module.SafetyClassifierV2(batch_network_isolation_configured=isolated)
+                files = [{"network_targets": [{"scope": scope}] if scope else [],
+                          "credentialFindings": [{"kind": "fixture-format"}] if credential else []}]
+                actual = classifier._determine_admission("REVIEW_UNCERTAIN", groups, files,
+                                                         ["fixture-error"] if input_error else [])
+                self.assertEqual(actual, expected)
+
+    def test_namespace_host_used_by_network_api_is_still_blocked(self):
+        result = self.classify('node.SetAttribute("xmlns", "https://schemas.microsoft.com/test");\n'
+                               'requests.get("https://schemas.microsoft.com/test")', ".cs")
+        self.assertBlocked(result, "public_network_unverified")
+
+    def test_namespace_variable_name_does_not_whitelist_arbitrary_url(self):
+        for name in ("namespace_uri", "xmlns"):
+            with self.subTest(name=name):
+                self.assertBlocked(self.classify(f'{name} = "https://example.com/ns"'),
+                                   "public_network_unverified")
+
+    def test_csharp_assembly_version_is_not_an_ip_target(self):
+        result = self.classify('[assembly: AssemblyVersion("1.0.0.0")]', ".cs")
+        self.assertAllowed(result)
+        self.assertEqual(result.details["files"][0]["network_targets"], [])
+
+    def test_assembly_version_does_not_hide_same_ip_network_use(self):
+        result = self.classify('[assembly: AssemblyVersion("1.0.0.0")]\n'
+                               'socket.connect(("1.0.0.0", 80))', ".cs")
+        self.assertBlocked(result, "public_network_unverified")
+
+    def test_filename_used_as_a_network_host_is_still_blocked(self):
+        self.assertBlocked(self.classify('socket.connect(("demo.txt", 80))'),
+                           "public_network_unverified")
+
     def test_hardcoded_ip_with_wsaconnect_is_still_a_target(self):
         # D2-108 regression: hard-coded IP + WSAConnect stays a network target
         # (10.x is private, so allowed without isolation, but still REVIEW_NETWORK).

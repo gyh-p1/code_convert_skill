@@ -33,7 +33,7 @@ description: Use when converting Ruby source to C++; apply this direction's lang
        void MyExtension(std::string& s) { ... }
    }
    ```
-6. **信息不足或实现相关时的处理**：若源猴子补丁覆写了核心行为，在转换报告中标明侵入性修改已降级为显式调用。
+6. **信息不足或实现相关时的处理**：源猴子补丁覆写核心行为时，核全部直接/间接调用方、既有实例与后续分派；显式自由函数只有在这些消费者均保持对应时才是候选。缺调用边界则停止受影响映射，登记缺口；不能仅在报告声明“降级”为显式调用就删除原生效范围。
 7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 12；RB-DOC-CORE。
 
 ### 规则 RB-CPP-02：Ruby 资源块模式 (File.open do...end) 向 C++17 RAII 作用域析构映射

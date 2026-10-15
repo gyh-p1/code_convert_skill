@@ -142,6 +142,8 @@ curl.exe --fail -sS "http://127.0.0.1:8443/api/jobs/<job-id>/artifacts/evidence/
 
 artifactDigests 是派生核对摘要，不替代原件；逐件原生取回/核对到转换输出目录，按[交付 §1.1](../../framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)记录适用清单。原 report、comparison 和观察不因归因不同而覆写。
 
+2026-10-13评估源码候选新增两类collectorDiagnostics警告：DOTNET_HOST_LOOKUP_FAILURE_REPORTED与DRIVER_SYNTAX_ERROR_REPORTED，分别提示流中出现宿主查找失败或被调用驱动位置的SyntaxError特征。当时未测试；2026-10-15当前工作树维护回归已覆盖相应既有测试，仍未发布或部署，不要求现役服务必须返回这些code。即使取得提示，也仍核精确入口/版本、原stderr/退出和输出来源；警告不证明根因、未运行范围或已修复，不改变原平台判定。没有警告也不证明这些问题不存在。
+
 最低适用回传面按真实 kind/mode/已发生阶段选择；下表只消费现有接口，不建设取证脚本。历史实例缺新路由时保留原记录和缺口，不访问安装目录/jobs 来补件。
 
 | 实际分支/阶段 | 取回并核对的适用面 |
@@ -173,6 +175,8 @@ artifactDigests 是派生核对摘要，不替代原件；逐件原生取回/核
 新服务器 preset=`noise-tolerant-v2` 可配置 workspace_path_pairs：最多 16 对精确绝对目录前缀，带尾分隔符、足够具体、无根目录/父穿越/重复路径。映射只处理已声明前缀，剩余相对路径/文件名与计时值继续比较。`text_tokens=[]`、`system_noise_patterns=[]` 明确禁用其他规则；省略时可能继承 v1 默认，冻结时须读实际完整配置。strict/v1 不接受非空目录对。
 
 目录映射仍是平台服务器配置，不能放进input_profile冒充任务字段，不能失败后自动放宽。例外与冻结允许差异及部署/配置版本关联。JSON ignoredJsonPaths副本修复不增加计时通配、浮点容差或新oracle。有效matched与有效semantic_pass均可计冻结范围功能比较通过，分别保留两类和原始/规范化差异，不外推完整业务分子；口径见[评估准备§5.1](../../framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)及[比较策略适配](comparison-policy-adapter.md)。
+
+ignoredJsonPaths的schema声明、低层实现与输出入口传递须分别核；2026-10-15发现旧输出入口未转交列表，本轮候选源码已补传递并通过入口及维护回归，见[比较适配§2.2](comparison-policy-adapter.md#22-json-字段忽略的声明与消费)。新增类型化token候选见该页§2.3；均尚未发布或部署，不据字段可填写推定现役消噪成功。source-only/驱动有效性继续按评估准备判读，专用退出码只是定位线索，不新增schema或改历史verdict。
 
 ## 7. 本轮适配边界
 

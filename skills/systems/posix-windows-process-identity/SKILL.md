@@ -47,6 +47,7 @@ Windows同OS的语言转换涉及这些API时也适用；只据精确SDK/架构�
 - **环境块**：GetEnvironmentStrings返回NUL分隔、双NUL终止的块，使用后按对应FreeEnvironmentStrings释放。块中可有以`=`开头的驱动器当前目录项，按首个等号直接split成普通字典可能丢掉名称；A/W及具体窄字符编码不能凭ASCII样例推定。先看源是否枚举、过滤或原样转交，再选目标环境抽象，复制内容与保持借用生命周期分开。
 - **可变长令牌结构**：TOKEN_PRIVILEGES含PrivilegeCount与LUID_AND_ATTRIBUTES数组；数组实际长度由返回信息决定，SDK声明的占位元素不是长度上限。DWORD、LONG、BOOL及LUID字段不会因为进程指针位宽变化就自动变成指针宽度。目标可采用精确布局/封装，但须对应头部、元素、对齐和返回缓冲长度，不将某结构的偏移数值推广到所有结构。
 - **有效权限**：成员SID、enabled/deny-only属性、线程模拟与进程令牌不同。AccessCheck的安全描述符、模拟令牌、desired access及generic mapping决定结果；BOOL调用结果与AccessStatus输出也不同。先定位源检查对象，再选成员查询或访问判定，不以组名存在替代有效权限，不从“管理员”一词推出全部权限。
+- **描述符与ACL身份**：Windows SDK的AccessCheck首参要求完整安全描述符，不是其DACL地址；即使底层声明容许void指针，编译通过也不证明对象正确。GetNamedSecurityInfo返回的DACL等指针指向其安全描述符内相应部分，按实际请求标志/成功状态核有效性；返回描述符缓冲用LocalFree释放后，这些内部指针不能继续使用，也不分别释放。调用失败与AccessStatus拒绝分别按源路径传播，不能合成“检查恒假”。此规则只用于保持已有访问检查，不改变访问权或扩张权限。
 - **缓冲与初始化**：区分容量、有效长度、NUL和字节/字符单位；语言模块或DLL加载不等于对应系统API的初始化成功。源固定容量、初始化失败时机及后续错误路径按原调用保持，原代码越界风险单列，不因源UB省略目标容量分析。
 
 依据：Microsoft Win32 GetEnvironmentStrings/FreeEnvironmentStrings、TOKEN_PRIVILEGES/LUID_AND_ATTRIBUTES、AccessCheck及Access Tokens；布局和编码的精确版本不明时记录缺口，不猜数值。此处只补转换选择知识，不提供权限扩张方法。
