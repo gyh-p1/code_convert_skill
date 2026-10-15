@@ -3,11 +3,11 @@ name: posix-windows-threads
 description: Map the POSIX pthread lifecycle used by a source file to Windows CRT/Win32 thread APIs without assuming identical cancellation, handles, or synchronization semantics.
 ---
 
-# POSIX ↔ Windows 线程系统方向（初稿）
+# POSIX ↔ Windows 线程系统方向
 
 > **加载前置**：先读取根[转换入口](../../../SKILL.md)并完成其必读契约与语言/方向选择；本页补充系统映射，不单独推进转换。
 
-适用于 Linux/POSIX 的 `pthread_*` 与 Windows CRT/Win32 线程 API 之间的迁移。这里聚焦线程 API 与生命周期；共享状态、顺序和资源归属还须加载[并发场景](../../scenes/concurrency/SKILL.md)。规则以对应 API 契约为依据，未经本项目转换样例验证。
+适用于 Linux/POSIX 的 `pthread_*` 与 Windows CRT/Win32 线程 API 之间的迁移。这里聚焦线程 API 与生命周期；共享状态、顺序和资源归属还须加载[并发场景](../../scenes/concurrency/SKILL.md)。按对应 API 契约选择映射，本项编译和行为结论须依据精确版本的独立证据。
 
 ## 适用映射与边界
 

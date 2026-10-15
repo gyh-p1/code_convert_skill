@@ -23,7 +23,7 @@ description: Use alongside a conversion direction when source launches child pro
 
 ## L2-PROC-01 宿主输出通道属于可观察行为，不得只图可用
 
-旧锚点保留，普通语言事实归位至[PowerShell 通道](../../references/languages/powershell.md#宿主与输出通道)、[Ruby puts](../../references/languages/ruby.md#输出换行puts-与字节写入)和[C# WriteLine](../../references/languages/csharp.md#输出换行consolewriteline)。本场景只规定子进程观察：按源捕获/重定向方式保留通道与交错规则，不把退出码正确当作流内容正确，不新增提示文本。
+普通语言输出事实见[PowerShell 通道](../../references/languages/powershell.md#宿主与输出通道)、[Ruby puts](../../references/languages/ruby.md#输出换行puts-与字节写入)和[C# WriteLine](../../references/languages/csharp.md#输出换行consolewriteline)。本场景只规定子进程观察：按源捕获/重定向方式保留通道与交错规则，不把退出码正确当作流内容正确，不新增提示文本。
 
 ## L2-PROC-02 父子分支、映像替换与环境契约
 

@@ -7,7 +7,7 @@ description: Use when converting PowerShell source to Python; apply this directi
 
 > **适用基线**：PowerShell 7.6 → CPython 3.12。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 PowerShell](../../references/languages/powershell.md)与[目标语言 Python](../../references/languages/python.md)，按源码选择适用规则。
-> **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
+> **证据边界**：以下规则用于当前任务的映射选择；目标编译与功能结论须依据本项精确版本的独立证据，不以规则存在或模型自评替代。
 
 ## 适用范围与前提
 
@@ -140,4 +140,4 @@ description: Use when converting PowerShell source to Python; apply this directi
 
 ## 网络 API 映射
 
-迁入网络场景，仅在 TcpClient/NetworkStream 到 Python socket 时使用。源读取返回 0（按源请求长度与契约核有序关闭）映射为空 bytes；.NET Write 与 Python send 的返回形状不同，源完整写义务在目标不能遗漏短写处理。StreamReader/Writer 的编码、换行和读取到行尾须保留，不能降裸字节或给裸流加文本层；.Dispose 的异常/提前返回释放在目标用有相同作用域的 with/finally。通用行为读[网络场景](../../scenes/network-io/SKILL.md)，未知编码/异常写待确认。
+仅在 TcpClient/NetworkStream 到 Python socket 时使用。源读取返回 0（按源请求长度与契约核有序关闭）映射为空 bytes；.NET Write 与 Python send 的返回形状不同，源完整写义务在目标不能遗漏短写处理。StreamReader/Writer 的编码、换行和读取到行尾须保留，不能降裸字节或给裸流加文本层；.Dispose 的异常/提前返回释放在目标用有相同作用域的 with/finally。通用行为读[网络场景](../../scenes/network-io/SKILL.md)，未知编码/异常写待确认。

@@ -193,7 +193,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 ## 五、模型自检与质量结论声明
 
 1. **模型自检重点**：核对切片边界检查是否完善、循环内 `defer` 是否被正确剥离至子函数、常量溢出是否在编译前消除。该自检属于模型自评，严禁作为编译通过证据。
-2. **证据状态声明**：当前 C→Go 方向处于 `未验证/阻断` 状态（RC4 历史用例两端未构建），在补丁 `7d77158` 部署并取得第三方构建证据前，一律保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`。
+2. **证据状态声明**：本项精确目标版本尚无对应第三方构建证据时保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；取得后按实际编译、执行与观察范围分层报告。本页静态知识不替代本项证据，不从其他任务继承结论。
 
 ---
 
@@ -207,4 +207,4 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 ## 网络 API 映射
 
-迁入网络场景，仅在 send/recv 映射 net.Conn 时使用。Go Read/Write 的 (n,err) 两部分都消费，n>0 与 err 非空可并存，不丢已收数据；EOF 与失败分开，不能把任何 err 当同一故障。源部分 I/O 循环、超时范围与重试条件保留，源相对超时与目标绝对 Deadline 须显式转换；不猜错误类型。源 POSIX/Winsock 错误按[系统页](../../systems/posix-winsock/SKILL.md)区分，通用行为读[网络场景](../../scenes/network-io/SKILL.md)。
+仅在 send/recv 映射 net.Conn 时使用。Go Read/Write 的 (n,err) 两部分都消费，n>0 与 err 非空可并存，不丢已收数据；EOF 与失败分开，不能把任何 err 当同一故障。源部分 I/O 循环、超时范围与重试条件保留，源相对超时与目标绝对 Deadline 须显式转换；不猜错误类型。源 POSIX/Winsock 错误按[系统页](../../systems/posix-winsock/SKILL.md)区分，通用行为读[网络场景](../../scenes/network-io/SKILL.md)。

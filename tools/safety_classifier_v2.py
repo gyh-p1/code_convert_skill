@@ -1,35 +1,17 @@
 #!/usr/bin/env python3
-"""Static review triage, v2.5 candidate with tiered admission policy (Spec 04).
+"""Static text classifier with highest-risk blocking admission.
 
-Reads text only; implements "block only highest-risk" instead of "executable=False for all".
-Classification determines ALLOWED vs BLOCKED based on VM isolation capabilities.
+Input-integrity errors block first; public/hostname targets without declared
+network isolation block next; high-confidence credential findings also block.
+Other review signals remain admission-eligible with applicable context flags.
+ALLOWED is classification only, not execution authorization or proof of isolation.
 
-v2.5 candidate (not a deployment or admission-trust update):
-  * Validate colon-shaped IP candidates without discarding ambiguous hostname:port
-    or hostname:service literals; those keep the legacy hostname admission path.
-  * Exclude explicit XML-literal namespace attributes / C# assembly-version
-    metadata only when the source has no detected network consumer. Method names
-    such as SetAttribute never establish a trusted XML consumer. Record exclusions.
-
-v2.4 change over v2.3:
-  * Hostname heuristic no longer promotes a bare file-name literal (e.g.
-    `"demo.txt"`) to a network target just because a weak context word such as
-    the variable name `target` is on the same line. A QUOTED_HOST value that is
-    a known file extension and has no real network API in context is treated as
-    a path. Real hosts (with a network API like Dial/connect on the line) and
-    hard-coded IPs are unaffected. Fixes dataset-2 D2-055 false positive.
-
-v2.3 changes over v2.2, all required by docs/stages/stage1/specs/tiered-admission-policy.md:
-  * Input paths are resolved against the manifest's own directory, not the repository
-    root. v2.2 read batch.json `sourcePath`/`sourceDir` as root-relative, so every
-    manifest written in the documented `../<direction>/<case>/source` style that did
-    not coincide with `<source_base>/<direction>/...` became a false BLOCKED_INPUT.
-  * Rule 3 (high-confidence real credential) is implemented; v2.2 shipped it as a
-    placeholder comment and could never emit `real_credential_suspected`.
-  * The batch-level network isolation switch is reachable from the CLI; v2.2 always
-    passed False, so Spec 04 3.2 could not be cleared by configuration.
-  * Lexical boundaries no longer fire on substrings of ordinary identifiers
-    (`os.WriteFile` is not the Windows API, `translation-eval` is not dynamic eval).
+Ambiguous hostname:port/service literals follow hostname admission rules.
+Explicit XML-literal namespace and C# assembly-version metadata exclusions apply
+only in a file without detected network signals; method names establish no exemption.
+Known file suffixes without network API context can identify path literals.
+Input paths resolve within the manifest-directory and declared-source-base bounds.
+Samples are read as text, never imported, compiled, or executed.
 """
 from __future__ import annotations
 
@@ -92,7 +74,7 @@ QUOTED_HOST = re.compile(r"""['"](\[?[A-Fa-f0-9:]+\]?|localhost|(?:[A-Za-z0-9-]+
 PRIVATE_V4 = tuple(ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"))
 PRIVATE_V6 = ipaddress.ip_network("fc00::/7")
 
-# Spec 04 3.3: block only HIGH-CONFIDENCE real credential material. A keyword such as
+# Block only HIGH-CONFIDENCE real credential material. A keyword such as
 # "password" is explicitly NOT enough, because the body must be a placeholder value.
 # These patterns describe credential *formats* that cannot be produced by accident.
 CREDENTIAL_PATTERNS = {
@@ -253,10 +235,10 @@ def address_scope(value: str) -> str:
 
 
 def detect_high_confidence_real_credential(code: str) -> list[dict[str, Any]]:
-    """Spec 04 3.3: report credential material that is very unlikely to be a placeholder.
+    """Report credential material that is very unlikely to be a placeholder.
 
-    Findings carry line, kind and a redacted excerpt only. Spec 01 4 requires that
-    reports keep clues and positions rather than copying source, and a credential is
+    Findings carry line, kind and a redacted excerpt only. Reports keep clues and
+    positions rather than copying source, and a credential is
     the one token that must never be written into an output file even if it is later
     judged synthetic: the excerpt is truncated to a non-reconstructable prefix.
     """
@@ -295,7 +277,7 @@ class SafetyClassification:
 
 
 class SafetyClassifierV2:
-    """Compatibility name for v2.2 tiered admission; no execution/HTTP/import of samples."""
+    """Static tiered admission; no execution, HTTP access, or import of samples."""
 
     def __init__(self, batch_network_isolation_configured: bool = False):
         """
@@ -435,7 +417,7 @@ class SafetyClassifierV2:
         else:
             cls, reason = "LOW_SIGNAL", "no_known_signal_detected_not_proven_safe"
 
-        # Determine admission status based on tiered policy (Spec 04)
+        # Determine admission status based on the highest-risk blocking policy.
         admission_status, blocking_reason, requires_network_isolation, requires_synthetic_data = self._determine_admission(
             cls, groups, files, errors
         )
@@ -500,7 +482,7 @@ class SafetyClassifierV2:
             return "BLOCKED", "public_network_unverified", True, False
 
         # Rule 3: High-confidence real credential material → BLOCKED pending human review.
-        # Spec 04 3.3: only credential *formats*; a bare "password"/"key"/"token"
+        # Only credential *formats*; a bare "password"/"key"/"token"
         # keyword with a placeholder value must stay ALLOWED.
         credential_findings = [finding
                                for file in files
@@ -527,7 +509,7 @@ def checked_path(path: Path, root: Path) -> Path:
 def manifest_roots(input_json: Path, source_base: Path) -> tuple[Path, ...]:
     """Ordered containment roots a manifest path may legitimately resolve inside.
 
-    Spec 04 3.1 blocks a task only for a real input-integrity failure. A path that
+    Input admission blocks a task only for a real integrity failure. A path that
     simply uses a different base directory is not one, so both readings are tried:
     the manifest's own directory first (the documented `../<direction>/<case>/source`
     style), then the declared source base (root-relative style). `source_base` is
@@ -696,7 +678,7 @@ if __name__ == "__main__":
     parser.add_argument("source_base", type=Path)
     parser.add_argument(
         "--network-isolation-configured", action="store_true",
-        help="Spec 04 3.2: batch-level network isolation is configured, so public/hostname "
+        help="Batch-level network isolation is configured, so public/hostname "
              "network targets are admission-eligible instead of blocked. Only pass this when "
              "the batch-authorization.json evidence exists; it is not verified here.")
     args = parser.parse_args()

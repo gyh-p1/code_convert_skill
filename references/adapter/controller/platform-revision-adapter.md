@@ -1,8 +1,8 @@
 # Controller 当前协议适配：源侧预检、收尾与恢复
 
-> 更新：2026-10-11。状态：ACTIVE，转换系统对当前评估平台协议的正式适配。任务按本页选择请求、报告、取证与恢复形状，并保存实际 health/回传身份。平台回归不是转换效果、驱动合法性或网络隔离证据。
+> 状态：ACTIVE，转换系统对评估平台协议的适配。任务按本页选择请求、报告、取证与恢复形状，并保存实际 health/回传身份；支持声明不替代本项构建、行为、驱动合法性或网络隔离证据。
 
-本页随转换仓库离线交付，完整维护当前需消费的字段与形状，不要求联网或读取相邻评估仓库。请求前核实际平台身份与声明能力；字段/路由缺失或版本不符时记录准备缺口，不猜填 capability。连接与普通双侧请求沿用[Controller 适配](remote-controller-adapter.md)，门禁分别消费[任务状态](../../framework/task-state-contract.md)、[评估准备](../../framework/evaluation-readiness-contract.md)、[交付](../../framework/delivery-handoff-contract.md)、[安全边界](../../framework/safety-boundary.md)。适配文本不产生样本执行授权。
+本页随转换仓库离线交付，定义需消费的字段与形状，不要求读取相邻评估仓库。请求前核实际平台身份与声明能力；字段/路由缺失或版本不符时记录准备缺口，不猜填 capability。连接与普通双侧请求沿用[Controller 适配](remote-controller-adapter.md)，门禁分别消费[任务状态](../../framework/task-state-contract.md)、[评估准备](../../framework/evaluation-readiness-contract.md)、[交付](../../framework/delivery-handoff-contract.md)、[安全边界](../../framework/safety-boundary.md)。适配文本不产生样本执行授权。
 
 ## 1. 启用前核对版本与能力
 
@@ -12,14 +12,14 @@
 |---|---|
 | `supportedJobKinds` | Controller 含 comparison/source-preflight；按本项任务选择入口，支持声明不代替独立执行授权 |
 | `supportedEvaluationModes` | Controller/参与 Agent 对应 build-and-run 或 build-only；仅编译须两端明确支持 |
-| `contractSetHash` | Controller、参与 Agent、batchAuthorization.contractHash 与本次所用 schema 对应；新增 schema 改变全哈希，旧数值不沿用 |
+| `contractSetHash` | Controller、参与 Agent、batchAuthorization.contractHash 与本项所用 schema 集合对应；集合改变即重新核全哈希，不沿用不适用数值 |
 | `implementationIdentity.available/components/restartRequired` | 保存 Controller/Agent 产品启动身份及 evaluationCore 身份；available=true、restartRequired=false，并与部署材料对应。不存在/不明记身份缺口；同一版本标签或契约 hash 不替代实现身份 |
 | `ready`、runner readiness、快照、clean | 只核当前调度/恢复状态；另核逐项网络/数据边界、合法入口、观察四要素与真实清理 |
 | `comparison` | 保存实际 preset、token、目录映射与容忍配置；按[比较适配](comparison-policy-adapter.md)冻结，不在 capsule 内伪造服务器配置 |
 
 模块启动 hash 不证明所有已加载内存、依赖、工具链或隔离；产品文件改变须重启，Controller/Agent 拒绝新执行。普通组件 version 仍可能为 1.0.0，不能凭这个标签认定新包已生效。支持列表不增加 network/registry collector 或事件级 oracle。
 
-当前发布协议身份（1.0.29）：完整 contractSetHash 为 `sha256:8090cfcc71697e552c93d4531fdce9dc17b92be41cb306fcbe081a4af3ec4aac`。保存本项现场 health，并核 Controller/参与 Agent/授权的值相符；历史 `a9ed1445…` 不用于当前协议请求。releaseVersion、manifestHash 和产品启动身份分别关联，不把“同一契约 hash”当成实现、工具链或隔离证明。
+保存本项现场 health，核 Controller、参与 Agent、授权及所用 schema 的 contractSetHash 相符，不沿用其他任务的数值。releaseVersion、manifestHash 和产品启动身份分别关联，不把“同一契约 hash”当成实现、工具链或隔离证明。
 
 ## 2. 独立源侧预检请求
 
@@ -79,7 +79,7 @@ Capsule 只包含 `source_preflight_manifest.json`、`input_profile.json`、`met
 
 `metadata.json` 是必需的 JSON 对象；无附加元数据时完整内容为 `{}`，不能省文件、写空文本或 null。它不代替 manifest、冻结记录、classification 或授权。存在 fixture 时，每项声明含 relativePath、真实 contentDigest、sizeBytes、mediaType 和可空 sourceArtifactRef，并携带对应既有 fixture 原件；没有 fixture 才使用 `fixtures=[]`。不填写假 hash 或新造 fixture/驱动。
 
-明确仅编译时：mode 改 `build-only`，**删除 runCommand 键**，采用 InputProfile **1.0**，argv=[]、stdin=null、observationPolicy.dimensions=[]、comparisonPolicy={}，无 functionalProfile。已发布 InputProfile 1.1 强制 functionalProfile，与仅编译冲突，不能直接套用或静默降版本。本轮无法合法行为评估时，用户已允许按[评估准备 §1.3](../../framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)明确冻结 LIB_UNOBSERVABLE_COMPILE_ONLY，再采用上述形状取得源构建及目标语法/编译证据；不改平台 schema、不新增 capability、不补造入口。仅编译支持未知阻止该验证提交，不把已满足条件的生成也停掉。
+明确仅编译时：mode 改 `build-only`，**删除 runCommand 键**，采用 InputProfile **1.0**，argv=[]、stdin=null、observationPolicy.dimensions=[]、comparisonPolicy={}，无 functionalProfile。InputProfile 1.1 强制 functionalProfile，与仅编译冲突，不能直接套用或静默降版本。本项无法合法行为评估时，按[评估准备 §1.3](../../framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)明确冻结 LIB_UNOBSERVABLE_COMPILE_ONLY，再采用上述形状取得源构建及目标语法/编译证据；不改平台 schema、不新增 capability、不补造入口。仅编译支持未知阻止该验证提交，不把已满足条件的生成也停掉。
 
 手工打包与提交形状（满足本项前置门槛后使用；有 fixture 时把既有 fixture 树纳入本项归档）：
 
@@ -96,11 +96,11 @@ curl.exe -sS -o source-preflight-submission-body.json -w "%{http_code}" -X POST 
 
 本节是获授权任务使用的请求契约，不是某一项的执行批准。classification 和 batchAuthorization 必须来自该项真实分类及适用人工授权，源文件集合、授权有效期/contractHash、当前平台身份和逐例隔离分别核对；已有适用授权可复用，不因本页补充示例重复申请。缺任一适用件时记具体 PREPARATION_GAP/WAITING 并写 result.md，不先生成目标凑包。
 
-## 3. 新报告 kind 与分层判读
+## 3. 报告 kind 与分层判读
 
 source-only 的 `/api/jobs/{jobId}/report` 返回 **SourcePreflightReport 1.0**，kind=`codeconvert-source-preflight-report`；不是双侧 EvaluationReport。通过相同 job 状态、report.md、evidence/source、closure 路由取证；没有 target bundle 或 comparison，不要求伪造它们。源预检全部原件仍归既有 `job-00-source-buildability/returned-evidence/`。
 
-源原件采信及生成前/双侧提交前的逐项落实消费[评估准备 §1.4](../../framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)。历史占位目标 job 原标签保留，其 comparison 不当转换结论；不将 source-only 缺 target/comparison 误判为缺档。
+源原件采信及生成前/双侧提交前的逐项落实消费[评估准备 §1.4](../../framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)。采用占位目标的源预检 job 保留原标签，其 comparison 不当转换结论；不将 source-only 缺 target/comparison 误判为缺档。
 
 | 字段 | 判读 |
 |---|---|
@@ -118,7 +118,7 @@ source-only 的 `/api/jobs/{jobId}/report` 返回 **SourcePreflightReport 1.0**�
 
 ## 4. 平台收尾与原件取回
 
-状态 API 新增 jobKind、sourceOs/sourceLang、closureBlocked；source-only 的 target 坐标为空，runnerAssignments.target=null，不推定同机双侧。**不能只因 jobStatus 属旧终态枚举就停止等待/记 DONE**：closureBlocked=true、jobPhase=CLEANING、提交/调用未知或清理未确认时保持 WAITING，照常写暂停 result.md。
+状态 API 提供 jobKind、sourceOs/sourceLang、closureBlocked；source-only 的 target 坐标为空，runnerAssignments.target=null，不推定同机双侧。**不能只因 jobStatus 属终态枚举就停止等待/记 DONE**：closureBlocked=true、jobPhase=CLEANING、提交/调用未知或清理未确认时保持 WAITING，照常写暂停 result.md。
 
 `GET /api/jobs/{jobId}/closure` 返回 JobClosure 1.0（kind=`codeconvert-job-closure`）：complete、cleanupConfirmed、cleanupRecords、issues、artifactDigests、roles、oracleStatus、programOutputProvenance、checkedAt。complete/cleanupConfirmed 要与当前阶段原件及本项清理一致；平台完整性通过仍不能免转换端交付核对，也不是功能 PASS。programOutputProvenance 当前恒为 UNVERIFIED，不把它当已经采到来源证明。
 
@@ -142,9 +142,9 @@ curl.exe --fail -sS "http://127.0.0.1:8443/api/jobs/<job-id>/artifacts/evidence/
 
 artifactDigests 是派生核对摘要，不替代原件；逐件原生取回/核对到转换输出目录，按[交付 §1.1](../../framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)记录适用清单。原 report、comparison 和观察不因归因不同而覆写。
 
-2026-10-13评估源码候选新增两类collectorDiagnostics警告：DOTNET_HOST_LOOKUP_FAILURE_REPORTED与DRIVER_SYNTAX_ERROR_REPORTED，分别提示流中出现宿主查找失败或被调用驱动位置的SyntaxError特征。当时未测试；2026-10-15当前工作树维护回归已覆盖相应既有测试，仍未发布或部署，不要求现役服务必须返回这些code。即使取得提示，也仍核精确入口/版本、原stderr/退出和输出来源；警告不证明根因、未运行范围或已修复，不改变原平台判定。没有警告也不证明这些问题不存在。
+collectorDiagnostics 的 `DOTNET_HOST_LOOKUP_FAILURE_REPORTED` 与 `DRIVER_SYNTAX_ERROR_REPORTED` 分别提示流中出现宿主查找失败或被调用驱动位置的 SyntaxError 特征。按实际回传消费提示，并核精确入口/版本、原 stderr/退出和输出来源；警告不证明根因、未运行范围或已修复，不改变原平台判定。接口未提供或没有警告均不证明这些问题不存在。
 
-最低适用回传面按真实 kind/mode/已发生阶段选择；下表只消费现有接口，不建设取证脚本。历史实例缺新路由时保留原记录和缺口，不访问安装目录/jobs 来补件。
+最低适用回传面按真实 kind/mode/已发生阶段选择；下表只消费现有接口，不建设取证脚本。实例缺适用路由时保留原记录和缺口，不访问安装目录/jobs 来补件。
 
 | 实际分支/阶段 | 取回并核对的适用面 |
 |---|---|
@@ -162,22 +162,22 @@ artifactDigests 是派生核对摘要，不替代原件；逐件原生取回/核
 
 相同 ID 配不同冻结材料为 400；存在 request 但缺 state 返回 RECOVERY_REQUIRED，保持未知并移交获批平台核对，不补造新 job。恢复取回原 job 与申请新执行分开；前者仍保留原失败/清理记录。无 ID 的旧未知提交不天然幂等，不从 caseId/capsule hash 猜找 job，也没有通用列举/查询端点。
 
-本地评估仓库的恢复候选已补 request-only 的可查询失败状态，以及损坏请求/状态/manifest 和报告持久化失败的阻断处理；未部署或回归，不以候选改变当前服务的上述回执判读。原接收材料不可读时仍需获批平台处理，不保证所有孤立记录可自动收尾/解除 busy，不借重启或 runner READY 推清理完成。
+request-only、请求/状态/manifest 损坏或报告持久化失败时，按实际可查询状态和失败原件判读。原接收材料不可读或状态缺失时保持恢复阻断并移交获批平台处理，不保证所有孤立记录可自动收尾或解除 busy，不借重启或 runner READY 推清理完成。
 
-409 busy 的新 detail 为对象：error=controller_busy、jobCreated=false、retryAfterSeconds=null、action。它表示本次未建 job，不承诺排队或 ETA；旧字符串 detail 保留原文按实际解释。503 不由标签推断已提交/未提交，按回执事实处理。Controller 只支持单进程共享作业存储，不据提交锁宣称多进程或分布式去重。
+409 busy 的 detail 对象包含 error=controller_busy、jobCreated=false、retryAfterSeconds=null、action 时，表示本次未建 job，不承诺排队或 ETA；字符串 detail 保留原文按实际解释，不推定具有同一保证。503 不由标签推断已提交/未提交，按回执事实处理。Controller 只支持单进程共享作业存储，不据提交锁宣称多进程或分布式去重。
 
-即使已验收幂等性，也不能因未知或活动 job 盲重投；只用精确 ID/材料恢复原回执，或按[Controller 恢复规则](remote-controller-adapter.md#提交结果未知时的恢复)取得原接收/终止/清理证据后另记尝试。任务输入、驱动、配置或授权变化须另冻版本、按需重新分类与源预检，不借旧 ID 消除差异。
+不能因接口支持幂等而对未知或活动 job 盲重投；只用精确 ID/材料恢复原回执，或按[Controller 恢复规则](remote-controller-adapter.md#提交结果未知时的恢复)取得原接收/终止/清理证据后另记尝试。任务输入、驱动、配置或授权变化须另冻版本、按需重新分类与源预检，不借旧 ID 消除差异。
 
 ## 6. 追加归因与比较配置
 
 `POST /api/jobs/{jobId}/annotations` 仅接收 author/reason/note/可选 supersedes；GET 同路径读取追加记录。返回 JobAnnotation 1.0，annotationId、createdAt、originalVerdictUnchanged=true；supersedes 只能指该 job 已有 annotationId。说明不修改原 verdict/比较/证据，也不是平台重评或放行；author 是声明，不是签名。只在已授权向评估平台补充记录时使用，不向其他人/服务发送消息；注释内容不含敏感信息或执行指令。
 
-新服务器 preset=`noise-tolerant-v2` 可配置 workspace_path_pairs：最多 16 对精确绝对目录前缀，带尾分隔符、足够具体、无根目录/父穿越/重复路径。映射只处理已声明前缀，剩余相对路径/文件名与计时值继续比较。`text_tokens=[]`、`system_noise_patterns=[]` 明确禁用其他规则；省略时可能继承 v1 默认，冻结时须读实际完整配置。strict/v1 不接受非空目录对。
+服务器 preset=`noise-tolerant-v2` 可配置 workspace_path_pairs：最多 16 对精确绝对目录前缀，带尾分隔符、足够具体、无根目录/父穿越/重复路径。映射只处理已声明前缀，剩余相对路径/文件名与计时值继续比较。`text_tokens=[]`、`system_noise_patterns=[]` 明确禁用其他规则；省略时可能继承 v1 默认，冻结时须读实际完整配置。strict/v1 不接受非空目录对。
 
-目录映射仍是平台服务器配置，不能放进input_profile冒充任务字段，不能失败后自动放宽。例外与冻结允许差异及部署/配置版本关联。JSON ignoredJsonPaths副本修复不增加计时通配、浮点容差或新oracle。有效matched与有效semantic_pass均可计冻结范围功能比较通过，分别保留两类和原始/规范化差异，不外推完整业务分子；口径见[评估准备§5.1](../../framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)及[比较策略适配](comparison-policy-adapter.md)。
+目录映射是平台服务器配置，不能放进 input_profile 冒充任务字段，不能失败后自动放宽。例外与冻结允许差异及实际配置/实现身份关联。JSON ignoredJsonPaths 在副本上移除精确字段，不增加计时通配、浮点容差或新 oracle。有效 matched 与有效 semantic_pass 均可计冻结范围功能比较通过，分别保留两类和原始/规范化差异，不外推完整业务分子；口径见[评估准备§5.1](../../framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)及[比较策略适配](comparison-policy-adapter.md)。
 
-ignoredJsonPaths的schema声明、低层实现与输出入口传递须分别核；2026-10-15发现旧输出入口未转交列表，本轮候选源码已补传递并通过入口及维护回归，见[比较适配§2.2](comparison-policy-adapter.md#22-json-字段忽略的声明与消费)。新增类型化token候选见该页§2.3；均尚未发布或部署，不据字段可填写推定现役消噪成功。source-only/驱动有效性继续按评估准备判读，专用退出码只是定位线索，不新增schema或改历史verdict。
+ignoredJsonPaths 的 schema 声明、结构比较与输出入口传递分别核实，见[比较适配§2.2](comparison-policy-adapter.md#22-json-字段忽略的声明与消费)。类型化 token 的范围及保护项见该页 §2.3；按实际实现/配置支持选择，不据字段可填写推定消噪成功。source-only/驱动有效性按评估准备判读，专用退出码只是定位线索，不据此改写原 verdict。
 
-## 7. 本轮适配边界
+## 7. 适用边界
 
-维护依据为评估平台实际生产者、loader、API 与回归结果对应的当前协议；维护资料定位 `third-party-evaluation-system/docs/platform-revision.md`，本页不依赖该外部文件才能执行字段判读。旧部署记录、历史 job 和历史版本哈希不回写；历史实例与当前协议不符时按实际身份记录准备缺口。本轮平台测试及部署事实另见评估仓库测试记录，不将测试结果写成转换效果。本轮没有提交转换 job、编译/运行危险样本、改变业务指标或增加辅助工具。
+本页定义请求与判读契约，不替代实际 API、schema、实现身份、任务授权及逐例隔离核对。实例与本页所需协议不符时记录具体准备缺口，暂停受影响提交或判读；已发生 job 的原报告、观察及身份不回写。不以支持声明、示例受理或平台自检代替精确版本的源/目标构建和适用行为证据。

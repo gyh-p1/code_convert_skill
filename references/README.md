@@ -1,6 +1,6 @@
 # 项目知识与执行参考索引
 
-从[根入口](../SKILL.md)进入。索引只负责路由；规范在下表对应真源维护，短摘要不产生第二份规则。开发计划在 docs/stages，不是转换任务必读依赖；测试数据和历史批次不进入产品知识索引。
+从[根入口](../SKILL.md)进入。索引只负责路由；规范以表中对应契约为准，短摘要不产生第二份规则。
 
 ## 知识：按源码事实加载
 
@@ -20,7 +20,7 @@
 | [单项闭环](workflow/conversion-evaluation-loop.md) | 每项正式转换必读 | 冻结→分类→源预检→生成/自审→准备→评估→有限修复→收尾；计数与反馈分流 |
 | [批量工作流](../skills/workflows/batch-conversion/SKILL.md) | 请求含多项 | 手工串行、接入/恢复、每 40 终态增量对账及终局核对 |
 | [长文件工作流](../skills/workflows/long-file-conversion/SKILL.md) | 长/复杂单文件 | 全文件地图、语义分段、跨单元核对；不重置单项预算 |
-| [行为指导](workflow/behavior-preservation-contract.md) | 单文件行为目标/差异说明 | 目标与允许差异建议；旧门禁章节仅链接准备契约 |
+| [行为指导](workflow/behavior-preservation-contract.md) | 单文件行为目标/差异说明 | 目标与允许差异建议；提交门禁引用准备契约 |
 | [构建前提](workflow/build-prerequisites.md) | 冻结前及源/目标构建必读 | 冻结构建命令、工程/依赖/工具链条件，真实诊断分流 |
 | [分类准入](workflow/classifier-agent-gate.md) | 冻结/分类前、源预检前、提交/重提必读 | 分类输入、ALLOWED、精确身份及重新分类；不替代授权/隔离 |
 
@@ -41,6 +41,6 @@
 | [Controller 适配](adapter/controller/remote-controller-adapter.md) | 连接、外部 schema、classification/batchAuthorization、手工提交/轮询/取证与未知提交恢复 |
 | [Controller 当前协议适配](adapter/controller/platform-revision-adapter.md) | 使用该渠道时随主适配读取；独立源预检/报告 kind、closure/原件、精确 submissionId 与比较配置，提交前核实际平台身份与能力 |
 | [比较策略适配](adapter/controller/comparison-policy-adapter.md) | 平台实际字段、策略/维度能力与已知缺口；不承诺通用语义 oracle |
-| [Runner 能力矩阵](adapter/controller/runner-capability-matrix.md) | 登记组合、部署版本和最后已知能力；任务仍核实际接口/证据 |
+| [Runner 能力矩阵](adapter/controller/runner-capability-matrix.md) | 登记组合、能力和组件身份；任务核实际接口/证据 |
 
-语言/方向/场景/系统只提供事实和映射，不替代门禁、工作流或授权。新增文档必须有上述消费者；不能凭目录存在宣称已实现能力。
+语言/方向/场景/系统只提供事实和映射，不替代门禁、工作流或授权；能力与结果以实际接口和精确版本证据为准。

@@ -13,9 +13,9 @@ metadata:
 
 **已知缺陷与验证范围分别处理**：源/目标定位及适用语义已确认的转换错误，按[单项闭环 §3.1/§4](references/workflow/conversion-evaluation-loop.md#31-语法与功能修复反馈分支)有限修复；oracle 不可冻结、仅编译或有限 matched 不关闭缺陷。修复核源判断/调用/失败路径的保持依据，不能硬编码迎合当前输出。预算/条件不足时在[交付报告](references/framework/delivery-handoff-contract.md#23-resultmd面向读者的中文报告骨架)明示未修复或修后未验证；REPAIR 标签本身不构成确认依据，有效 NO-REPAIR 可正常推进。
 
-**知识按离线消费**：读取本仓库正文与本地参考，不依赖访问官方网页或下载资料。来源名称/版本只用于追溯；必要语义缺失或准确版本无法确定时，记录知识缺口，不要求联网补全后才能使用其余适用规则。维护规则见[Skill 编写规范 §5.1](docs/Skill编写规范.md#51-本地引用与网页资料)；知识读取不授权外部联网或执行。
+**知识按离线消费**：读取本仓库正文与本地参考，不依赖访问官方网页或下载资料。来源名称/版本只用于追溯；必要语义缺失或准确版本无法确定时，记录知识缺口，不要求联网补全后才能使用其余适用规则。知识读取不授权外部联网或执行。
 
-片段以声明上下文的语法为范围，只引用用户或获批平台已提供的精确中性上下文并记录来源/版本；缺件待准备，不由 Agent/模型新造桩、入口或依赖。单文件保持约定可观察行为；长单文件加载专用工作流。700 个 LF 归一化物理源代码行是计划上限，长文件流程与全部方向尚无全面效果验证，不能据知识页数量宣称达标。
+片段以声明上下文的语法为范围，只引用用户或获批平台已提供的精确中性上下文并记录来源/版本；缺件待准备，不由 Agent/模型新造桩、入口或依赖。单文件保持约定可观察行为；长单文件加载专用工作流，以 700 个 LF 归一化物理源代码行为规模边界，超范围单列并核上下文与交付条件。规模、方向和行为结论均由本项精确版本的实际证据支持，不能据知识页数量或行数推定通过。
 
 ## 必经执行链与契约
 
@@ -40,7 +40,7 @@ metadata:
 | [交付契约](references/framework/delivery-handoff-contract.md) | 统一收尾入口、全去向 result.md、适用件核对、目录及移交清单 | 开始处理每项时必读；结束/失败/阻断/暂停前再次核对 |
 | [安全边界](references/framework/safety-boundary.md) | 本机/同机/VM、网络和数据红线 | 全程 |
 
-[行为指导](references/workflow/behavior-preservation-contract.md)用于单文件目标/允许差异说明，不自设裁决标准；其旧门禁章节仅转引评估准备契约。[Controller 适配](references/adapter/controller/remote-controller-adapter.md)只在使用该渠道时加载，维护外部字段与命令；它和开发阶段文档不产生执行授权。
+[行为指导](references/workflow/behavior-preservation-contract.md)用于单文件目标/允许差异说明，不自设裁决标准；门禁以评估准备契约为准。[Controller 适配](references/adapter/controller/remote-controller-adapter.md)只在使用该渠道时加载，规定外部字段与命令；适配内容不产生执行授权。
 
 ## 选择适用知识
 
@@ -48,7 +48,7 @@ metadata:
 
 **语言事实**：每项必读源、目标两页，由[七语言共性语义索引](skills/references/seven-language-common-semantics.md)导航；“按需”只用于选择适用规则和正文注入范围，不能省掉任一语言页。基线为 C11、C++17、C# 12/.NET 8、CPython 3.12、Go 1.27、PowerShell 7.6、Ruby 3.4；实际工具链仍须证据核验。
 
-**语言方向（42 个）**：每项选择一个源→目标方向。方向只维护映射，语言内事实不在 42 页重复。
+**语言方向（42 个）**：每项选择一个源→目标方向。方向规定映射，语言内事实以语言页为准。
 
 | 源语言 | 目标语言方向 Skill |
 |---|---|
@@ -60,7 +60,7 @@ metadata:
 | **PowerShell** | [PowerShell → C](skills/directions/powershell-to-c/SKILL.md) ｜ [PowerShell → C++](skills/directions/powershell-to-cpp/SKILL.md) ｜ [PowerShell → C#](skills/directions/powershell-to-csharp/SKILL.md) ｜ [PowerShell → Python](skills/directions/powershell-to-python/SKILL.md) ｜ [PowerShell → Go](skills/directions/powershell-to-go/SKILL.md) ｜ [PowerShell → Ruby](skills/directions/powershell-to-ruby/SKILL.md) |
 | **Ruby** | [Ruby → C](skills/directions/ruby-to-c/SKILL.md) ｜ [Ruby → C++](skills/directions/ruby-to-cpp/SKILL.md) ｜ [Ruby → C#](skills/directions/ruby-to-csharp/SKILL.md) ｜ [Ruby → Python](skills/directions/ruby-to-python/SKILL.md) ｜ [Ruby → PowerShell](skills/directions/ruby-to-powershell/SKILL.md) ｜ [Ruby → Go](skills/directions/ruby-to-go/SKILL.md) |
 
-**场景（按行为多选）**：[网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[进程执行](skills/scenes/process-execution/SKILL.md)、[并发](skills/scenes/concurrency/SKILL.md)。场景维护跨语言行为义务，不承载普通单线程控制流或单一语言 API 改写表。
+**场景（按行为多选）**：[网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[进程执行](skills/scenes/process-execution/SKILL.md)、[并发](skills/scenes/concurrency/SKILL.md)。场景规定跨语言行为义务；普通单线程控制流与单一语言 API 语义按语言及方向页判断。
 
 **系统（按实际 API/子系统多选）**：[POSIX ↔ Winsock](skills/systems/posix-winsock/SKILL.md)、[文件路径](skills/systems/posix-windows-filesystem/SKILL.md)、[进程创建/身份权限](skills/systems/posix-windows-process-identity/SKILL.md)、[线程](skills/systems/posix-windows-threads/SKILL.md)、[Windows 注册表/服务](skills/systems/windows-registry-service-subsystem/SKILL.md)。同 OS 的专有子系统也适用；双向标题不证明全面映射或验证。macOS 当前只含文件位置约定；PE、ptrace/seccomp、Keychain/launchd/CoreFoundation 无对应系统 Skill。
 
@@ -68,7 +68,7 @@ metadata:
 
 [ATT&CK 战术索引](skills/attack-tactic-index/SKILL.md)仅核对标签与定位知识，不生成战术规则，不参与授权；无证据记 none。HTTP/socket/文件 API 本身不构成战术。
 
-**跨场景安全语义**：源码有网络、文件、认证或边界校验行为时，读取[安全行为共性](skills/references/security-behavior.md)的适用正文；它维护源防护语义，不替代执行安全边界。
+**跨场景安全语义**：源码有网络、文件、认证或边界校验行为时，读取[安全行为共性](skills/references/security-behavior.md)的适用正文；它规定源防护语义，不替代执行安全边界。
 
 ## 按以下顺序执行
 

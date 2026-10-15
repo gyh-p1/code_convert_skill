@@ -7,7 +7,7 @@ description: Use when converting C# source to Python; apply this direction's lan
 
 > **适用基线**：C# 12 / .NET 8 → CPython 3.12。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 C#](../../references/languages/csharp.md)与[目标语言 Python](../../references/languages/python.md)，按源码选择适用规则。
-> **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
+> **证据边界**：以下规则用于当前任务的映射选择；目标编译与功能结论须依据本项精确版本的独立证据，不以规则存在或模型自评替代。
 
 ## 适用范围与前提
 
@@ -166,4 +166,4 @@ description: Use when converting C# source to Python; apply this direction's lan
 
 ## 网络 API 映射
 
-迁入网络场景，仅在 Socket/NetworkStream 到 Python socket 时使用。非零长度接收的有序关闭返回 0 与 Python recv 空 bytes 对应，不变成无限重试；连接重置等异常与正常 EOF 分开映射。源 BeginReceive/ReceiveAsync/Task 若改阻塞 recv，先核并发拓扑、取消和同时服务多个连接义务，不能静默串行化。通用行为读[网络场景](../../scenes/network-io/SKILL.md)、并发读[并发场景](../../scenes/concurrency/SKILL.md)，未知入口/错误类别写待确认。
+仅在 Socket/NetworkStream 到 Python socket 时使用。非零长度接收的有序关闭返回 0 与 Python recv 空 bytes 对应，不变成无限重试；连接重置等异常与正常 EOF 分开映射。源 BeginReceive/ReceiveAsync/Task 若改阻塞 recv，先核并发拓扑、取消和同时服务多个连接义务，不能静默串行化。通用行为读[网络场景](../../scenes/network-io/SKILL.md)、并发读[并发场景](../../scenes/concurrency/SKILL.md)，未知入口/错误类别写待确认。

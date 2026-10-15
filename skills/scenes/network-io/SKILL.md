@@ -114,7 +114,7 @@ if [301, 302, 303, 307, 308].include?(response.code.to_i)
 
 ## 具体语言转换的高频陷阱
 
-本节保留原导航锚点，具体 API 映射已归入方向页；只加载本项匹配方向，不同时加载全部语言对：
+具体 API 映射按下列方向页读取；只加载本项匹配方向，不同时加载全部语言对：
 
 - [C→Python](../../directions/c-to-python/SKILL.md#网络-api-映射)、[C→Go](../../directions/c-to-go/SKILL.md#网络-api-映射)：字节、部分 I/O 与错误。
 - [Python→C](../../directions/python-to-c/SKILL.md#网络-api-映射)：独立 C 实现与嵌入 Python 的边界。

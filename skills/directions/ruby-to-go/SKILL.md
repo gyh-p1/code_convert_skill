@@ -7,7 +7,7 @@ description: Use when converting Ruby source to Go; apply this direction's langu
 
 > **适用基线**：CRuby 3.4 → Go 1.27。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 Ruby](../../references/languages/ruby.md)与[目标语言 Go](../../references/languages/go.md)，按源码选择适用规则。
-> **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
+> **证据边界**：以下规则用于当前任务的映射选择；目标编译与功能结论须依据本项精确版本的独立证据，不以规则存在或模型自评替代。
 
 ## 适用范围与前提
 
@@ -164,7 +164,7 @@ description: Use when converting Ruby source to Go; apply this direction's langu
 2. **源/目标事实**：读[Ruby L1-RB-09](../../references/languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)与[Go L1-GO-07](../../references/languages/go.md#l1-go-07-ostempdir-选路径不检查目录可用性)。
 3. **条件映射**：保留源候选优先级、路径展开、拒绝/回退及诊断；仅在这些义务已一致时可直接用 os.TempDir，不能为匹配改环境或预建目录。
 4. **反例**：只设置 TMP、或 TMPDIR 指向不可用目录时，两库不能假定返回相同可用路径。
-5. **未知/依据**：准确库版本/权限未明时记条件差异；依据见两事实页。语义任务文本可完成，历史归因和效果仍须精确证据。
+5. **未知/依据**：准确库版本/权限未明时记条件差异；依据见两事实页。缺陷归因和转换效果须依据本项精确版本的独立证据。
 
 ## 转换与验证边界
 

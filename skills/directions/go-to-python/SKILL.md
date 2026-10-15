@@ -7,7 +7,7 @@ description: Use when converting Go source to Python; apply this direction's lan
 
 > **适用基线**：Go 1.27 → CPython 3.12。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 Go](../../references/languages/go.md)与[目标语言 Python](../../references/languages/python.md)，按源码选择适用规则。
-> **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
+> **证据边界**：以下规则用于当前任务的映射选择；目标编译与功能结论须依据本项精确版本的独立证据，不以规则存在或模型自评替代。
 
 ## 适用范围与前提
 
@@ -155,4 +155,4 @@ description: Use when converting Go source to Python; apply this direction's lan
 
 ## 网络 API 映射
 
-迁入网络场景，仅在 Go net.Conn 到 Python socket 时使用。一次 Read/recv 都不代表完整帧；Go n>0 与 err 非空并存时先保留有效数据再处理错误。重复关闭的返回值/异常若被源观察，必须列入对应行为，不能因目标 close 便利而自动丢弃。关闭唤醒阻塞调用的效果按[并发场景](../../scenes/concurrency/SKILL.md)及目标平台核对，不默认同义。通用字节/协议读[网络场景](../../scenes/network-io/SKILL.md)，未核关闭/错误语义记待确认。
+仅在 Go net.Conn 到 Python socket 时使用。一次 Read/recv 都不代表完整帧；Go n>0 与 err 非空并存时先保留有效数据再处理错误。重复关闭的返回值/异常若被源观察，必须列入对应行为，不能因目标 close 便利而自动丢弃。关闭唤醒阻塞调用的效果按[并发场景](../../scenes/concurrency/SKILL.md)及目标平台核对，不默认同义。通用字节/协议读[网络场景](../../scenes/network-io/SKILL.md)，未核关闭/错误语义记待确认。

@@ -7,7 +7,7 @@ description: Use when one request contains multiple conversion tasks. Manually s
 
 一次请求包含多项时加载。本页只管手工编排、持久化、恢复和对账；知识选择走[根入口](../../../SKILL.md)，执行红线见[安全边界](../../../references/framework/safety-boundary.md)与 [AGENTS.md](../../../AGENTS.md)。不编写、生成、保存或运行辅助脚本，不自建批量运行时。
 
-整个数据集保持一个 batchId，不按 40 项切批。新增材料另记 intakeId，追加集合版本与依据，已完成项不重编号；规则由[任务状态契约](../../../references/framework/task-state-contract.md)维护。单批不少于 40 项是业务能力目标，当前手工串行操作与未来无需人工操作指标分开，不能凭队列 CLOSED 或条数宣称目标达成。
+整个数据集保持一个 batchId，不按 40 项切批。新增材料另记 intakeId，追加集合版本与依据，已完成项不重编号；规则由[任务状态契约](../../../references/framework/task-state-contract.md)维护。批量任务手工串行逐项推进；队列 CLOSED 或条目数量不代表转换质量，结论按逐项实际证据与覆盖范围报告。
 
 处理首项前按根入口第 1 步读全部必读契约和使用渠道的适配，不等下文 §1 或生成阶段才补读。每项先完成根步骤 2–4 的画像/知识选择，再按下文 §0 第 4–5 步完成冻结；根第 5 步调度表逐行消费单项闭环，不另建调度顺序。
 
@@ -52,7 +52,7 @@ description: Use when one request contains multiple conversion tasks. Manually s
 
 前三道门禁与收尾门禁逐项适用。明确文本交付/片段不触发后续行为 job，正式模型生成仍先过分类与源侧预检。正常评估、仅编译例外、两侧对称及有效观察见[评估准备契约](../../../references/framework/evaluation-readiness-contract.md)。自审 NO-REPAIR-IDENTIFIED 是有限内部推进信号，不能要求它预测编译；REPAIR-RECOMMENDED 只对有源/目标定位证据且属转换引入的条目修复，不反复自审求保证。
 
-每次 POST 随附该 taskId 的 classification 和覆盖该项的 batchAuthorization；单项用最小单项授权。字段及手工命令只见[Controller 适配](../../../references/adapter/controller/remote-controller-adapter.md)，不依赖 docs/stages 开发期规格。分类源文件集合/哈希须与 capsule 精确一致；ALLOWED 不替代独立授权和逐例隔离。READY/clean/快照不证明隔离，不访问同机 Controller 安装目录/jobs。
+每次 POST 随附该 taskId 的 classification 和覆盖该项的 batchAuthorization；单项用最小单项授权。字段及手工命令只见[Controller 适配](../../../references/adapter/controller/remote-controller-adapter.md)。分类源文件集合/哈希须与 capsule 精确一致；ALLOWED 不替代独立授权和逐例隔离。READY/clean/快照不证明隔离，不访问同机 Controller 安装目录/jobs。
 
 到 job 终态后取证，读两侧原始观察再分转换引入、源已有、环境、装置。平台原判保留；matched 或维度计数不替代有效观察和真实 build；缺证据 UNVERIFIED。仅编译不采信空输出 matched，不合成单一成功率。
 
@@ -60,7 +60,7 @@ description: Use when one request contains multiple conversion tasks. Manually s
 
 ## 4. 持久化与恢复
 
-落点与文件集合只见[交付契约 §2.1.1/§2.1.2](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架2026-10-09-冻结按-docstestdataset-实测形制)：单项 run 保存版本/证据；批次根保存 batch.json、items/<taskId>.json、events.jsonl、README.md 和关闭前定稿的 summary.md。items 是调度指针，不能复制或替代原证据。事件只追加，更正用新事件；原始去向逐个齐全。
+落点与文件集合只见[交付契约 §2.1.1/§2.1.2](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架)：单项 run 保存版本/证据；批次根保存 batch.json、items/<taskId>.json、events.jsonl、README.md 和关闭前定稿的 summary.md。items 是调度指针，不能复制或替代原证据。事件只追加，更正用新事件；原始去向逐个齐全。
 
 1. 恢复先读接入、去向、冻结、单项状态与事件，核对身份及差异。原材料暂不可读时，仅在冻结快照仍可取得且契约允许时继续，否则准备缺口，不猜恢复。
 2. 已提交按原 jobId 查询，已生成不重复成功模型请求，已取证不为补事件重新执行。文件/事件不一致追加带证据说明，不改原记录或重置修复预算。

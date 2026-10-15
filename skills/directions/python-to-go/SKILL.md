@@ -152,4 +152,4 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 ## 网络 API 映射
 
-迁入网络场景，仅在 Python socket 到 Go net.Conn 时使用。Python recv 的空 bytes 与 Go io.EOF 对应关闭，Go 的 n 与 err 须同时处理，不丢已有字节、不将 EOF 当普通网络失败。Python 非阻塞/无限阻塞/相对超时与 Go 绝对 Deadline 分开映射；按源每次调用预算决定重设，不机械沿用过期截止。异常按 errors.Is/As 和实际平台类别对应，名称相近不等价。通用 I/O 与协议读[网络场景](../../scenes/network-io/SKILL.md)，未核错误/超时差异写待确认。
+仅在 Python socket 到 Go net.Conn 时使用。Python recv 的空 bytes 与 Go io.EOF 对应关闭，Go 的 n 与 err 须同时处理，不丢已有字节、不将 EOF 当普通网络失败。Python 非阻塞/无限阻塞/相对超时与 Go 绝对 Deadline 分开映射；按源每次调用预算决定重设，不机械沿用过期截止。异常按 errors.Is/As 和实际平台类别对应，名称相近不等价。通用 I/O 与协议读[网络场景](../../scenes/network-io/SKILL.md)，未核错误/超时差异写待确认。

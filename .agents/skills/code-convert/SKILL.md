@@ -5,7 +5,7 @@ description: Use for code conversion tasks in this repository. Load the project 
 
 # Code Convert — Codex 发现入口
 
-先读取 [AGENTS.md](../../../AGENTS.md) 和仓库根 [SKILL.md](../../../SKILL.md)。根入口维护必读契约与按事实加载的知识索引，本页不维护第二份规则。
+先读取 [AGENTS.md](../../../AGENTS.md) 和仓库根 [SKILL.md](../../../SKILL.md)。必读契约与按事实加载的知识索引以根入口为准。
 
 已确认转换缺陷与评估范围/阻塞分别处理：依根入口及[单项闭环](../../../references/workflow/conversion-evaluation-loop.md)有限修复并核源行为保持；oracle 不可冻结、仅编译或有限 matched 不关闭已定位误译。停止时按交付契约明示未修复/修后未验证，不以 residualRisk 替代。知识与观察范围按源码触发选择，比较能力只据现役适配，不新增驱动、比较器或无限自审。
 
@@ -21,7 +21,7 @@ description: Use for code conversion tasks in this repository. Load the project 
 
 按根入口六步执行：先读全部必读契约，再画像、选知识、完成冻结，随后按第 5 步调度表逐行推进。多项任务在处理首项前加载[批量工作流](../../../skills/workflows/batch-conversion/SKILL.md)，长文件在地图/分段前加载[长单文件工作流](../../../skills/workflows/long-file-conversion/SKILL.md)，两者可以同时使用。每项必读源/目标两语言页与一个方向 Skill，场景/系统/安全行为和 ATT&CK 索引按源码事实加载；加载阶段只准备材料，不提前发送模型请求。知识可达、Agent 已读、模型已注入与效果已验证分别记录，判据见任务状态 §2.3。
 
-能力和证据边界由根入口说明。本入口不索引测试数据集、历史批次或工程阶段；规则应用不依赖一次性测试数据长期存在。
+能力和证据边界由根入口说明。规则应用不依赖一次性测试数据长期存在。
 
 功能判读及统计按根入口转引的[评估准备§5.1](../../../references/framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)消费有效性、消噪与分类次序，不只按平台标签计通过；知识映射是按源使用点选择的引导，不追加审阅或动态验证步骤。
 

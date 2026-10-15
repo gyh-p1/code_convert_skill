@@ -1,7 +1,7 @@
 # Python 语言共性语义（CPython 3.12）
 
 > **用途**：以 Python 为源语言或目标语言的任务必读本页，按源码选择适用条目；加载与门禁先见根[转换入口](../../../SKILL.md)。本页仅保存该语言的跨方向事实与风险，不指定任何源→目标映射。
-> **知识与证据边界**：由原[七语言共性索引](../seven-language-common-semantics.md)的七个机制表逐行迁入；原有版本/官方依据随条目保留。静态事实不代表目标工具链已部署，也不代表任一方向的编译或行为已验收。
+> **知识与证据边界**：按条目中的语言版本、资料依据和源码触发条件选择适用事实；跨语言关注点见[七语言共性索引](../seven-language-common-semantics.md)。目标工具链能力与编译、行为结论须依据本项精确版本的独立证据。
 > **分类**：`[语言规范保证]`、`[指定运行时的实现相关事实]`、`[待专题核验，不可用于确定转换规则]` 的含义见[共性索引](../seven-language-common-semantics.md)。具体任务仍须冻结版本、运行时、OS、架构和 ABI。
 
 ## 一、值、引用、别名与可变性
@@ -269,7 +269,7 @@ split要核分隔符、maxsplit、首尾空项和首个等号；dict读取默认
 
 源码实际调用CPython3.12 tempfile.gettempdir时，默认搜索TMPDIR→TEMP→TMP，再到平台候选：Windows依次`C:\TEMP`、`C:\TMP`、`\TEMP`、`\TMP`；其他平台依次/tmp、/var/tmp、/usr/tmp；最后当前目录。搜索寻找调用用户能创建文件的候选并缓存结果；tempfile.tempdir已设置时会影响默认选择，实际文件API显式dir参数另优先。不能把它仅映射为每次读取一个环境变量或创建一个新目录。
 
-先看源码何时首次选择、是否修改tempdir、是否指定dir以及返回str/bytes的消费者，再选目标的选择/校验/缓存行为。环境变化不自动意味着已有缓存失效；Go os.TempDir的只选路径与Ruby Dir.tmpdir的候选/校验也不能替这套语义。未知OS、变量/缓存状态只写对应前提，不读取本机环境代替冻结条件，不在知识维护时真的创建文件验证。依据：Python3.12 tempfile.gettempdir/gettempdirb/tempdir及各文件API的dir参数。
+先看源码何时首次选择、是否修改tempdir、是否指定dir以及返回str/bytes的消费者，再选目标的选择/校验/缓存行为。环境变化不自动意味着已有缓存失效；Go os.TempDir的只选路径与Ruby Dir.tmpdir的候选/校验也不能替这套语义。未知OS、变量/缓存状态只写对应前提，不读取本机环境代替冻结条件，不在本机创建文件试验源/目标行为。依据：Python3.12 tempfile.gettempdir/gettempdirb/tempdir及各文件API的dir参数。
 
 ### L1-PY-15 ctypes 的 ABI 声明与业务判定分别保持
 

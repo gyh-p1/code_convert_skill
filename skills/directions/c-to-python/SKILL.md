@@ -181,7 +181,7 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 ## 五、模型自检与质量结论声明
 
 1. **模型自审边界**：转换生成的 Python 代码应核对位掩码截断是否存在、异常捕获是否对齐、`bytes` 与 `str` 是否混用。该项自审为模型自评，不得标记为语法通过。
-2. **证据状态声明**：本项精确目标版本尚无对应第三方构建证据时保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；取得后按实际编译、执行与观察范围分层报告。不从本页静态知识推定通过，也不把历史未验证状态当作新任务永久结论。
+2. **证据状态声明**：本项精确目标版本尚无对应第三方构建证据时保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；取得后按实际编译、执行与观察范围分层报告。本页静态知识不替代本项证据，不从其他任务继承结论。
 
 ---
 
@@ -195,4 +195,4 @@ description: Use when converting C source code (ISO C11) to Python (CPython 3.12
 
 ## 网络 API 映射
 
-迁入网络场景的本方向细节，仅在原始 socket I/O 触发时使用；通用部分 I/O、协议与生命周期仍读[网络场景](../../scenes/network-io/SKILL.md)。C recv 缓冲按显式长度映射为 Python bytes，不转 str；只有源文本契约明确时才显式解码并保留解码失败。完整消息须按源帧/长度循环，不能一次 recv 读满。POSIX 的 -1/errno 与 Python OSError 子类按错误路径对应；Winsock 源另读系统错误模型，不把 errno 泛化到全部 C。版本/错误类别不明时待确认，静态规则不证明运行等价。
+仅在原始 socket I/O 触发时使用；通用部分 I/O、协议与生命周期仍读[网络场景](../../scenes/network-io/SKILL.md)。C recv 缓冲按显式长度映射为 Python bytes，不转 str；只有源文本契约明确时才显式解码并保留解码失败。完整消息须按源帧/长度循环，不能一次 recv 读满。POSIX 的 -1/errno 与 Python OSError 子类按错误路径对应；Winsock 源另读系统错误模型，不把 errno 泛化到全部 C。版本/错误类别不明时待确认，静态规则不证明运行等价。

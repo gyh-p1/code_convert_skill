@@ -1,6 +1,6 @@
 # 功能保持与第三方评估指导：行为目标、可接受差异与修复反馈
 
-本页供 Agent 与配置模型组织行为目标、差异建议及第三方反馈，不产生功能 PASS/FAIL，不建设比较器或第二套验收标准。文件名保留以兼容现有引用。提交前义务与证据有效性统一由[评估准备契约](../framework/evaluation-readiness-contract.md)维护，状态由[任务状态契约](../framework/task-state-contract.md)维护，执行红线以[安全边界](../framework/safety-boundary.md)为准。
+本页供 Agent 与配置模型组织行为目标、差异建议及第三方反馈，不产生功能 PASS/FAIL，不建设比较器或第二套验收标准。提交前义务与证据有效性统一见[评估准备契约](../framework/evaluation-readiness-contract.md)，状态见[任务状态契约](../framework/task-state-contract.md)，执行红线以[安全边界](../framework/safety-boundary.md)为准。
 
 ## 1. 谁提出目标，谁执行与裁决
 
@@ -49,7 +49,7 @@
 
 ### 4.1 驱动义务：提交前的硬门禁
 
-本节保留旧引用入口，规范正文统一见[评估准备契约](../framework/evaluation-readiness-contract.md)。知识说明应保留什么，契约规定能否提交及能否采信观察。
+提交前义务的规范正文统一见[评估准备契约](../framework/evaluation-readiness-contract.md)。知识说明应保留什么，契约规定能否提交及能否采信观察。
 
 #### 4.1.1 四要素判定表
 
@@ -65,9 +65,9 @@
 
 #### 4.1.4 oracle 与驱动的关系（oracle 不设硬门禁）
 
-驱动回答怎么看到行为；oracle 回答依据什么判断。适用状态和可冻结性见[评估准备 §4](../framework/evaluation-readiness-contract.md#4-oracle-与两侧对称)。标题保留旧锚点：oracle 是条件义务，门禁检查其适用状态，不要求每项造 oracle。可观察任务不能以条件性为由省掉应有评估。
+驱动回答怎么看到行为；oracle 回答依据什么判断。适用状态和可冻结性见[评估准备 §4](../framework/evaluation-readiness-contract.md#4-oracle-与两侧对称)。oracle 是条件义务，门禁检查其适用状态，不要求每项造 oracle。可观察任务不能以条件性为由省掉应有评估。
 
-#### 4.1.5 装置两侧必须对称（四要素之外的第 ⑤ 维，2026-10-10 实测补入）
+#### 4.1.5 装置两侧必须对称
 
 输入送达、文件/目录与后处理对称见[评估准备 §4](../framework/evaluation-readiness-contract.md#4-oracle-与两侧对称)。不对称造成的差异不能记转换引入。
 

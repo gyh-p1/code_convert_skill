@@ -1,12 +1,12 @@
 # 评估准备与观察有效性契约
 
-本页维护 Agent 的提交准备条件与证据采信边界；不产生第三方功能 PASS/FAIL，不建设驱动、比较器或运行时。单项闭环规定何时核对，[行为指导](../workflow/behavior-preservation-contract.md)整理目标与允许差异，[Controller 适配](../adapter/controller/remote-controller-adapter.md)规定外部字段。执行红线以[安全边界](safety-boundary.md)及 [AGENTS.md](../../AGENTS.md) 为准。
+本页规定 Agent 的提交准备条件与证据采信边界；不产生第三方功能 PASS/FAIL，不建设驱动、比较器或运行时。单项闭环规定何时核对，[行为指导](../workflow/behavior-preservation-contract.md)整理目标与允许差异，[Controller 适配](../adapter/controller/remote-controller-adapter.md)规定外部字段。执行红线以[安全边界](safety-boundary.md)及 [AGENTS.md](../../AGENTS.md) 为准。
 
 源预检及每次提交/重提前，先按[任务状态 §2.2](task-state-contract.md#22-冻结落盘门禁)回读本项本 run 的 `01-frozen/frozen-inputs.md`，核路径/版本、适用内容及当前动作所需条件；缺失、空白或错位不进入新 job。已有 ALLOWED/预检 PASS 不替代本检查，未知提交的查询、取回已发生证据及终止/清理仍按原 job 处理。
 
 ## 1. 适用分支与提交条件
 
-采用 Controller 渠道时，源预检/双侧仅编译的具体接口、报告 kind 与平台身份核对消费[当前协议适配](../adapter/controller/platform-revision-adapter.md)，本页门禁不因平台回归通过而解除。源侧报告的有限 oracle PASS、平台收尾完整性与有效业务基线分别核对；版本不符或支持未知记准备缺口，不造 target 补预检。
+采用 Controller 渠道时，源预检/双侧仅编译的具体接口、报告 kind 与平台身份核对消费[当前协议适配](../adapter/controller/platform-revision-adapter.md)。每项均须核本页门禁；源侧报告的有限 oracle PASS、平台收尾完整性与有效业务基线分别核对，版本不符或支持未知记准备缺口，不造 target 补预检。
 
 | 分支 | 提交前必须核对 | 功能结论 |
 |---|---|---|
@@ -89,7 +89,7 @@ driver 是真正启动、观察和终止程序的契约角色，不强制 Python
 
 判据是能否用中性/公开输入、不编造源行为、不触发 UB、不连真实目标、不无限阻塞地观察源声明行为，不是有没有 main。
 
-LIB_UNOBSERVABLE_COMPILE_ONLY 按 §1.3 表示**本轮无法合法完成行为评估、改做语法/编译交付**；本节标题与旧锚点保留。判断实际可观察性和当前入口是否齐备，不能把“缺 main”当无法评估的充分证据，也不能要求入口缺件的项永远等待而不转换。
+LIB_UNOBSERVABLE_COMPILE_ONLY 按 §1.3 表示**本轮无法合法完成行为评估、改做语法/编译交付**。判断实际可观察性和当前入口是否齐备，不能把“缺 main”当无法评估的充分证据，也不能要求入口缺件的项永远等待而不转换。
 
 - 能安全观察：合法入口/向量等条件齐备时走四要素+oracle。确定性库及公开测试向量属于此分支；本轮缺合法入口时可记 LIB_UNOBSERVABLE_COMPILE_ONLY，按 §1.3 继续转换并验证目标语法/编译，注明“缺合法入口”而不是“永远无安全观察方式”，不自行造驱动。
 - 确属不能安全观察：逐项举证后记 LIB_UNOBSERVABLE_COMPILE_ONLY，仍按门禁转换并移交双侧仅编译。编译据实、功能 UNVERIFIED、PARTIAL；比较器的空输出 matched 不采信。
@@ -174,4 +174,4 @@ coverageRatio、sufficientDimensions 或其他汇总字段按现役平台定义�
 | 维度统计 | dimension status=matched/semantic-match 且 applicable、observed 时可列配置比较通过维度小计及两类数量；一个任务的多个维度不变成多个任务，coverage/sufficientDimensions 不证明输入/业务有效 |
 | 交付、构建、执行、安全与生命周期 | 另列自己的证据/分母；DONE、build completed/0、source-only baseline PASS、closure complete 或 report.codeVerdict 不直接增加功能任务通过数 |
 
-原标签分布与有效性分类分开保留，同一快照同一任务只归一个当前功能类别；缺阶段或状态身份单列不可映射，不能用补零或净额抵消缺档。人读摘要没有 comparison 维度明细时不从 coverage 反算 semantic-match；现役 JSON matchedDimensions 的含义以实际 schema/实现为准，不能擅自把它改为 matched+semantic-match。统计与真实版本、重复/遗留对账按批量工作流，未确认的部署候选不作当前服务能力。
+原标签分布与有效性分类分开保留，同一快照同一任务只归一个当前功能类别；缺阶段或状态身份单列不可映射，不能用补零或净额抵消缺档。人读摘要没有 comparison 维度明细时不从 coverage 反算 semantic-match；现役 JSON matchedDimensions 的含义以实际 schema/实现为准，不能擅自把它改为 matched+semantic-match。统计与真实版本、重复/遗留对账按批量工作流，服务能力以实际组件身份与接口支持为准。

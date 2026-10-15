@@ -9,7 +9,7 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 
 本文件是**检索/分类入口**,不是转换规则。它把 ATT&CK Enterprise 战术映射到本项目已有的语言/场景/系统知识,方便"按攻防用途思考"的人找到对应的转换知识。它**不**为每个战术建独立转换 Skill,**不**由战术标签推断代码用了哪个 API、哪个 OS 或哪种行为,也**不**凌驾于对源码实际行为的分析之上。战术只是缩小"该找什么",不决定"该产出什么"。
 
-> 下表是项目记录于 2026-09-25 核对的 MITRE ATT&CK Enterprise 战术快照，列 15 个名称/ID（含 TA0005 Stealth 与 TA0112 Defense Impairment）。离线调用仅按该已记录版本作分类导航；未确认与任务要求版本一致或缺少所需名称/ID 时记录分类版本缺口，不要求调用者联网更新，也不宣称这是最新列表。版本更新由维护侧核验后修订本表；索引存在不代表专属转换能力。
+> 下表使用 MITRE ATT&CK Enterprise 战术的 2026-09-25 本地快照，列 15 个名称/ID（含 TA0005 Stealth 与 TA0112 Defense Impairment）。离线调用仅按该快照作分类导航；未确认与任务要求版本一致或缺少所需名称/ID 时记录分类版本缺口，不要求调用者联网更新，也不宣称这是最新列表。索引存在不代表专属转换能力。
 
 > 外部样本目录与旧资料中的战术缩写只作线索；逐例分类须按当前官方 ID/名称和源码实际行为核对。七语言转换知识仍位于根入口、`skills/directions/` 与 `skills/references/`。
 
@@ -44,9 +44,9 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 
 ## 覆盖现状
 
-当前转换知识含网络、文件、进程执行和并发场景；系统方向含 POSIX ↔ Winsock、POSIX ↔ Windows 文件路径（含 macOS 路径位置约定）、进程创建与身份/权限、线程，以及 Windows 注册表与服务子系统。仍属缺口的是:**PE 解析**、**Linux 内核接口**（`ptrace`/`seccomp`）与 **macOS 专有子系统**（Keychain/launchd/CoreFoundation），以及系统信息/枚举类行为中的其余未建模部分。ATT&CK 15 战术均仅作分类入口，不代表本项目为每个战术提供了转换能力。本表既是检索入口,也是缺口地图;补齐要按"有真实行为消费者才建"的规则推进,不为凑满战术预建空 Skill。
+当前转换知识含网络、文件、进程执行和并发场景；系统方向含 POSIX ↔ Winsock、POSIX ↔ Windows 文件路径（含 macOS 路径位置约定）、进程创建与身份/权限、线程，以及 Windows 注册表与服务子系统。仍属缺口的是:**PE 解析**、**Linux 内核接口**（`ptrace`/`seccomp`）与 **macOS 专有子系统**（Keychain/launchd/CoreFoundation），以及系统信息/枚举类行为中的其余未建模部分。ATT&CK 15 战术均仅作分类入口，不代表本项目为每个战术提供了转换能力。遇到知识缺口时按根入口记录影响及未覆盖范围。
 
 ## 依据
 
-- 资料来源：MITRE ATT&CK Enterprise 战术列表；本地快照核对日期为 2026-09-25，具体名称/ID 见上表。维护侧核对来源版本后才能更新，离线调用不补猜新战术或自动改表。
+- 资料来源：MITRE ATT&CK Enterprise 战术列表；本地快照日期为 2026-09-25，具体名称/ID 见上表。离线调用按快照版本使用，不补猜新战术或自动改表。
 - ATT&CK 是分类/检索维度,不代替代码行为判断;组合原则与能力边界见根 [通用 Skill 入口](../../SKILL.md) §选择适用知识。

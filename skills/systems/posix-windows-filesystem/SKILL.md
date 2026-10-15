@@ -42,7 +42,7 @@ FreeBSD 等平台的源码可能使用目标工具链缺少的头、类型或符
 
 ## 3. C→C++ 机械与语义要点
 
-旧标题保留兼容锚点。语言层头文件/类型改写只见[C→C++ 头文件与宏参考](../../directions/c-to-cpp/references/header-macro.md#文件系统映射的语言层边界)和[类型/ABI 参考](../../directions/c-to-cpp/references/type-abi.md)；本页以下条目只管平台 CRT/SDK 符号、句柄及替代 API 的语义。
+语言层头文件/类型改写只见[C→C++ 头文件与宏参考](../../directions/c-to-cpp/references/header-macro.md#文件系统映射的语言层边界)和[类型/ABI 参考](../../directions/c-to-cpp/references/type-abi.md)；本页以下条目只管平台 CRT/SDK 符号、句柄及替代 API 的语义。
 
 ### L2-FS-01 与目标平台 CRT/SDK 同名符号必须消歧
 
@@ -138,7 +138,7 @@ if (GetFinalPathNameByHandleA(h, resolved, sizeof resolved, 0) == 0) { /* 需要
 | 密钥/凭据位置 | `~/Library/Keychains/*.keychain-db` | 取决于实现（文件/内核密钥环/桌面密钥环） | 凭据管理器/DPAPI | 路径差异之外还有**存储格式与保护机制**差异，不能只改路径就宣称等价 |
 | 大小写敏感性 | 默认卷通常大小写不敏感（可配制为敏感） | 通常敏感 | 不敏感 | 与 Windows 一样，大小写敏感性不能假定；比较路径时保留源语义 |
 
-**边界**：本节只覆盖"位置与路径文本"的可观察差异，覆盖方向为 macOS ↔ Linux 与 macOS ↔ Windows 的对应行；文件 API（`open`/`stat`/`opendir` 等）在 macOS 上大部分与 POSIX 一致，但仍需按目标 SDK 核对（例如 `st_birthtimespec` 等专有字段）。macOS 专有子系统与工具链（`security`、`codesign`、`launchctl`、CoreFoundation）没有项目内证据，**不在此建立映射**。
+**边界**：本节只覆盖"位置与路径文本"的可观察差异，覆盖方向为 macOS ↔ Linux 与 macOS ↔ Windows 的对应行；文件 API（`open`/`stat`/`opendir` 等）在 macOS 上大部分与 POSIX 一致，但仍需按目标 SDK 核对（例如 `st_birthtimespec` 等专有字段）。macOS 专有子系统与工具链（`security`、`codesign`、`launchctl`、CoreFoundation）**不在本页映射范围内**。
 
 ## 依据
 

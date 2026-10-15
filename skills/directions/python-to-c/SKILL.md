@@ -7,7 +7,7 @@ description: Use when converting Python source to C; apply this direction's lang
 
 > **适用基线**：CPython 3.12 → ISO C11。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 Python](../../references/languages/python.md)与[目标语言 C](../../references/languages/c.md)，按源码选择适用规则。
-> **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
+> **证据边界**：以下规则用于当前任务的映射选择；目标编译与功能结论须依据本项精确版本的独立证据，不以规则存在或模型自评替代。
 
 ## 适用范围与前提
 
@@ -157,4 +157,4 @@ description: Use when converting Python source to C; apply this direction's lang
 
 ## 网络 API 映射
 
-迁入网络场景，仅在 Python socket 到 C 实现时使用。bytes 可含 NUL，C 始终传显式长度，不用 strlen。独立 C 目标用实际 socket 返回值/平台错误重建 Python 的异常路径，不能照抄带 try/catch 的 C++ 伪代码，也不引入 Python 运行时。仅在任务明确保留 CPython 扩展/嵌入时才另核 C API、GIL 与阻塞调用规则；此边界待匹配官方版本专题核验，不把释放 GIL 包在任意 Python API 调用外。通用部分 I/O 读[网络场景](../../scenes/network-io/SKILL.md)，平台错误读[系统页](../../systems/posix-winsock/SKILL.md)。
+仅在 Python socket 到 C 实现时使用。bytes 可含 NUL，C 始终传显式长度，不用 strlen。独立 C 目标用实际 socket 返回值/平台错误重建 Python 的异常路径，不能照抄带 try/catch 的 C++ 伪代码，也不引入 Python 运行时。仅在任务明确保留 CPython 扩展/嵌入时才另核 C API、GIL 与阻塞调用规则；缺对应版本的本地必要事实时记录缺口，不把释放 GIL 包在任意 Python API 调用外。通用部分 I/O 读[网络场景](../../scenes/network-io/SKILL.md)，平台错误读[系统页](../../systems/posix-winsock/SKILL.md)。

@@ -27,7 +27,7 @@ class StaticClassifierChecks(unittest.TestCase):
         source.write_text(text, encoding="utf-8")
         result = self.classifier.classify("T1", "python-to-go", "fixture", str(source))
         self.assertFalse(result.executable)
-        # Spec 04: executionApproved mirrors admissionStatus, it is no longer always False.
+        # executionApproved mirrors admissionStatus and does not authorize execution.
         self.assertEqual(result.details["executionApproved"], result.admission_status == "ALLOWED")
         return result
 
@@ -41,7 +41,7 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertIsNone(result.blocking_reason)
         self.assertTrue(result.details["executionApproved"])
 
-    # --- Spec 04 3.1 input integrity -------------------------------------------------
+    # --- Input integrity -----------------------------------------------------------
 
     def test_missing_and_invalid_encoding_are_rows(self):
         missing = self.classifier.classify("T", "c-to-go", "x", str(self.root / "missing.c"))
@@ -53,7 +53,7 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertEqual(result.classification, "BLOCKED_INPUT")
         self.assertBlocked(result, "input_error")
 
-    # --- Spec 04 3.2 public network --------------------------------------------------
+    # --- Public network ------------------------------------------------------------
 
     def test_public_literal_is_blocked_without_batch_isolation(self):
         self.assertBlocked(self.classify('host = "8.8.8.8"\nsocket.connect((host, 80))'),
@@ -73,7 +73,7 @@ class StaticClassifierChecks(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertAllowed(self.classify(text))
 
-    # --- Spec 04 3.3 high-confidence credentials -------------------------------------
+    # --- High-confidence credentials -----------------------------------------------
 
     def test_high_confidence_credential_is_blocked(self):
         result = self.classify('key = "AKIAIOSFODNN7EXAMPLE"')
@@ -115,12 +115,12 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertTrue(result.requires_synthetic_data)
 
     def test_rule_two_precedes_rule_three(self):
-        # Spec 04 ordering: an unisolated public target is reported as a network block,
+        # An unisolated public target is reported as a network block first,
         # so a reviewer fixes isolation first instead of chasing a credential claim.
         result = self.classify('key = "AKIAIOSFODNN7EXAMPLE"\nurl = "https://example.invalid/v1"')
         self.assertBlocked(result, "public_network_unverified")
 
-    # --- v2.3 lexical boundary fixes --------------------------------------------------
+    # --- Lexical boundaries --------------------------------------------------------
 
     def test_dash_joined_identifier_is_not_dynamic_eval(self):
         result = self.classify('mode := "translation-eval"', ".go")
@@ -143,10 +143,10 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertTrue(any(t["scope"] == "public" and t["provenance"] == "literal"
                             for t in result.details["files"][0]["network_targets"]))
 
-    # --- v2.4 hostname false-positive (C5, D2-055) ------------------------------------
+    # --- Hostname and path context -------------------------------------------------
 
     def test_filename_literal_in_path_context_is_not_a_network_target(self):
-        # D2-055: `filepath.Join(root, "demo.txt")` — a bare file name must not be
+        # `filepath.Join(root, "demo.txt")`: a bare file name must not be
         # promoted to a DNS target by the nearby variable word `target`.
         result = self.classify('target := filepath.Join(root, "demo.txt")', ".go")
         self.assertNotEqual(result.classification, "REVIEW_NETWORK")
@@ -155,13 +155,13 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertNotIn("demo.txt", [t["value"] for t in targets])
 
     def test_real_hostname_with_network_api_is_still_a_target(self):
-        # Reverse regression (anti over-correction): a real external host consumed by a
+        # A real external host consumed by a
         # network API stays a target and blocked without isolation.
         result = self.classify('conn, _ := net.Dial("tcp", "attacker.example.com")', ".go")
         self.assertEqual(result.classification, "REVIEW_NETWORK")
         self.assertBlocked(result, "public_network_unverified")
 
-    # Candidate v2.5: text-only maintenance regressions, never execute fixtures.
+    # Classification reads fixture text without executing it.
     def test_punctuation_is_not_an_ipv6_host(self):
         for literal in (":", ":::f", "[:::]"):
             with self.subTest(literal=literal):
@@ -362,7 +362,7 @@ class StaticClassifierChecks(unittest.TestCase):
                            "public_network_unverified")
 
     def test_hardcoded_ip_with_wsaconnect_is_still_a_target(self):
-        # D2-108 regression: hard-coded IP + WSAConnect stays a network target
+        # A hard-coded IP with WSAConnect remains a network target.
         # (10.x is private, so allowed without isolation, but still REVIEW_NETWORK).
         result = self.classify('const char* a = "10.9.1.6";\nWSAConnect(s, (SOCKADDR*)&sa, len, 0, 0, 0, 0);', ".cpp")
         self.assertEqual(result.classification, "REVIEW_NETWORK")
@@ -497,7 +497,7 @@ class StaticClassifierChecks(unittest.TestCase):
         self.assertIn("path_outside_source_base", str(result[0]["details"]))
 
     def test_manifest_relative_paths_resolve_against_the_manifest(self):
-        """v2.2 read these as root-relative and emitted a false BLOCKED_INPUT."""
+        """Manifest-relative paths use the manifest directory as their first base."""
         case = self.root / "c-to-go" / "case-1" / "source"
         case.mkdir(parents=True)
         (case / "sample.c").write_text("int main(void){return 0;}", encoding="utf-8")

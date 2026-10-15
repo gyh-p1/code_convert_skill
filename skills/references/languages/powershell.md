@@ -1,7 +1,7 @@
 # PowerShell 语言共性语义（PowerShell 7.6）
 
 > **用途**：以 PowerShell 为源语言或目标语言的任务必读本页，按源码选择适用条目；加载与门禁先见根[转换入口](../../../SKILL.md)。本页仅保存该语言的跨方向事实与风险，不指定任何源→目标映射。
-> **知识与证据边界**：由原[七语言共性索引](../seven-language-common-semantics.md)的七个机制表逐行迁入；原有版本/官方依据随条目保留。静态事实不代表目标工具链已部署，也不代表任一方向的编译或行为已验收。
+> **知识与证据边界**：按条目中的语言版本、资料依据和源码触发条件选择适用事实；跨语言关注点见[七语言共性索引](../seven-language-common-semantics.md)。目标工具链能力与编译、行为结论须依据本项精确版本的独立证据。
 > **分类**：`[语言规范保证]`、`[指定运行时的实现相关事实]`、`[待专题核验，不可用于确定转换规则]` 的含义见[共性索引](../seven-language-common-semantics.md)。具体任务仍须冻结版本、运行时、OS、架构和 ABI。
 
 ## 一、值、引用、别名与可变性
@@ -204,7 +204,7 @@
 
 ### 宿主与输出通道
 
-迁入原进程场景的语言事实：success、error、warning、verbose、debug、information 与 host 显示的归属/重定向条件须按源码调用和宿主区分，不能因“都能看见”合成 stdout/stderr。保留 Write-Warning/Write-Verbose/ShouldProcess 的触发条件，不新增 What if 提示文本；公开数据流不能被提示污染。普通脚本输出也适用，进程场景只管子进程捕获与等待。来源：about_Redirection、ShouldProcess。
+success、error、warning、verbose、debug、information 与 host 显示的归属/重定向条件须按源码调用和宿主区分，不能因“都能看见”合成 stdout/stderr。保留 Write-Warning/Write-Verbose/ShouldProcess 的触发条件，不新增 What if 提示文本；公开数据流不能被提示污染。普通脚本输出也适用，进程场景只管子进程捕获与等待。来源：about_Redirection、ShouldProcess。
 
 ## 九、普通控制流
 

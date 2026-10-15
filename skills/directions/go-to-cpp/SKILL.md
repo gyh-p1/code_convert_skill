@@ -7,7 +7,7 @@ description: Use when converting Go source to C++; apply this direction's langua
 
 > **适用基线**：Go 1.27 → ISO C++17。具体任务仍须冻结目标工具链、运行时、OS 和 ABI。
 > **共性语义**：先读根[转换入口](../../../SKILL.md)的必读契约；[分类与场景索引](../../references/seven-language-common-semantics.md)；必读[源语言 Go](../../references/languages/go.md)与[目标语言 C++](../../references/languages/cpp.md)，按源码选择适用规则。
-> **证据边界**：以下是从原方向参考库迁入的静态决策规则；本方向尚无可据此宣称的目标编译或功能验收证据。不得把规则存在、候选 case 数量或模型自评当成转换成功。
+> **证据边界**：以下规则用于当前任务的映射选择；目标编译与功能结论须依据本项精确版本的独立证据，不以规则存在或模型自评替代。
 
 ## 适用范围与前提
 
@@ -174,4 +174,4 @@ description: Use when converting Go source to C++; apply this direction's langua
 
 ## 子进程 API 映射
 
-迁入进程场景的 Go→C++ 细节，仅在 os/exec 触发时读取。CommandContext 的默认取消针对直接进程，WaitDelay 约束管道等待，不承诺整树回收。目标用实际平台 API 分别映射启动、双流排空、等待与超时，不能将 Cmd 字段臆造给 std::system/popen。通用观察义务读[进程场景](../../scenes/process-execution/SKILL.md)，跨 OS 读[进程系统页](../../systems/posix-windows-process-identity/SKILL.md)。源自定义 Cancel/WaitDelay 或目标杀树能力未知时记录待确认，不声明已验证。
+仅在 os/exec 触发时读取。CommandContext 的默认取消针对直接进程，WaitDelay 约束管道等待，不承诺整树回收。目标用实际平台 API 分别映射启动、双流排空、等待与超时，不能将 Cmd 字段臆造给 std::system/popen。通用观察义务读[进程场景](../../scenes/process-execution/SKILL.md)，跨 OS 读[进程系统页](../../systems/posix-windows-process-identity/SKILL.md)。源自定义 Cancel/WaitDelay 或目标杀树能力未知时记录待确认，不声明已验证。

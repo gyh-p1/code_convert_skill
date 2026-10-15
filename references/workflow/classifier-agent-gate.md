@@ -4,13 +4,13 @@
 
 ## 1. 接入位置与执行环境
 
-原始输入先只读画像；稳定 taskId、方向和完整源文件集合后逐项冻结，再分类。登记缺口先准备，不由分类器替代。源预检前以及每次提交/重提消费精确版本结果；没有 ALLOWED 不预检、不生成、不 POST。最后已知 1.0.28 已接入服务端消费，外部字段/身份校验只见[Controller 适配](../adapter/controller/remote-controller-adapter.md)；本轮未连接复验，不因旧版曾忽略字段而省略 Agent 门禁。
+原始输入先只读画像；稳定 taskId、方向和完整源文件集合后逐项冻结，再分类。登记缺口先准备，不由分类器替代。源预检前以及每次提交/重提消费精确版本结果；没有 ALLOWED 不预检、不生成、不 POST。平台按[Controller 适配](../adapter/controller/remote-controller-adapter.md)消费分类、授权与身份字段；平台校验不替代 Agent 的前置门禁。
 
 调用分类器前先按[任务状态 §2.2](../framework/task-state-contract.md#22-冻结落盘门禁)确认本项本 run 的 `01-frozen/frozen-inputs.md` 已写出且回读通过，并保存核对依据；缺文件、空白或身份/版本错位不得分类。候选清单可作分类输入，不代表可以省略冻结 Markdown；该检查由 Agent 手工执行，不修改分类器输出或另造准入值。
 
-使用现有 [分类器](../../tools/safety_classifier_v2.py)。本机仅准备清单、核对哈希和读取结果；在获准的外部环境临时目录调用分类器，只读取待分类文件，不导入、编译或运行这些文件。临时目录中脚本副本必须与本仓库当前脚本 SHA-256 一致，不使用已部署 release 目录充当工具工作目录。
+使用[安全分类器](../../tools/safety_classifier_v2.py)，调用前核对脚本实际版本和 SHA-256 与平台受信登记一致。本机仅准备清单、核对哈希和读取结果；在获准的外部环境临时目录调用分类器，只读取待分类文件，不导入、编译或运行这些文件。临时目录中脚本副本必须与所选受信原件 SHA-256 一致，不使用已部署 release 目录充当工具工作目录。
 
-**暂存目录是暂存，不得常驻（2026-10-10 实测补入）**：分类器暂存目录必须建在**仓库外路径**（如 `$env:TEMP`），**不得建在仓库根**；每个暂存目录在取回并持久化当次 `classification-<N>.json` 之后**立即删除**（本项实际 run 的 `01-frozen/`，首次通常为 classification-1；关联变体位置按交付契约）。若因故必须在仓库内暂存，**先**把该模式加入 `.gitignore`，并在当轮任务结束前删除。判断标准是行为：暂存目录成为常驻物即违反本条——早期曾在仓库根残留 27 个 `.tmp-classify-*/`（112 条 untracked 条目），是反例。只清理已取回的临时副本，不删除持久化分类输入/结果或旧拒收原件。
+**暂存目录不得常驻**：分类器暂存目录必须建在**仓库外路径**（如 `$env:TEMP`），**不得建在仓库根**；每个暂存目录在取回并持久化当次 `classification-<N>.json` 之后**立即删除**（本项实际 run 的 `01-frozen/`，首次通常为 classification-1；关联变体位置按交付契约）。若因故必须在仓库内暂存，**先**把该模式加入 `.gitignore`，并在当轮任务结束前删除。只清理已取回的临时副本，不删除持久化分类输入/结果或旧拒收原件。
 
 分类输入可用候选任务清单或已有 `batch.json`；单项用只有一项的同形清单，不另建格式。保留本次实际分类输入的不可覆盖快照，`inputManifestSha256` 只核对该快照；最终冻结清单增加契约/运行字段后不要求 JSON 字节相同，改以 taskId、方向和精确源文件集合/哈希核对对应。临时传输可改变路径布局，但须保留上述身份和字节；给分类器传入实际临时路径及声明哈希，并保存原始、候选、冻结与临时清单的对应，不能互换它们的清单哈希。
 
@@ -24,9 +24,9 @@
 
 误报经重分类解除也保留首轮输入/输出和拒收原件，在既有记录写旧件→新件的原因及当前引用，不删除classification-1来使目录只剩ALLOWED。描述URL、版本串或类型名被词法命中时，可追加回源定位，但Agent不据此改判或豁免真实隔离；新分类件仍须按实际输入和准入条件产生。
 
-hostname误报复核逐条回读network_targets的原值/位置和实际消费者，区分本地路径分量、分隔符、元数据版本、命名空间标识与真正送入网络API的目标；字符串形状不能单独证明可达行为。文件后缀/namespace也不能成为无条件白名单，同一字面量若被用于连接仍须核网络边界。当前v2.4已有文件名上下文过滤，但裸冒号或namespace的所有误报不能据此宣称已修；需要分类器维护方提供新版本及正反回归（真实网络目标不得漏报），并更新钉定身份/平台接受条件后正规重分类。Agent不手改BLOCKED/ALLOWED或换未登记脚本放行，分类器修订/回归不由本文本审阅冒充完成。
+hostname 误报复核逐条回读 network_targets 的原值/位置和实际消费者，区分本地路径分量、分隔符、元数据版本、命名空间标识与真正送入网络 API 的目标；字符串形状不能单独证明可达行为。文件后缀、namespace 或方法名也不能成为无条件白名单，同一字面量若被用于连接仍须核网络边界。复核只记录依据，不改变分类结果；Agent 不手改 BLOCKED/ALLOWED，也不换未登记脚本放行。
 
-2026-10-15仓库脚本为v2.5源码候选。初稿63项维护自测后追加语义修订，保留hostname:port/service候选、撤回方法名豁免，并在本文件检出网络信号时禁用元数据排除；该单文件阶段68项自测通过。后续双文件源集合用例未完成，用户已要求停止扩展，当前完整70项自测仍有8条双文件subtest失败记录，不能称候选全套回归通过。尚未完成平台信任登记或发布，平台默认信任仍钉v2.4。未登记候选不得用于正式分类，不把它的输出标成旧SHA，也不扩大默认接受列表。正式任务先取得登记钉定且经核验的合法版本，否则记工具准备缺口；源码修订不使历史BLOCKED自动解除。
+正式分类必须使用平台受信登记所钉定的精确版本与 SHA-256；脚本、输出身份或登记不一致时记工具准备缺口，先取得合法版本，不伪标身份、不扩大接受列表。脚本版本变化不自动解除已有 BLOCKED；只有适用输入、条件和合法脚本对应的新分类结果可供后续门禁消费。
 
 ## 2. 准入判定
 
@@ -50,7 +50,7 @@ hostname误报复核逐条回读network_targets的原值/位置和实际消费�
 
 以下核对只回答一个问题：**即将提交的，是否正是分类器判定过的那一份**。任一项不成立说明引用错位，须重新分类或修正引用，而不是给该任务下一个更低的准入结论：
 
-1. **身份对应**：将分类输出 `id/dir/case` 对应冻结任务的 `taskId/direction/caseId`。逐项覆盖，不允许缺项、重复、额外任务。**平台 identity 硬门禁按文件集合校验 `source/` 树（非按扩展名过滤）**：`source/` 里的每个文件——包含源侧驱动 `source/run_case.py`——都必须出现在分类输出的 `details.files[]` 里，否则 `POST /api/jobs` 返回 `403 identity_mismatch`（2026-10-10 实测，详见[Controller 适配](../adapter/controller/remote-controller-adapter.md)）。因此源侧驱动须**与源文件一同提交给分类器**。`target/` 侧驱动不在源分类范围内，仍须独立审阅。
+1. **身份对应**：将分类输出 `id/dir/case` 对应冻结任务的 `taskId/direction/caseId`。逐项覆盖，不允许缺项、重复、额外任务。**平台 identity 硬门禁按文件集合校验 `source/` 树（非按扩展名过滤）**：`source/` 里的每个文件——包含源侧驱动 `source/run_case.py`——都必须出现在分类输出的 `details.files[]` 里，否则 `POST /api/jobs` 返回 `403 identity_mismatch`（详见[Controller 适配](../adapter/controller/remote-controller-adapter.md)）。因此源侧驱动须**与源文件一同提交给分类器**。`target/` 侧驱动不在源分类范围内，仍须独立审阅。
 2. **哈希对应**：核对 `classifierVersion/classifierSha256/inputManifestSha256`，以及提交 capsule 中精确文件集合与 `details.files[].sha256`。
 
    输入/任务条件变化的重新分类触发项：① 源码字节；② 完整 source/ 文件集合或随源提交的输入（含合法来源源驱动）；③ 工具链/平台/标准；④ 源→目标方向。创建父版本关联变体，不覆盖旧证据。另有 §2 的隔离分类条件变化（如 public_network_unverified 解除）必须重新分类；不能把“四项”解释成可沿用旧 BLOCKED/旧隔离假设。
@@ -79,4 +79,4 @@ hostname误报复核逐条回读network_targets的原值/位置和实际消费�
 
 此模式支持遵循本工作流的 Agent 使用现有分类器，并把分类结论作为唯一准入判定。
 
-最后已知 1.0.28 已消费必附 classification/batchAuthorization；字段、拒收形状与部署身份统一见[Controller 适配](../adapter/controller/remote-controller-adapter.md)和[能力矩阵](../adapter/controller/runner-capability-matrix.md)。开发期[接入记录](../../docs/stages/stage1/reports/平台提交端准入闭环接入-2026-10-10.md)仅作来源，不是必须加载的执行规则。本轮未动态复验；字段接入、真实样本拒收、无法绕过门禁的验收分别取证，ALLOWED/APPROVED/executionApproved 不表示已运行或已通过。
+平台提交必附 classification/batchAuthorization；字段、拒收形状与组件身份统一见[Controller 适配](../adapter/controller/remote-controller-adapter.md)和[能力矩阵](../adapter/controller/runner-capability-matrix.md)。提交前核对实际接口与受信身份；ALLOWED/APPROVED/executionApproved 分别按其字段职责解释，不表示已运行或已通过。

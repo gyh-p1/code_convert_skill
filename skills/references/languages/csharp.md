@@ -1,7 +1,7 @@
 # C# 语言共性语义（C# 12 / .NET 8）
 
 > **用途**：以 C# 为源语言或目标语言的任务必读本页，按源码选择适用条目；加载与门禁先见根[转换入口](../../../SKILL.md)。本页仅保存该语言的跨方向事实与风险，不指定任何源→目标映射。
-> **知识与证据边界**：由原[七语言共性索引](../seven-language-common-semantics.md)的七个机制表逐行迁入；原有版本/官方依据随条目保留。静态事实不代表目标工具链已部署，也不代表任一方向的编译或行为已验收。
+> **知识与证据边界**：按条目中的语言版本、资料依据和源码触发条件选择适用事实；跨语言关注点见[七语言共性索引](../seven-language-common-semantics.md)。目标工具链能力与编译、行为结论须依据本项精确版本的独立证据。
 > **分类**：`[语言规范保证]`、`[指定运行时的实现相关事实]`、`[待专题核验，不可用于确定转换规则]` 的含义见[共性索引](../seven-language-common-semantics.md)。具体任务仍须冻结版本、运行时、OS、架构和 ABI。
 
 ## 一、值、引用、别名与可变性
@@ -189,7 +189,7 @@
 
 ### 输出换行：Console.WriteLine
 
-迁入原进程场景的语言事实：Console.WriteLine 写值后追加当前 writer 的行终止符；控制台 writer 默认对应 Environment.NewLine。源码配置 writer/NewLine 时以实际配置为准，不能看到参数已有换行就省掉追加。普通打印也适用，不要求子进程。C#→Ruby 见[方向映射](../../directions/csharp-to-ruby/SKILL.md#输出行终止符映射)。来源：Console.WriteLine。
+Console.WriteLine 写值后追加当前 writer 的行终止符；控制台 writer 默认对应 Environment.NewLine。源码配置 writer/NewLine 时以实际配置为准，不能看到参数已有换行就省掉追加。普通打印也适用，不要求子进程。C#→Ruby 见[方向映射](../../directions/csharp-to-ruby/SKILL.md#输出行终止符映射)。来源：Console.WriteLine。
 
 ## 九、枚举类型与终端输入
 

@@ -89,4 +89,4 @@ description: Use as the source-OS -> target-OS layer when source code reads or w
 - Microsoft Learn：`OpenSCManagerW`、`OpenServiceW`、`CreateServiceW`、`ChangeServiceConfigW`、`StartServiceW`、`ControlService`、`QueryServiceStatusEx`、`DeleteService`、`CloseServiceHandle`：SCM/服务句柄、配置、状态机与清理。
 - Microsoft Learn：Service Control Manager 与 Service Status Structures：状态字段与状态转换。
 
-以上为平台规则依据，不是特定 Windows 版本、SDK、语言运行时或转换结果的验证记录；目标为具体版本/位宽时须核对对应文档。本 Skill 未经本项目转换样例验证。同时遵守根入口和[安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。
+以上为平台规则依据，不是特定 Windows 版本、SDK、语言运行时或转换结果的验证记录；目标为具体版本/位宽时须核对对应文档。本项编译和行为结论须依据精确版本的独立证据。同时遵守根入口和[安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

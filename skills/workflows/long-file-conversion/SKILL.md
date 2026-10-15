@@ -81,6 +81,6 @@ description: Use for single-file code conversion when a source file is large or 
 
 提供完整目标文件或明确指出未完成部分。长单文件同时保存 `source-analysis.md`（源/目标配置、证据化标签、ATT&CK 判断、所选 Skill、源码地图与未决项），便于复核 Skill 选择。简要报告：实际完成范围、需要确认的假设、未映射/降级行为、语法与行为检查分别是否执行及结果。未运行或无 oracle 时写明“未验证/无法判断”，不宣称功能等价。源文件较大时可附函数/符号覆盖摘要，但不要用摘要替代用户要求的目标文件。
 
-run 根只放适用的当前交付物，过程按交付契约 §2.2 归位。终态前按[交付契约 §2.1.1](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架2026-10-09-冻结按-docstestdataset-实测形制)核模式/已达阶段/停止原因对应的适用件；长文件另有 source-analysis.md，未完整组装的单元稿不能充最终 target，评估前停止不伪造 job。DONE/PARTIAL 按任务状态契约，缺应有件不得记终态。
+run 根只放适用的当前交付物，过程按交付契约 §2.2 归位。终态前按[交付契约 §2.1.1](../../../references/framework/delivery-handoff-contract.md#211-单文件任务的标准骨架)核模式/已达阶段/停止原因对应的适用件；长文件另有 source-analysis.md，未完整组装的单元稿不能充最终 target，评估前停止不伪造 job。DONE/PARTIAL 按任务状态契约，缺应有件不得记终态。
 
 result.md 记录完整/部分/无目标、实际原因、已审/未审范围及适用件核对，不用单元成功标签或源码地图代替结果报告。长文件尚未进行分析即停止时，不伪造 source-analysis.md 的覆盖；其适用性按实际阶段记录。

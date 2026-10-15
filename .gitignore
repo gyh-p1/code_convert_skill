@@ -12,21 +12,20 @@ Thumbs.db
 .vscode/
 
 # 转换测试数据、源码快照与批次产物仅保留在本地工作区
-# 整个 docs/test/ 都是本地测试集与审阅辅助脚本，不是产品 Skill 的依赖，不随 Git 分发
-# （含 dataset、dataset-2、还原/校验脚本与附件 ZIP）
+# docs/test/ 为任务材料，不随 Skill 分发
 /docs/test/
 /docs/test/dataset.zip
 
-# 迁移后的一次性用例与退役副本仍仅本地保存；工程审查 Markdown 可提交
+# 本地任务数据与副本；仅保留约定目录中的 Markdown 文档
 /docs/dataset-2/
 /docs/stages/stage4/reviews/retired-dataset-2-copy-2026-10-12/
 /docs/stages/stage4/reviews/dataset-2-2026-10-12/*
 !/docs/stages/stage4/reviews/dataset-2-2026-10-12/*.md
 
-# 本次一次性测试审查材料，不作为产品或常驻数据集索引提交
+# 本地测试材料
 /docs/stages/stage2/
 
-# 本地一次性静态盘点辅助脚本，不随 Skill 分发
+# 本地文件，不随 Skill 分发
 /audit_clean.ps1
 
 # 分类器/转换过程中的一次性暂存（用完即清，禁止入库）
