@@ -95,7 +95,7 @@ description: Use when converting Go source to PowerShell; apply this direction's
    # 实际任务值与索引不同时，必须按原任务索引恢复，不能照抄此 Sort-Object
    $results = 1..4 | ForEach-Object -Parallel { $_ } | Sort-Object
    ```
-6. **信息不足或实现相关时的处理**：触发本规则即加载并发场景。若源码依赖 channel 背压、`select` 或 `context` 取消，须逐项冻结阻塞/选择/取消与清理义务，由配置模型在目标实现中保持；Runspace API 近似不能自动证明等价，场景页也不代作实现裁决。缺任务身份、同步或取消语义时记录缺口，不能仅“注明重新设计”就接受改变。
+6. **信息不足或实现相关时的处理**：触发本规则即加载并发场景。若源码依赖 channel 背压、`select` 或 `context` 取消，须逐项冻结阻塞/选择/取消与清理义务，由智能体模型在目标实现中保持；Runspace API 近似不能自动证明等价，场景页也不代作实现裁决。缺任务身份、同步或取消语义时记录缺口，不能仅“注明重新设计”就接受改变。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Go_statements；PowerShell 7.6 ForEach-Object 的 Description、Example 14、Notes；MS-PS-JOBS。
 
 ### 规则 GO-PS-06：Go error 返回与 defer 清理向 PowerShell 控制流与 finally 映射

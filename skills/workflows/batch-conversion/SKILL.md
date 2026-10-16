@@ -42,7 +42,7 @@ description: Use when one request contains multiple conversion tasks. Manually s
 
 分类阻断按真实原因处理，不手改 JSON；隔离缺失补真实证明后重新分类。重新分类的输入/条件变化及授权失效情况只按[分类准入](../../../references/workflow/classifier-agent-gate.md)，不能用“只改目标驱动/oracle”免除独立评估准备核对。
 
-逐请求保存实际模型、参数、用量、响应完整性和失败 attempt；传输重试和代码修复分开，预算按[闭环 §2](../../../references/workflow/conversion-evaluation-loop.md#2-阶段及门槛)，长文件按整项累计。对配置模型不发送 max_tokens；配置/容量缺口如实报告，不自动换模型。提交端忙时只停当前单项，不以并发填槽。
+逐请求保存实际模型、参数、用量、响应完整性和失败 attempt；传输重试和代码修复分开，预算按[闭环 §2](../../../references/workflow/conversion-evaluation-loop.md#2-阶段及门槛)，长文件按整项累计。对智能体模型不发送 max_tokens；模型可用性或容量缺口如实报告，不自动换模型。提交端忙时只停当前单项，不以并发填槽。
 
 ## 3. 逐项推进
 

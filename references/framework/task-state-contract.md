@@ -17,7 +17,7 @@
 |---|---|
 | 身份 | batchId/taskId/direction、caseId、casePath+caseSha256、源文件集合、sourcePath+sourceSha256 |
 | 源/目标配置 | sourceOs/targetOs、候选 sourceOsBasis、架构/ABI、实际条件分支、语言标准、工具链/SDK、依赖及检查上下文 |
-| 知识与模型 | selected skills（路径+哈希）、配置模型/温度、RAG 开关、不发送 max_tokens 的输出约定 |
+| 知识与模型 | selected skills（路径+哈希）、当前智能体模型身份与非敏感参数、RAG 开关、不发送 max_tokens 的输出约定 |
 | 构建与源基线 | 两侧 buildCommand/环境/工程输入；源预检适用运行条件与观察目标；真实构建诊断及适用运行/清理证据取得后追加引用，不倒填成冻结前已知 |
 | 评估计划 | driver（形态、来源、argv/stdin、就绪条件、终止）、driverRationale、input/初始状态、oracle 是否适用及其来源/观察范围/比较策略 |
 | 评估系统可达性 | 按评估准备 §1.0 记录本项检查时间、实际提交端/端点、原始健康响应或传输诊断指针、可达性结论及正常/仅转换分支；不可达时源/目标编译运行未开展，计划与实测分开 |
