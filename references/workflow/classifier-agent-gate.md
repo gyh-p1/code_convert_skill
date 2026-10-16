@@ -1,6 +1,6 @@
 # 分类结果准入与 Agent 执行位置
 
-适用于正式单文件、片段和批量转换。ALLOWED 且 blockingReason=null 先于源侧预检和生成，不替代授权/逐例隔离。源构建必过，正常行为分支生成前取有效源基线；本轮行为无法合法评估但源可构建时，按[评估准备 §1.3](../framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)采用 LIB_UNOBSERVABLE_COMPILE_ONLY 后继续生成与目标语法/编译验证，不免分类。Agent 不改判、不另造裁决，不修改已部署组件或新增运行时。
+适用于正式单文件、片段和批量转换。ALLOWED 且 blockingReason=null 先于源侧预检和生成，不替代授权/逐例隔离。先按[评估准备 §1.0](../framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)核评估系统可达性；可达时源构建必过，正常行为分支生成前取有效源基线；本轮行为无法合法评估但源可构建时，按[评估准备 §1.3](../framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)采用 LIB_UNOBSERVABLE_COMPILE_ONLY 后继续生成与目标语法/编译验证。不可达仅转换不要求源构建，但仍须冻结和 ALLOWED，不免分类；分类入口不可用或 BLOCKED 仍停止并交报告。Agent 不改判、不另造裁决，不修改已部署组件或新增运行时。
 
 ## 1. 接入位置与执行环境
 
@@ -30,11 +30,11 @@ hostname 误报复核逐条回读 network_targets 的原值/位置和实际消�
 
 ## 2. 准入判定
 
-判定就是分类器的判定。ALLOWED 且 blockingReason=null 后进入源侧预检，不直接跳到运行队列；独立授权与安全仍核对，无需另造 Agent 决策字段：
+判定就是分类器的判定。ALLOWED 且 blockingReason=null 后，可达正常流程进入源侧预检，不直接跳到运行队列；不可达按评估准备 §1.0 只转换、自审与交付，独立授权与安全仍按适用动作核对，无需另造 Agent 决策字段：
 
 | 分类结果 | 判定 |
 |---|---|
-| `ALLOWED`（`blockingReason=null`） | 分类准入通过；核授权/隔离后源侧预检（构建及适用运行基线），通过再生成；每次提交仍核引用与评估准备 |
+| `ALLOWED`（`blockingReason=null`） | 分类准入通过；可达时核授权/隔离后源侧预检（构建及适用运行基线），通过再生成；确认不可达按评估准备 §1.0 生成、自审和部分交付；每次实际提交仍核引用与评估准备 |
 | `BLOCKED`（任一原因） | 不预检、不生成、不提交；按下方原因处理 |
 | 未知状态/原因、损坏结果、缺项 | 不得当作 ALLOWED；补齐或重跑分类 |
 
@@ -65,9 +65,9 @@ hostname 误报复核逐条回读 network_targets 的原值/位置和实际消�
 3. **独立授权/隔离记录**：复用已有合法授权，记录来源、范围、有效期、双侧 VM、真实网络阻断/受控目标、合成数据和清理。batchAuthorization 字段及固定 scope 只见[Controller 适配](../adapter/controller/remote-controller-adapter.md#batchauthorization-字段与来源)；单项也必附同形最小授权，不只写冻结记录。缺证据先补，不填全部 true 占位；requiresNetworkIsolation=false 不证明私网/动态目标无需隔离。授权变化触发有效性复核；影响分类隔离假设时重新分类。
 4. **现役条件**：读取实际 Controller/Runner 身份、契约、平台、工具链与就绪状态，核对授权证据仍适用于当前基线；READY/快照不是网络隔离证明。授权的 `contractHash` 与现役 `contractSetHash` 核对，它不替代本任务源码/目标哈希。
 
-引用核对通过仅满足本节检查，不再记录额外的 Agent 决策值；仍按根入口当前阶段推进：分类后先完成源侧预检，正式生成、自审及适用评估就绪核对完成后才提交双侧评估。核对不通过说明引用错位或授权缺失，注明具体待准备项（`RUN_SAFETY_NOT_READY` 或对应准备缺口）并修复后重来。**这些记录不是分类器的 `admissionStatus`，也不是平台 verdict 或执行证据。**
+引用核对通过仅满足本节检查，不再记录额外的 Agent 决策值；仍按根入口当前阶段推进：系统可达时分类后先完成源侧预检，正式生成、自审及适用评估就绪核对完成后才提交双侧评估；确认不可达仅转换按评估准备 §1.0，不提交评估。核对不通过说明引用错位或授权缺失，注明具体待准备项（`RUN_SAFETY_NOT_READY` 或对应准备缺口）并修复后重来。**这些记录不是分类器的 `admissionStatus`，也不是平台 verdict 或执行证据。**
 
-分类与动态执行是不同门槛：缺授权/隔离不改 ALLOWED，但阻断受影响提交；若源侧预检尚未完成，也不能正式模型生成。已经通过生成前门禁的文本交付可按实际阶段收尾，不暗示已动态验证。
+分类与动态执行是不同门槛：缺授权/隔离不改 ALLOWED，但阻断受影响提交；可达正常流程若源侧预检尚未完成，也不能正式模型生成。不可达仅转换按评估准备 §1.0 核文本处理条件，不要求未执行的源预检或虚填 VM 隔离。已经通过适用生成前门禁的文本交付可按实际阶段收尾，不暗示已动态验证。
 
 ## 4. 留证与字段分工
 

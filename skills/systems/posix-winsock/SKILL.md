@@ -135,4 +135,4 @@ if (n > INT_MAX) { /* 分段或报错，不静默收窄 */ }
 - Microsoft Winsock 参考：`WSAStartup`、`SOCKET`/`INVALID_SOCKET`/`SOCKET_ERROR`、`closesocket`、`ioctlsocket`、`WSAGetLastError`、`recv`/`send` 签名、`setsockopt`（`SO_RCVTIMEO`）。
 - Porting Socket Applications to Winsock 与 WSAPoll：跨平台移植差异与 `WSAPoll` 行为说明。
 
-以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/framework/safety-boundary.md)。**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。
+以上为语言/平台规则依据，不是特定编译器、SDK 版本或转换结果的验证记录；目标为具体版本时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/framework/safety-boundary.md)。**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性，可达走源预检及适用评估，不可达仍冻结、分类 `ALLOWED`、转换、自审和交付报告，不编译运行；见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本系统方向 Skill **不替代门禁、不构成执行授权**。

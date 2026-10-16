@@ -53,4 +53,4 @@ description: Use alongside a conversion direction when source launches child pro
 - POSIX posix_spawn、waitpid：启动/状态/等待。
 - CreateProcessW、WaitForSingleObject：Windows 句柄/等待。
 
-规则是静态知识，不证明逐例行为。回到[根入口](../../../SKILL.md)、[AGENTS.md §3](../../../AGENTS.md)与[安全边界](../../../references/framework/safety-boundary.md)：分类 ALLOWED→源侧预检（构建 + 适用运行基线）→生成/自审→评估就绪→提交/取证→交付门禁，场景不替代门禁或授权。
+规则是静态知识，不证明逐例行为。回到[根入口](../../../SKILL.md)、[AGENTS.md §3](../../../AGENTS.md)与[安全边界](../../../references/framework/safety-boundary.md)：先检查评估系统可达性，可达走源预检及适用评估，不可达仍冻结、分类 ALLOWED、转换、自审和交付报告，不编译运行；场景不替代门禁或授权。

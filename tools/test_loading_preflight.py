@@ -227,6 +227,55 @@ class LoadingChecks(unittest.TestCase):
         data = self.record(omit=lp.CORE["safety"])
         self.assertEqual(self.check(data)["status"], "FAIL")
 
+    def test_two_evaluation_paths_use_same_required_loading(self):
+        paths = {
+            "reachable": ("start", "freeze", "classify", "source-precheck", "generate",
+                          "review", "submit", "close"),
+            "unreachable-conversion-only": ("start", "freeze", "classify", "generate",
+                                            "review", "close"),
+        }
+        for batch, long in ((False, False), (True, False), (False, True), (True, True)):
+            if (self.base / "structure.json").exists():
+                (self.base / "structure.json").unlink()
+            data = self.record(batch, long)
+            expected = set(lp.CORE.values())
+            expected.update(name for key, name in lp.WORKFLOWS.items()
+                            if data["workflows"][key]["applies"])
+            for mode, actions in paths.items():
+                with self.subTest(batch=batch, long=long, mode=mode):
+                    for action in actions:
+                        result = self.check(data, action)
+                        self.assertEqual(result["status"], "PASS", result)
+                        selected = expected - ({lp.WORKFLOWS["long-file"]} if action == "start" else set())
+                        self.assertEqual(set(result["selected"]), selected)
+                        self.assertFalse(result["executionAuthorized"])
+                        self.assertEqual(result["scope"], "loading-only")
+                    if long:
+                        self.assertEqual(self.check(data, "map")["status"], "PASS")
+            # No compiler, network, classifier result, or job is supplied to this text check.
+            self.assertFalse((self.base / "04-evaluation").exists())
+            self.assertFalse((self.base / "classification-1.json").exists())
+
+    def test_conversion_only_still_requires_each_core_contract(self):
+        for name in lp.CORE.values():
+            with self.subTest(missing=name):
+                if (self.base / "structure.json").exists():
+                    (self.base / "structure.json").unlink()
+                data = self.record(omit=name)
+                result = self.check(data, "generate")
+                self.assertEqual(result["status"], "FAIL")
+                self.assertIn({"severity": "error", "code": "coverage", "detail": name}, result["findings"])
+                self.assertFalse(result["executionAuthorized"])
+
+    def test_conversion_only_keeps_conditional_workflow_requirements(self):
+        data = self.record(batch=True, long=True, omit=lp.WORKFLOWS["batch"])
+        self.assertEqual(self.check(data, "generate")["status"], "FAIL")
+        data["reads"].append(self.append_offer(self.offer(lp.WORKFLOWS["batch"])))
+        self.assertEqual(self.check(data, "generate")["status"], "PASS")
+        data["reads"] = [pointer for pointer in data["reads"]
+                         if lp.load_json(pointer["path"])["offer"]["payload"]["document"] != lp.WORKFLOWS["long-file"]]
+        self.assertEqual(self.check(data, "review")["status"], "FAIL")
+
     def test_middle_gap_and_overlap(self):
         name = lp.CORE["build"]
         data = self.record(omit=name)

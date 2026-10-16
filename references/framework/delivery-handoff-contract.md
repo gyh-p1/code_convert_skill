@@ -14,6 +14,8 @@
 
 从开始处理该项起，正常完成和任何提前停止都走同一收尾入口，包括分类阻断、源预检失败/缺基线、配置或生成失败、自审/修复停止、评估准备缺口、平台故障、仅编译、排除/重复/跳过及 WAITING 暂停。不能在某个分支写完停止原因后直接返回，不能等到批次每 40 项对账才补单项报告；尚未开始处理的清单候选不要求预建报告。纯文档审阅不属于这里的转换任务。
 
+评估系统不可达按[评估准备 §1.0](evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)继续转换和自审后同样走本入口。交完整 target、自审记录和 result.md；源/目标编译运行未执行/UNVERIFIED，不要求未发生 job-00/job-01。可达性检查原件放本 run 的 `01-frozen/` 并由冻结及报告引用；不因无评估 job 而删掉实际模型、分类或自审记录。
+
 1. **写本项 result.md**：不论是否生成完整目标、不论成功/失败/阻断，都须有一份中文报告。沿用 §2.3 五栏目，写实际阶段/状态、原因、已有证据、未完成/不适用义务与恢复条件；无目标明确“未生成”，未开展维度写“未执行/UNVERIFIED”，不编造 target、job 或 PASS。报告不包含凭证、危险载荷或不必要的源码。
 2. **逐件核对真实产物**：按 §2.1.1 的模式、已达阶段和停止原因列适用清单，人工读取实际文件并核内容符合形制、可复核、版本/指针相符；逐件记“已取得/缺失/不适用”、真实路径与理由。目录存在、文件名齐、空报告或占位文件均不算齐备；真实采集的空 stdout/stderr 等原件可为空，须有对应采集记录，不能与缺文件/占位混淆。有完整目标才要求完整 target，实际发生的模型/分类/预检/提交/原始证据不能因失败漏掉。
 3. **保存核对结果再决定状态**：在 result.md 的“验证依据与覆盖范围”记录核对时间、适用清单及通过/未通过，缺件与责任/补件条件写“未决问题与下一步”；批次 item/event 引用本报告及核对记录，不复制成第二份证据。缺应有件不能记 DONE/PARTIAL/CLOSED；未知提交、活动或未确认清理的 job 保持 WAITING，已有报告不解除它们。
@@ -85,13 +87,45 @@ Controller 的收尾字段与原件下载消费[当前协议适配 §4](../adapt
 
 **关联变体的落点**：任务状态要求另开 run 时，在本 case 的 `output/<batchId>/runs/<runId>/` 使用同样的阶段骨架；首次 run 根及原件保留，不覆盖旧 frozen-inputs、目标、自审或 job。runId 为本项唯一的非敏感本地版本名，不改 batchId/taskId，不新增 Controller 字段或第二套索引。既有 item/event/manifest 指向当前 run 的实际根、报告和原件；源未变可引用原只读 source，已有源构建按评估准备 §1.2 核对复用，不能把新请求或新证据倒填旧 run。目标 repair 在原 run 内另存目标版本，原条件重提另记 attempt/job，不为这两类动作重复开 run；旧 case.md 保留原接入/冻结说明，新范围写入新 run 的 frozen-inputs。
 
+#### 2.1.1.1 不可达仅转换的产物骨架
+
+按[评估准备 §1.0](evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)确认评估系统不可达后，仍用同一个单项 run 布局，不另设 offline 目录或第二份交付契约。下面展示已完成生成和自审的首次 run；关联变体使用上文 `runs/<runId>/`。未生成完整目标或自审失败时按真实阶段裁剪并写报告，不借示意补造文件。
+
+```text
+<direction>/<case-id>/output/<batchId>/
+├── 01-frozen/
+│   ├── frozen-inputs.md                  # 不可达分支、检查指针、未开展验证及恢复条件
+│   ├── evaluator-reachability-<N>.*      # 实际 HTTP/传输诊断；headers/body 仅存在时保留
+│   ├── classifier-input.json
+│   ├── classification-<N>.json           # 当前适用 ALLOWED/null；历史结果不覆盖
+│   └── <实际加载原件>                    # 系统报告/返回凭证/动作核对；无系统支持记 manual
+├── 02-conversion/
+│   ├── target.gen.<ext>
+│   ├── target.gen.model.json            # 含脱敏请求/原响应或不可变引用
+│   └── <实际修订及失败 attempt 原件>
+├── 03-self-review/
+│   ├── self-review-<N>.json
+│   ├── self-review-<N>.model.json        # 关联被审最终版本；原始响应同样可回读
+│   └── <实际复审/追加裁决/失败原件>
+├── target.<ext>                         # 最终完整目标，与实际过程版本对应
+├── result.md                            # 五栏目及逐件核对；未开展编译/运行/功能 UNVERIFIED
+├── source-analysis.md                   # 长文件适用
+└── evaluator_manifest.json              # 消费方要求时；非本轮提交/执行证明
+```
+
+首次仅转换且从未提交评估时不创建 `04-evaluation/`、capsule、job-id、build/evidence/comparison/closure 占位。检查失败没有 body 时保留已有 HTTP/传输诊断，不制造空 body 原件。若已有真实 attempt/job/失败，则必须保留其原目录与证据；未知提交、活动或清理未确认仍 WAITING，不适用“无 job 已收尾”的骨架。批量索引仍按 §2.1.2 完整维护，item/event 指向本项 target、自审、检查原件和 result，不复制成第二份证据。
+
+manifest 需要时，`files[].success` 只按完整转换产物就绪填写；`x_adapter.executionApproved` 未取得实际评估接收回执时保持 false。在既有 `x_adapter.note/status/prerequisites` 及报告中说明不可达和待验证，未发生证据的可空路径用 null、`artifacts` 据实为 false，计划落点不当已存在原件；不为仅转换添加 Controller schema 字段或声明 VM 已隔离。
+
+#### 2.1.1.2 各分支通用产物核对
+
 **产物范围与命名约束**：
 
 | 规则 | 说明 |
 |---|---|
 | `01-frozen/` | 分类前已完成冻结的项即须有 frozen-inputs.md，并按[任务状态 §2.2](task-state-contract.md#22-冻结落盘门禁)写出且回读通过；不等生成或收尾才要求。已发生分类保留 classifier-input.json 与原分类结果；重分类另存递增编号并指明当前版本，不覆盖旧结果。不写 frozen-inputs.json；冻结前停止的项只要求实际适用件，不伪建冻结记录 |
 | **提交前必须有当前适用的 `classification-<N>.json` 且 ALLOWED/null** | 首次通常为 classification-1.json；重分类引用实际新编号。每次进入评估准备/提交/重提核该结果与完整源集合、身份/条件对应；是否重分类只按[分类准入](../workflow/classifier-agent-gate.md)，不能因原编号有 ALLOWED 沿用失效结果 |
-| `frozen-inputs.md` 必须记录授权与隔离 | 含授权来源、范围、有效期，源/目标 VM 与 runnerId、网络边界、清理条件；**不得只靠事后 evidence 的 `clean` 代替提交前记录** |
+| `frozen-inputs.md` 必须记录授权与隔离的适用状态 | 实际评估前含授权来源、范围、有效期，源/目标 VM 与 runnerId、网络边界、清理条件；**不得只靠事后 evidence 的 `clean` 代替提交前记录**。不可达仅转换分支记本轮不编译运行及未核验/不适用理由，不伪填已隔离；文本外发授权另核 |
 | 请求/响应追溯 | 不另堆 prompt.txt；在该轮 model.json 或其指向的不可变记录保存脱敏请求/原始响应与身份、哈希。哈希不能还原正文；raw.txt 是实际响应，不是请求替代品。自审原始响应也须保留，不能只保存解析结论 |
 | 提交与状态记录 | 不另建重复 state.json；job-id.txt 记录已知 jobId，拒收/丢回执/传输诊断在该 job/attempt 的实际记录中保留。不得以没有 submission-response.json 为由丢弃未知提交证据；轮询中间快照不当作终态证据 |
 | 已有完整交付稿时根级须有 `target.<ext>` | 等于所指最终完整版本；没有后续目标修订时才等于 target.gen。自修、评估后修复或有依据的组装恢复后指向实际新稿，不把不完整生成充作交付版 |
@@ -105,7 +139,8 @@ Controller 的收尾字段与原件下载消费[当前协议适配 §4](../adapt
 | 去向 | 必备交付物 | 不要求 |
 |---|---|---|
 | **已生成目标且完成适用评估** | 根级 target、result.md（含功能结论）、manifest（契约要求时）、冻结/分类、全部实际模型/自审/裁决与版本来源记录、每个实际 job 的回执及原始返回证据 | 不要求未发生的额外修复 job；仅编译不伪造 comparison |
-| **已生成但评估前停止/明确文本交付** | 根级 target、result.md（功能 UNVERIFIED 及停止/不适用原因）、manifest（要求时）、冻结/分类/job-00、已发生模型与自审记录；明确未完成义务及恢复条件 | 未提交的 job-01；不能据此免除应做评估或把安全缺口写成功 |
+| **已生成但评估前停止/明确文本交付** | 根级 target、result.md（功能 UNVERIFIED 及停止/不适用原因）、manifest（要求时）、冻结/分类/适用 job-00、已发生模型与自审记录；明确未完成义务及恢复条件 | 未提交的 job-01；不能据此免除应做评估或把安全缺口写成功 |
+| **评估系统不可达、仅转换并自审** | 根级完整 target、result.md（不可达原因及检查指针、自审覆盖、编译运行/功能未验证、恢复动作）、manifest（要求时）、冻结/分类、全部实际模型/自审/修订与可达性检查原件；齐备且无未决执行后 PARTIAL | 未发生源预检、编译运行 job 或 comparison；不虚记 SOURCE_BUILDABLE/EVALUATED/PASS，不把免动态验证当免自审 |
 | **生成尝试失败，无完整目标** | result.md（无目标、真实失败原因、已发生件核对、功能 UNVERIFIED）；冻结/分类/适用源预检、已发生请求/响应/失败 attempt | 不完整代码不能充当最终 target；不要求未发生自审/双侧 job |
 | **非可转换去向**（`SOURCE_NOT_BUILDABLE`/`SOURCE_DEPENDENCY_GAP`/`PREPARATION_GAP`/`EXCLUDED`/`DUPLICATE`/`SAFETY_BLOCKED`/`SKIPPED`） | result.md（去向/原因、实际阶段与证据、适用件核对）；其余只要实际适用件：冻结/去向记录、已取得分类输入/结果、已发生预检 attempt/回执/原始证据。未发生不造 | 完整 target、未发生双侧 job、未开展维度的 PASS；result.md 不豁免 |
 | **WAITING 暂停/未知提交/活动或未确认清理的 job** | result.md（暂停原因、当前已达阶段、已有/缺失件、接收/终止/清理待核及恢复条件）、全部实际发生记录与指针 | 不要求未发生件或未回传证据的伪文件；有报告也不得记终态 |
@@ -171,7 +206,7 @@ LIB_UNOBSERVABLE_COMPILE_ONLY 是本轮行为未评估、仅验证目标语法/�
 
 | 编号 | 用途名 | 何时产生 |
 |---|---|---|
-| `job-00-source-buildability` | 源侧预检（目录名沿用） | 冻结与分类 ALLOWED 后，取源 build completed/exitCode=0 及适用有效运行基线；通过后才生成，文本/仅编译例外见评估准备 §1.1 |
+| `job-00-source-buildability` | 源侧预检（目录名沿用） | 系统可达时冻结与分类 ALLOWED 后，取源 build completed/exitCode=0 及适用有效运行基线，通过后才生成；运行适用性见评估准备 §1.1，不可达仅转换按评估准备 §1.0 不产生此 job |
 | `job-01-dual-build` | 双侧评估（仅编译分支注明） | 目标生成/自审及适用评估就绪门禁通过后才提交，不要求未提交项伪造此目录 |
 | `job-02-…` 起 | 后续诊断/修复重评 | 按实际发生递增；用途名用简短英文连字符（`branch-diagnostic`、`repair-verified` 等） |
 
@@ -212,6 +247,8 @@ LIB_UNOBSERVABLE_COMPILE_ONLY 是本轮行为未评估、仅验证目标语法/�
 交付时按任务状态 §2.1 的对象分工核接收清单、冻结、分类、实际请求与 job，不把移交模板当 Controller 输入。模板 `taskMetadata.sourceLanguage/targetLanguage` 与 `languagePair.sourceLang/targetLang` 含义对应；语法/行为证据范围、hasSource/hasTranslatedCode 和批准状态均须据实替换，示例中的布尔/字符串不构成存在或已执行证明。当前指针可更新，失败 attempt、首轮分类、旧稿原件及原判不可被“整理最后一版”删除。
 
 ### 2.3 `result.md`：面向读者的中文报告骨架
+
+EVALUATOR_UNREACHABLE_CONVERSION_ONLY 沿用下方五栏目：第 1 栏说明“第三方评估系统不可达；已转换并自审，未编译运行”；第 3 栏说明检查诊断及自审/有限修订；第 4 栏引用可达性原件、最终目标与自审版本及适用交付清单，源/目标编译运行、功能比较未开展均 UNVERIFIED；第 5 栏写恢复可达后补源预检和目标验证的动作。不得以自审代编译，不伪造平台 verdict/job；已有真实失败或未决 job 原样保留，后者仍 WAITING。
 
 取回件逐件区分：已取得且完整、未回传/不可读、取得失败占位、已删除但有历史指针、未发生、不适用；这些状态不能互相替换。closure列出的摘要只证明平台记录过该路径/摘要，不证明本地或远端正文现存。原始JSON/流保留；平台提供的可读副本可辅助阅读但不覆盖原件，工具展示截断须补读或明确未读，不以COMPLETE标签代全文。model.json既可能是元数据也可能含完整响应，按实际层次/字段核，不一概认为只有哈希。
 

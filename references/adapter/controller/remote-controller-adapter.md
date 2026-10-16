@@ -24,6 +24,20 @@ runnerId、语言与快照核对规则见 [Runner 能力矩阵](runner-capabilit
 
 ## API 契约
 
+### 转换前可达性检查
+
+单文件（含片段、长文件）和批量每项在冻结评估计划前做只读检查，首次生成前回读，恢复新增动作前重查；分流只按[评估准备 §1.0](../../framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)。在实际提交端使用该位置已登记的端点：同机走 `127.0.0.1`，其他机位走上表跨机地址，不把客户端自己的回环失败当远端服务已停。不猜新地址、不扫描端口、不读取安装目录。
+
+以下为在 Controller 同机提交端的单条原生命令示意；当前目录须是本 run 的 `01-frozen/`，重查另用递增编号，不覆盖旧原件。其他机位只按已登记地址替换 URL。检查本身不传源码、不发 POST、不运行样本，不需先有分类或源构建结果。
+
+```powershell
+curl.exe -sS --connect-timeout 5 --max-time 15 -D evaluator-reachability-1.headers.txt -o evaluator-reachability-1.body.json -w "%{http_code}" "http://127.0.0.1:8443/api/health" > evaluator-reachability-1.http-status.txt 2> evaluator-reachability-1.transport.txt
+```
+
+在既有准备/冻结记录同时记实际时间、提交端/端点、5/15 秒超时及工具实际退出码，人工回读 HTTP/body/传输诊断。成功响应须能确认预期 Controller 身份；HTTP 000、空 body 或 curl 非零本身不足以下结论，须核真实 DNS/路由/连接/超时诊断。已收到 HTTP 拒绝/错误、ready=false、runner 忙碌、协议/能力不符均按正常准备缺口处理，不能写成传输不可达。仅无样本提交的健康检查无需 job 目录；检查失败的原件按实际存在保存，不造 body 占位。连接失败按评估准备 §1.0 留证后直接走仅转换/自审/报告，不循环探测；下一项及恢复时再手工核查。
+
+此处可达性与下面新提交前的 health/runner/版本/授权/隔离核对分工不同，可达不保证可执行。已经提交后失联仍按“提交结果未知时的恢复”处理，不能改为无 job 的仅转换收尾。
+
 Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2](../../framework/task-state-contract.md#22-冻结落盘门禁)回读本项本 run 的 `01-frozen/frozen-inputs.md` 并核身份/版本、适用内容与当前条件；缺失、空白或错位不 POST。此检查由提交端手工完成，接口没有 frozen-inputs multipart 字段或服务端冻结文件校验，不把文件塞入 source/ 树冒充源码。未知提交的恢复查询、已发生 job 的取证及终止/清理不因缺件延后。
 
 **提交前消费者的引用核对**：Agent 调用 POST /api/jobs 前，按[分类准入](../../workflow/classifier-agent-gate.md)核 ALLOWED、精确源集合/哈希和独立授权/隔离，并保存逐项提交记录。classification 与 batchAuthorization 每次提交均随附，单项亦按最小同形授权；这不免实际身份/协议核验。按[当前协议适配](platform-revision-adapter.md)核实际能力，不把其他任务结论或分类器 executionApproved 当当前服务器许可。
@@ -49,7 +63,7 @@ Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2]
 
 ### 当前协议的强制适配核对
 
-使用 Controller 渠道时必读[当前协议适配](platform-revision-adapter.md)，按当前协议选择适用形状，并核实际平台身份与能力。该页登记 source-preflights、SourcePreflightReport 1.0、EvaluationReport 3.2、closure/原件导出、submissionId/busy/恢复、追加归因与 v2 配置。`closureBlocked=true` 或 `jobPhase=CLEANING` 不能因 jobStatus 属终态枚举就收尾；平台 closure 不免转换端 result.md 与适用产物门禁。历史 job 缺 closure 时沿用真实原件/清理核对，不造成功记录。
+使用 Controller 渠道时必读[当前协议适配](platform-revision-adapter.md)，按当前协议选择适用形状；可达时在适用源预检/提交前核实际平台身份与能力，不可达仅转换不要求实时平台证据。该页登记 source-preflights、SourcePreflightReport 1.0、EvaluationReport 3.2、closure/原件导出、submissionId/busy/恢复、追加归因与 v2 配置。`closureBlocked=true` 或 `jobPhase=CLEANING` 不能因 jobStatus 属终态枚举就收尾；平台 closure 不免转换端 result.md 与适用产物门禁。历史 job 缺 closure 时沿用真实原件/清理核对，不造成功记录。
 
 ### 提交结果未知时的恢复
 

@@ -5,6 +5,8 @@
 
 平台提供独立 source-only、build-only、closure/原件导出、submissionId 与实现身份接口；请求和取证形状见[当前协议适配](platform-revision-adapter.md)。本页定义 runner 选型及运行条件，能力登记不代替本项构建、行为或隔离证据。
 
+本页离线正文在连接准备时读取；实时 runner、快照和工具链证据用于可达时的适用源预检/评估。按[评估准备 §1.0](../../framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)确认不可达后，仅转换分支记录候选平台及未核验范围，不要求取得实时接口返回才生成、自审和交付。
+
 ## 1. Runner 与语言登记
 
 | runnerId | os / arch | 支持语言（`supportedLanguages`） | 快照回滚 |

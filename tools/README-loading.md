@@ -65,6 +65,17 @@ python -B tools/loading_preflight.py check-next --repo . --record <run>/01-froze
 
 动作名：start（画像前，批量含 batch）、map（建图/分段前，含适用 long-file）、freeze、classify、source-precheck、generate、review（自审/修订）、submit、resume、close。start 时 long-file 可尚未加载；源码复杂度待画像确定时可用 applies=null 并说明待定依据，map/freeze 及后续动作前必须定案，适用则需要完整正文。报告不检查其他冻结字段；Agent 仍须按任务状态 §2.2 回读冻结正文并核全部字段。写 result.md 和保留停止原因不以加载 PASS 为前置条件；close 只核加载记录，不代替全去向交付及终态判据。
 
+### 4.1 可达与不可达两条路径的加载动作
+
+两条路径都先加载同一组 7 份核心契约及实际适用的 batch/long-file 工作流。不可达改变编译运行步骤的适用性，不减少冻结、分类、模型/知识、自审与交付规则的读取；build 契约仍用于声明平台/依赖和待验证计划，不要求本轮有构建原件。Controller 连接适配在健康检查前读取；现场平台/runner 证据仅在后续正常评估动作适用时核。Controller/语言/方向/场景/系统仍在本工具覆盖外，由 Agent 按根入口手工加载和留依据。
+
+| 本轮路径 | 调用既有加载动作的时点 | 不要求的动作/原件 |
+|---|---|---|
+| 可达正常流程 | `start` 后按已加载连接适配检查可达性；长文件建图前 `map`；随后 `freeze`、`classify`、`source-precheck`、`generate`、`review`、适用 `submit`、`close`，恢复新增动作前 `resume` | 不要求未发生的额外修复或 job；LIB 分支的行为件按评估准备契约不适用 |
+| 不可达仅转换 | 同样 `start`/适用 `map`、`freeze`、`classify`，再直接 `generate`、`review` 和 `close`；恢复前 `resume`，重新检查可达性后决定后续适用动作 | 不调用本轮未发生的 `source-precheck`/`submit`，不提供源构建/job/比较原件；仍必须有自审及 result.md |
+
+`check-next` 不要求先调用过某个动作，不消费源预检/分类/job 结果或网络诊断，不根据任意 `evaluationMode` 声明放宽正文覆盖；每次 PASS 仅表示该动作的加载条件满足，`executionAuthorized=false`。因此无需给加载记录增加不可达开关，不新增网络探测或自动跳步功能。业务分流及其证据由评估准备 §1.0 和 Agent 手工核对，产物按[交付骨架](../references/framework/delivery-handoff-contract.md#2111-不可达仅转换的产物骨架)。缺必要契约、工作流、版本或时序仍失败，不能借不可达免加载。
+
 默认检查当前日志末尾的前置条件。审计已发生动作时传 `--before-call <actual-action-call-id>`，只采信该动作之前的正文返回；补读不能追认历史合规。系统在每次动作前保存本次 next 原件并由 Agent 核对引用；未留历史检查原件时，当前 PASS 不能外推此前动作已合规。跨来源顺序不可比较时不合并，跨会话或已知 epoch 变化须重新提供。
 
 query/collect/terminate/cleanup 是已发生 job 的加载缺件例外：可不提供 record/transcript，工具返回 exception，同时 `executionAuthorized=false`；这只说明加载缺件不阻止查询取证/终止清理，操作仍按原 job、授权和安全契约执行。
@@ -77,6 +88,6 @@ query/collect/terminate/cleanup 是已发生 job 的加载缺件例外：可不�
 
 退出码 0：本次记录或限定范围检查成功；1：已知结构/覆盖/版本/时序缺项；2：用法、证据格式、读取/解析能力或输出保存不可用。结构报告内的已知文件缺失按 FAIL 记录；缺宿主日志不能生成强读取凭证。记录成功不等于完整加载。
 
-无系统接入时第三方智能体用原生读取工具手工核同范围：根表身份、路径/锚点和路由，7 份及适用工作流正文、精确版本、分段覆盖、消费时点和缺口。保存 `manual` 说明及实际工具依据，未完成则 UNAVAILABLE；人工记录不升级为 HOST_RETURN_OBSERVED。自填声明不证明理解或独立提供。既有分类/源构建/评估门禁不因回退省略。
+无系统接入时第三方智能体用原生读取工具手工核同范围：根表身份、路径/锚点和路由，7 份及适用工作流正文、精确版本、分段覆盖、消费时点和缺口。保存 `manual` 说明及实际工具依据，未完成则 UNAVAILABLE；人工记录不升级为 HOST_RETURN_OBSERVED。自填声明不证明理解或独立提供。加载回退不省略适用分类/源构建/评估门禁；第三方评估系统不可达的仅转换分支独立按[评估准备 §1.0](../references/framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)留证和分流，加载工具不检查网络或决定该分支。
 
 本工具及其回归与示例属于系统维护设施，所有测试输入均为文本 fixture；不得将说明中的系统命令作为第三方智能体辅助脚本许可。

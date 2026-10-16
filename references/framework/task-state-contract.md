@@ -20,6 +20,7 @@
 | 知识与模型 | selected skills（路径+哈希）、配置模型/温度、RAG 开关、不发送 max_tokens 的输出约定 |
 | 构建与源基线 | 两侧 buildCommand/环境/工程输入；源预检适用运行条件与观察目标；真实构建诊断及适用运行/清理证据取得后追加引用，不倒填成冻结前已知 |
 | 评估计划 | driver（形态、来源、argv/stdin、就绪条件、终止）、driverRationale、input/初始状态、oracle 是否适用及其来源/观察范围/比较策略 |
+| 评估系统可达性 | 按评估准备 §1.0 记录本项检查时间、实际提交端/端点、原始健康响应或传输诊断指针、可达性结论及正常/仅转换分支；不可达时源/目标编译运行未开展，计划与实测分开 |
 | 授权与环境 | 授权来源/范围/有效期、计划与已核验 runner/快照分开、实际网络/数据边界及清理条件；外部表单按适配页填写 |
 | 恢复 | 原始/分类/冻结快照对应、父版本、有限修复预算、超时/轮询计划和待补项 |
 
@@ -27,7 +28,7 @@
 
 片段的源侧预检只引用用户或获批平台已提供的精确中性声明上下文；缺源声明/依赖仍待准备，不由 Agent/模型新造桩、入口或依赖。正式转换须先过冻结、分类 ALLOWED 和适用源构建；正常行为分支还须有有效源运行基线。本轮无法合法行为评估但源构建通过时，按[评估准备 §1.3](evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)在既有评估计划中记 LIB_UNOBSERVABLE_COMPILE_ONLY、具体行为缺口及目标语法/编译范围后继续生成；driver/input/oracle 的行为部分有理由地记不适用，不豁免目标验证。库可保留单文件模式，无需改源包名或补 main。纯文档审阅不触发动态步骤。
 
-评估计划在冻结阶段确定；缺驱动、工具链或隔离证据不伪称行为就绪。本轮无法合法评估行为时按 LIB_UNOBSERVABLE_COMPILE_ONLY 转换并验证目标语法/编译，缺入口不阻断已满足条件的生成；工具链/隔离缺口仍阻止受影响的验证动作。已有 run 改范围按 §1 另记变体，保留历史，不以改范围抹掉真实行为失败。
+评估计划在冻结阶段确定；缺驱动、工具链或隔离证据不伪称行为就绪。系统可达但本轮无法合法评估行为时按 LIB_UNOBSERVABLE_COMPILE_ONLY 转换并验证目标语法/编译，缺入口不阻断已满足条件的生成；工具链/隔离缺口仍阻止受影响的验证动作。确认不可达则按评估准备 §1.0 记录仅转换、自审与交付，不要求本轮实时工具链或隔离证明，未知事实记未核验。已有 run 改范围按 §1 另记变体，保留历史，不以改范围抹掉真实行为失败。
 
 评估计划的具体内容消费[评估准备 §4](evaluation-readiness-contract.md#4-oracle-与两侧对称)：源行为/消费者、输入与初态、观察对象/范围/单位、允许关系/保护项、实际模式及未覆盖部分放在本项既有记录，不新建 schema。环境变量的继承/未设置/空值、独立中性 cwd 和文件副作用按实际平台语义记录，空 JSON 对象不证明环境为空。候选条件只记录与本源行为有关的已考虑选项、依据和未决缺口，不要求穷举所有可能输入。
 
@@ -97,6 +98,7 @@
 - 分类放行据当前源集合对应的原 ALLOWED/null；源可构建据实际冻结命令消费的源版本及 build completed/0，不拿另一个包/文件或系统内置库的构建代替。
 - 生成/自审据实际请求、完整响应、目标版本和追加裁决；提交前先保存精确 attempt/capsule/版本与恢复标识，HTTP 状态、body、传输退出/错误与 jobId 分别记实际事实。
 - 正常行为分支核有效源基线、驱动/输入/观察/清理；LIB 分支按评估准备 §1.3 核原因、源构建及不运行的目标验证，不要求不存在的 execution/comparison。
+- 评估系统不可达的仅转换分支按[评估准备 §1.0](evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)核检查原件、冻结与 ALLOWED，允许 CLASSIFIED→GENERATED→SELF_REVIEWED/适用修订→部分交付；不记 SOURCE_BUILDABLE/EVALUATED，不要求未发生源预检原件。自审、目标版本/来源和 result.md 仍须完整。
 - 恢复先处理未知提交/未决执行及清理，不能借新 run 开新执行或跳过原件；查询、取证、终止/清理继续按原身份。每次停止/暂停都走交付 §1.1；只有适用件核对齐备且没有未决执行才记 DONE/PARTIAL/CLOSED。
 
 ## 3. 接入去向
@@ -105,7 +107,7 @@
 
 | 去向 | 含义 |
 |---|---|
-| FROZEN | 转换边界已在本 run 的 frozen-inputs.md 落盘且回读通过（§2.2）；仍须逐项分类/源侧预检才能生成 |
+| FROZEN | 转换边界已在本 run 的 frozen-inputs.md 落盘且回读通过（§2.2）；仍须逐项分类，系统可达时再过适用源侧预检才能生成；不可达分支按评估准备 §1.0 |
 | PREPARATION_GAP | 方向/平台/模式、快照或所需合法准备件不足，待补 |
 | DUPLICATE | 同源同向同契约且非显式独立试验；指向复用任务 |
 | EXCLUDED | 不在任务范围，记依据 |
@@ -120,10 +122,10 @@
 
 | 字段 | 语义 |
 |---|---|
-| phase | 最近有完整记录的单项闭环阶段；已分类/源侧预检是生成前条件，不把动作开始写成完成 |
+| phase | 最近有完整记录的单项闭环阶段；分类及本轮适用的源侧预检是生成前条件，不把动作开始写成完成；不可达仅转换不虚记源预检阶段 |
 | pendingAction | 当前进行或等待的动作，关联请求/attempt/job 身份 |
 | lifecycle | NOT_STARTED / ACTIVE / WAITING / DONE / PARTIAL |
-| 原因与恢复条件 | 分类阻断、准备缺口、SELF_REVIEW_UNRESOLVED、RUN_SAFETY_NOT_READY、BLOCKED_ENV（有真实环境诊断）、SUBMISSION_UNKNOWN、LIB_UNOBSERVABLE_COMPILE_ONLY、ORACLE_NOT_FREEZABLE 等；保留解除历史 |
+| 原因与恢复条件 | 分类阻断、准备缺口、SELF_REVIEW_UNRESOLVED、RUN_SAFETY_NOT_READY、BLOCKED_ENV（有真实环境诊断）、SUBMISSION_UNKNOWN、LIB_UNOBSERVABLE_COMPILE_ONLY、EVALUATOR_UNREACHABLE_CONVERSION_ONLY（本项目范围/原因，非平台字段）、ORACLE_NOT_FREEZABLE 等；保留解除历史 |
 | 验证结论 | 按精确版本分列 source/target build、execution、comparison、环境与安全；原平台 verdict 与本项目覆盖判断分列 |
 
 DONE 表示契约所要求的工作、取证和交付已收尾，**可有真实失败**；PARTIAL 表示本轮已停止并完成适用的部分交付，仍缺工作/证据。两者都须先过[交付完整性门禁](delivery-handoff-contract.md#211-单文件任务的标准骨架)，对应闭环 CLOSED。matched/mismatched 不决定 lifecycle，缺证据为 UNVERIFIED。
@@ -133,3 +135,5 @@ DONE 表示契约所要求的工作、取证和交付已收尾，**可有真实�
 平台报告“终态”与本项 lifecycle 分开：使用 Controller 时按[当前协议适配](../adapter/controller/platform-revision-adapter.md)核平台身份、closure/原件与真实清理；仍收尾阻断或接收/调用/清理未知保持 WAITING。submissionId 只绑定精确提交尝试的恢复，不代 taskId/runId、不增加任务数，也不允许改冻结条件沿用旧 ID 重执行。
 
 仅编译项固定 PARTIAL、功能 UNVERIFIED，编译据实。源不可构建/依赖缺口不回填目标 FAIL；非可转换去向按适用件收尾，不纳入转换失败。可能已接收但缺回执，或 job 仍活动/未确认清理时保持 WAITING，不能用 PARTIAL 绕过未决执行。恢复 PARTIAL 追加重入依据，从最近适用阶段继续且保留预算。
+
+EVALUATOR_UNREACHABLE_CONVERSION_ONLY 属已转换后的部分验证交付范围，不新增接入去向或 Controller schema。完成转换、自审及适用件核对后 PARTIAL，源/目标编译、运行与功能比较未开展为 UNVERIFIED，不记源不可构建或功能失败。恢复可达先补适用源预检再验证已有目标，按评估准备 §1.0/§1.2 核旧证据及关联变体，不重复成功生成或重置预算；已有未决执行优先保持 WAITING。

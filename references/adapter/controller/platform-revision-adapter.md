@@ -2,9 +2,11 @@
 
 > 状态：ACTIVE，转换系统对评估平台协议的适配。任务按本页选择请求、报告、取证与恢复形状，并保存实际 health/回传身份；支持声明不替代本项构建、行为、驱动合法性或网络隔离证据。
 
-本页随转换仓库离线交付，定义需消费的字段与形状，不要求读取相邻评估仓库。请求前核实际平台身份与声明能力；字段/路由缺失或版本不符时记录准备缺口，不猜填 capability。连接与普通双侧请求沿用[Controller 适配](remote-controller-adapter.md)，门禁分别消费[任务状态](../../framework/task-state-contract.md)、[评估准备](../../framework/evaluation-readiness-contract.md)、[交付](../../framework/delivery-handoff-contract.md)、[安全边界](../../framework/safety-boundary.md)。适配文本不产生样本执行授权。
+本页随转换仓库离线交付，定义需消费的字段与形状，不要求读取相邻评估仓库。评估提交前核实际平台身份与声明能力；字段/路由缺失或版本不符时记录准备缺口，不猜填 capability。连接与普通双侧请求沿用[Controller 适配](remote-controller-adapter.md)，门禁分别消费[任务状态](../../framework/task-state-contract.md)、[评估准备](../../framework/evaluation-readiness-contract.md)、[交付](../../framework/delivery-handoff-contract.md)、[安全边界](../../framework/safety-boundary.md)。适配文本不产生样本执行授权。
 
 ## 1. 启用前核对版本与能力
+
+先按[评估准备 §1.0](../../framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)及[连接适配](remote-controller-adapter.md#转换前可达性检查)检查第三方评估系统可达性。不可达仅转换、自审及报告，不要求虚填本页实时平台/runner 证据或源构建，不发评估 job；可达后才落实本页动态提交条件。服务可达但版本/能力/就绪不足仍按原准备规则，不当不可达。未决 job 不因健康检查失败解除 WAITING。
 
 手工保存实际 `/api/health`、`/api/runners` 和平台提供的参与 Agent health/发布身份资料；不读取 Controller 安装目录或 jobs。当前字段：
 
@@ -112,7 +114,7 @@ source-only 的 `/api/jobs/{jobId}/report` 返回 **SourcePreflightReport 1.0**�
 | cleanup.status/reason | passed/failed/unknown/not-started，必须关联原清理记录；READY 不替代 |
 | jobStatus/jobPhase | 编排/收尾事实，不等于源可构建或可进入转换模型 |
 
-生成前仍核精确源 build completed/0、授权隔离与适用清理；正常行为分支还须有效源基线，缺口先停该分支。源构建已过而本轮无法合法行为评估时，按评估准备 §1.3 记录 LIB_UNOBSERVABLE_COMPILE_ONLY 后继续生成与目标语法/编译验证，不能把“任何观察缺口”写成禁止转换调用。没有独立 oracle 的平台 UNVERIFIED 不改 PASS，实际观察无有效依据不假称基线通过。
+系统可达的正常流程生成前仍核精确源 build completed/0、授权隔离与适用清理；正常行为分支还须有效源基线，缺口先停该分支。源构建已过而本轮无法合法行为评估时，按评估准备 §1.3 记录 LIB_UNOBSERVABLE_COMPILE_ONLY 后继续生成与目标语法/编译验证，不能把“任何观察缺口”写成禁止转换调用。不可达仅转换按评估准备 §1.0 回读检查原件，不要求未发生源预检。没有独立 oracle 的平台 UNVERIFIED 不改 PASS，实际观察无有效依据不假称基线通过。
 
 双侧普通报告沿用 3.0/3.1；双侧仅编译为 EvaluationReport **3.2**，kind 不变，逐侧 buildAssessment，execution.performed=false、comparisonRef=null、功能 UNVERIFIED。不能按 source-only 标量读双侧对象，也不能硬把 source-only 报告转成双侧 3.x。旧消费者遇未知 kind/version 停受影响判读。
 

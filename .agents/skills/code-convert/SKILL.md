@@ -9,7 +9,7 @@ description: Use for code conversion tasks in this repository. Load the project 
 
 已确认转换缺陷与评估范围/阻塞分别处理：依根入口及[单项闭环](../../../references/workflow/conversion-evaluation-loop.md)有限修复并核源行为保持；oracle 不可冻结、仅编译或有限 matched 不关闭已定位误译。停止时按交付契约明示未修复/修后未验证，不以 residualRisk 替代。知识与观察范围按源码触发选择，比较能力只据现役适配，不新增驱动、比较器或无限自审。
 
-正式转换必须手工、串行、逐项推进，不写任何辅助脚本/工具/驱动或自动化程序。顺序：冻结→分类 ALLOWED→源侧预检（构建 + 适用运行基线）→生成→自审→适用评估→取证/归因→交付门禁。能合法评估行为的先取有效源基线；本轮无法合法评估行为但源构建通过的，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续生成、自审与目标语法/编译验证，行为未评估/UNVERIFIED。不因缺 main、可执行文件、stdout 或合法入口直接跳过，不补造 main/驱动；不免冻结、分类、源构建与安全门禁。纯文档审阅不触发转换步骤。
+正式转换必须手工、串行、逐项推进，不写任何辅助脚本/工具/驱动或自动化程序。单文件和批量每项在冻结评估计划前，先按[评估准备 §1.0](../../../references/framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)检查第三方评估系统可达性并留原件，首次生成前回读。可达：冻结→分类 ALLOWED→源侧预检（构建 + 适用运行基线）→生成→自审→适用评估→取证/归因→交付门禁。不可达：记 EVALUATOR_UNREACHABLE_CONVERSION_ONLY，冻结→分类 ALLOWED→生成→自审/有限修订→交付门禁，不编译运行、不提交评估；仍交完整目标、自审记录及 result.md，未开展维度 UNVERIFIED、适用件齐备后 PARTIAL。忙碌/未就绪不是不可达，未决 job 仍 WAITING。可达但本轮无法合法评估行为、源构建通过的，按[评估准备 §1.3](../../../references/framework/evaluation-readiness-contract.md#13-lib_unobservable_compile_only-的转换与交付)记 LIB_UNOBSERVABLE_COMPILE_ONLY，继续生成、自审与目标语法/编译验证，行为未评估/UNVERIFIED。不因缺 main、可执行文件、stdout 或合法入口直接跳过，不补造 main/驱动；冻结、分类和安全边界始终适用。纯文档审阅不触发转换步骤。
 
 冻结完成必须先写出并回读本项本 run 的 `01-frozen/frozen-inputs.md`；缺失、空白、错项/错版本不分类、不推进，不能等收尾补写。源预检、每次正式模型请求、提交/重提及恢复新增动作前再核，完整规则只消费[任务状态 §2.2](../../../references/framework/task-state-contract.md#22-冻结落盘门禁)；已发生 job 的查询/取证/终止不因缺件延后。加载工具只检查本项加载条件，不新增平台字段。
 
@@ -25,8 +25,8 @@ description: Use for code conversion tasks in this repository. Load the project 
 
 功能判读及统计按根入口转引的[评估准备§5.1](../../../references/framework/evaluation-readiness-contract.md#51-有效性消噪与功能分类的次序)消费有效性、消噪与分类次序，不只按平台标签计通过；知识映射是按源使用点选择的引导，不追加审阅或动态验证步骤。
 
-使用 Controller 时按根步骤 1 加载[当前协议适配](../../../references/adapter/controller/platform-revision-adapter.md)，按当前协议选择源预检、报告版本、取证/恢复与收尾形状，并核实际平台身份与能力。平台终态标签不免本项适用原件与清理核对。
+使用 Controller 时按根步骤 1 先加载离线连接适配及[当前协议适配](../../../references/adapter/controller/platform-revision-adapter.md)，再检查可达性；可达时在适用源预检/提交前核实际平台身份与能力，不可达仅转换不要求无法取得的实时平台证据。按当前协议选择适用源预检、报告版本、取证/恢复与收尾形状，平台终态标签不免本项适用原件与清理核对。
 
-生成前及正常双侧提交前，按[评估准备 §1.4](../../../references/framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)回读源预检、核输入实际送达与两侧条件。历史占位目标比较不支持转换结论；合法空输出、空参数或预期非零退出按冻结观察判断，不增加非空门槛。
+系统可达的生成前及正常双侧提交前，按[评估准备 §1.4](../../../references/framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)回读源预检、核输入实际送达与两侧条件；不可达仅转换分支回读 §1.0 原件，不要求源构建。历史占位目标比较不支持转换结论；合法空输出、空参数或预期非零退出按冻结观察判断，不增加非空门槛。
 
 转换知识默认离线消费：只读取随仓库交付的正文和本地参考，网页/资料标题不能代替必需知识；缺语义或版本时记录具体缺口，不靠联网推定覆盖。按根入口加载适用正文，不把出处追溯变成联网步骤。

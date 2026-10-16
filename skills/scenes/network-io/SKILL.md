@@ -155,4 +155,4 @@ if [301, 302, 303, 307, 308].include?(response.code.to_i)
 
 ---
 
-**执行顺序受根入口三道硬门禁约束**（分类 `ALLOWED` → 源侧预检（构建 + 适用运行基线）→ 评估就绪核对），见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。
+**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性，可达走源预检及适用评估，不可达仍冻结、分类 `ALLOWED`、转换、自审和交付报告，不编译运行；见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。

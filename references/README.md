@@ -17,7 +17,7 @@
 
 | 文档 | 触发 | 职责 |
 |---|---|---|
-| [单项闭环](workflow/conversion-evaluation-loop.md) | 每项正式转换必读 | 冻结→分类→源预检→生成/自审→准备→评估→有限修复→收尾；计数与反馈分流 |
+| [单项闭环](workflow/conversion-evaluation-loop.md) | 每项正式转换必读 | 先按可达性分流，再冻结→分类→适用源预检→生成/自审→适用评估→有限修复→收尾；计数与反馈分流 |
 | [批量工作流](../skills/workflows/batch-conversion/SKILL.md) | 请求含多项 | 手工串行、接入/恢复、每 40 终态增量对账及终局核对 |
 | [长文件工作流](../skills/workflows/long-file-conversion/SKILL.md) | 长/复杂单文件 | 全文件地图、语义分段、跨单元核对；不重置单项预算 |
 | [行为指导](workflow/behavior-preservation-contract.md) | 单文件行为目标/差异说明 | 目标与允许差异建议；提交门禁引用准备契约 |
@@ -29,7 +29,7 @@
 | 文档 | 消费者/时点 | 职责 |
 |---|---|---|
 | [任务状态](framework/task-state-contract.md) | 开始处理每项即读；冻结/分类、各请求/新提交、恢复及收尾核对 | 身份、冻结落盘、知识加载/实际消费、版本关联、接入去向、变体、phase/lifecycle；验证结论独立 |
-| [评估准备](framework/evaluation-readiness-contract.md) | 冻结计划、源预检前、生成前、恢复及双侧提交/取证判读 | 源构建/适用基线及复用失效、合法来源驱动、四要素、两侧对称、oracle、仅编译和原始/归一化观察 |
+| [评估准备](framework/evaluation-readiness-contract.md) | 转换前可达性检查、冻结计划、源预检前、生成前、恢复及双侧提交/取证判读 | 可达正常流程/不可达仅转换自审交付、源构建/适用基线及复用失效、合法来源驱动、四要素、两侧对称、oracle、仅编译和原始/归一化观察 |
 | [交付移交](framework/delivery-handoff-contract.md) | 开始处理每项时必读；结束/失败/阻断/暂停前核对 | 统一收尾入口、全去向 result.md、逐件核对/记录、适用件、布局与移交字段来源 |
 | [移交模板](framework/evaluator_manifest.example.json) | 消费方要求 manifest 时 | 本仓库清单占位形状，不是 Controller capsule |
 | [安全边界](framework/safety-boundary.md) | 全程必读 | 本机/同机/VM、网络、数据及辅助程序红线 |
