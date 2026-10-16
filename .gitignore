@@ -11,19 +11,8 @@ Thumbs.db
 .idea/
 .vscode/
 
-# 转换测试数据、源码快照与批次产物仅保留在本地工作区
-# docs/test/ 为任务材料，不随 Skill 分发
-/docs/test/
-/docs/test/dataset.zip
-
-# 本地任务数据与副本；仅保留约定目录中的 Markdown 文档
-/docs/dataset-2/
-/docs/stages/stage4/reviews/retired-dataset-2-copy-2026-10-12/
-/docs/stages/stage4/reviews/dataset-2-2026-10-12/*
-!/docs/stages/stage4/reviews/dataset-2-2026-10-12/*.md
-
-# 本地测试材料
-/docs/stages/stage2/
+# 工程文档、审查证据与任务材料全部仅保留在本地，不随 Skill 分发
+/docs/
 
 # 本地文件，不随 Skill 分发
 /audit_clean.ps1

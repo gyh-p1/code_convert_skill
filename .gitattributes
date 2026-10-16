@@ -5,7 +5,3 @@
 /tools/loading-registration.json text eol=lf
 /tools/safety_classifier_v2.py text eol=lf
 /tools/test_safety_classifier_v2.py text eol=lf
-# Evidence references hash exact bytes; Git must not rewrite their line endings.
-/docs/stages/stage5/reviews/loading-acceptance-2026-10-15/** -text
-/docs/stages/stage5/reviews/evaluator-reachability-2026-10-16/** -text whitespace=trailing-space,space-before-tab,cr-at-eol
-/docs/stages/stage4/reviews/classifier-v2.5-acceptance-2026-10-15/** -text whitespace=trailing-space,space-before-tab,cr-at-eol

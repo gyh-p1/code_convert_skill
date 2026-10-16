@@ -1,9 +1,0 @@
-﻿{
-    "jobsAfter":  680,
-    "jobsBefore":  680,
-    "comparisonMissingFieldsHttpStatus":  422,
-    "comparisonMalformedJsonHttpStatus":  400,
-    "sourcePreflightMalformedJsonHttpStatus":  400,
-    "sourcePreflightMissingFieldsHttpStatus":  422,
-    "noJobCreated":  true
-}
