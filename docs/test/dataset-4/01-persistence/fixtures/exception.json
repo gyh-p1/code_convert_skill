@@ -1,0 +1,1 @@
+{"operations":[{"op":"transaction","steps":[{"op":"install","entry":{"name":"Demo","label":"welcome"}}],"fail_after":1},{"op":"boot"},{"op":"statistics"}]}

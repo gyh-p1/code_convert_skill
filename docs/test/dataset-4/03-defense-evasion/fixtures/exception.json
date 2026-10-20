@@ -1,0 +1,1 @@
+{"payload":{"text":"abc"},"recipes":[{"name":"slice_failure","atomic":true,"steps":[{"name":"slice","stride":-1},{"name":"slice","stride":0}]}]}

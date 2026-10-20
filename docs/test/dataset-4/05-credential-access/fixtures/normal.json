@@ -1,0 +1,1 @@
+{"records":[{"name":"lab","account":"student","secret":"fixture:one"}],"operations":[{"op":"inspect","name":"lab"},{"op":"compare","name":"lab","candidate":"fixture:one"},{"op":"rotate","name":"lab","secret":"fixture:two","expected":0},{"op":"compare","name":"lab","candidate":"fixture:two"}]}

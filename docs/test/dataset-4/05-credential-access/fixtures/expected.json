@@ -1,0 +1,30 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0006",
+      "/outcomes/0/result/synthetic_bytes": 11,
+      "/outcomes/1/result/matched": true,
+      "/outcomes/2/result/version": 1,
+      "/outcomes/3/result/matched": true,
+      "/state/active_leases": 0,
+      "/state/closed_leases": 3,
+      "/state/records/0/secret": "[synthetic-redacted]",
+      "/state/records/0/version": 1
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/outcomes/0/error": {"code":"INJECTED_FAILURE","field":"lease"},
+      "/outcomes/1/result/matched": true,
+      "/state/active_leases": 0,
+      "/state/closed_leases": 2,
+      "/state/records/0/version": 0,
+      "/state/audit": [{"action":"acquire","name":"lab","tick":0},{"action":"release","name":"lab","tick":0},{"action":"acquire","name":"lab","tick":0},{"action":"compare","name":"lab","tick":0},{"action":"release","name":"lab","tick":0}]
+    }
+  }
+}

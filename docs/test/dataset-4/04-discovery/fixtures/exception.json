@@ -1,0 +1,1 @@
+{"hosts":[{"name":"beta"},{"name":"alpha"}],"queries":[{"op":"search","fail_after":1},{"op":"search","limit":1}]}

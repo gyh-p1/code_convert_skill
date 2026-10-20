@@ -16,6 +16,9 @@ Thumbs.db
 # 本地文件，不随 Skill 分发
 /audit_clean.ps1
 
+# 本地转换产物与评测证据，不参与提交
+/outputs/
+
 # 分类器/转换过程中的一次性暂存（用完即清，禁止入库）
 # 依据：references/workflow/classifier-agent-gate.md 与 AGENTS.md §1（登记分类器的系统侧临时副本用完即清）
 .tmp-classify-*/

@@ -1,0 +1,1 @@
+{"text":"abc","chunk_size":2,"operations":[{"op":"send_all","fail_after":2},{"op":"status"},{"op":"send_all"},{"op":"commit"}]}

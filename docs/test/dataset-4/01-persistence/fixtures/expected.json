@@ -1,0 +1,29 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0003",
+      "/state/entries": [],
+      "/state/revision": 2,
+      "/state/boots": 2,
+      "/state/emissions": [{"boot":1,"name":"Demo","label":"welcome","owner":"lab-user"}],
+      "/outcomes/2/result/emitted": [],
+      "/outcomes/3/result/remaining_capacity": 64
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/outcomes/0/ok": false,
+      "/outcomes/0/error": {"code":"INJECTED_FAILURE","field":"transaction"},
+      "/state/entries": [],
+      "/state/revision": 0,
+      "/state/boots": 1,
+      "/state/emissions": [],
+      "/state/events": [{"action":"boot","name":"simulated-boot","tick":0,"revision":0}]
+    }
+  }
+}

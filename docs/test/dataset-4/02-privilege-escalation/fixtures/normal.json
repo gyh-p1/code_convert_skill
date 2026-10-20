@@ -1,0 +1,1 @@
+{"tokens":[{"name":"elevated","capabilities":["read","write"]}],"resources":[{"name":"note","value":"v0"}],"operations":[{"op":"scope","token":"elevated","steps":[{"op":"write","resource":"note","value":"v1","expected":0}]},{"op":"identity"},{"op":"read","resource":"note"}]}

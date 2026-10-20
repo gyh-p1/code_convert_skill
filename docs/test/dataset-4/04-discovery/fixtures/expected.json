@@ -1,0 +1,29 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0007",
+      "/outcomes/0/result": {"rows":["alpha"],"examined":1},
+      "/outcomes/1/result/reachable": [{"name":"alpha","distance":0},{"name":"beta","distance":1}],
+      "/outcomes/2/result/memory": 12,
+      "/outcomes/2/result/edges": 1,
+      "/state/open_cursors": 0,
+      "/state/closed_cursors": 1,
+      "/state/scanned": 1
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/outcomes/0/error": {"code":"INJECTED_FAILURE","field":"cursor"},
+      "/outcomes/1/result": {"rows":["alpha"],"examined":1},
+      "/state/open_cursors": 0,
+      "/state/closed_cursors": 2,
+      "/state/scanned": 2,
+      "/state/audit": [{"event":"open_cursor"},{"event":"close_cursor"},{"event":"open_cursor"},{"event":"close_cursor"}]
+    }
+  }
+}

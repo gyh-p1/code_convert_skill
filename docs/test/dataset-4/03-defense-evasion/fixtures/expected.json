@@ -1,0 +1,27 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0005",
+      "/state/payload": {"hex":"616263","length":3,"representation":"binary","text":"abc"},
+      "/state/same_bytes_as_input": true,
+      "/state/history/0/ok": true,
+      "/state/history/0/trace/0/after_length": 4,
+      "/state/history/0/trace/1/after_length": 3
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/state/history/0/ok": false,
+      "/state/history/0/error": {"code":"ZERO_STRIDE","field":"stride"},
+      "/state/history/0/rolled_back": true,
+      "/state/history/0/trace": [{"index":0,"name":"slice","before_length":3,"after_length":3}],
+      "/state/payload": {"hex":"616263","length":3,"representation":"utf-8","text":"abc"},
+      "/state/same_bytes_as_input": true
+    }
+  }
+}

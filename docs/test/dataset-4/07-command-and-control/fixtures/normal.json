@@ -1,0 +1,1 @@
+{"tasks":[{"name":"sum1","command":{"kind":"sum","arguments":{"values":[2,3]}}}],"operations":[{"op":"register","worker":"lab-worker"},{"op":"poll","worker":"lab-worker"},{"op":"execute","worker":"lab-worker","name":"sum1"}]}

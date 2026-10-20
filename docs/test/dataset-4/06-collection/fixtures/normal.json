@@ -1,0 +1,1 @@
+{"documents":[{"path":"/lab/a","text":"猫"},{"path":"/lab/b","text":"ab"}],"quota":5,"operations":[{"op":"collect"},{"op":"manifest"}]}

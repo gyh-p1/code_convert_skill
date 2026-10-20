@@ -1,0 +1,1 @@
+{"operations":[{"op":"install","entry":{"name":"Demo","label":"welcome","once":true,"priority":10}},{"op":"boot"},{"op":"boot"},{"op":"statistics"}]}

@@ -1,0 +1,1 @@
+{"hosts":[{"name":"beta","system":"windows","memory":8},{"name":"alpha","system":"linux","memory":4}],"links":[{"from":"alpha","to":"beta"}],"queries":[{"op":"search","limit":1},{"op":"reachable","host":"alpha","depth":1},{"op":"statistics"}]}

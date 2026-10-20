@@ -1,0 +1,32 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0011",
+      "/outcomes/2/result/result/sum": 5,
+      "/state/tasks/0/status": "done",
+      "/state/tasks/0/attempts": 1,
+      "/state/tasks/0/lease_owner": null,
+      "/state/tasks/0/lease_until": null,
+      "/state/released": 1,
+      "/state/statistics/counts/leased": 0
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/outcomes/2/error": {"code":"INJECTED_FAILURE","field":"command"},
+      "/outcomes/3/result/status": "pending",
+      "/outcomes/3/result/lease_owner": null,
+      "/outcomes/5/result/result/sum": 5,
+      "/state/tasks/0/status": "done",
+      "/state/tasks/0/attempts": 2,
+      "/state/tasks/0/lease_owner": null,
+      "/state/released": 2,
+      "/state/statistics/counts/leased": 0
+    }
+  }
+}

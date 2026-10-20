@@ -1,0 +1,29 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0009",
+      "/outcomes/0/result": {"collected":["/lab/a","/lab/b"],"bytes":5},
+      "/state/manifest/bytes": 5,
+      "/state/manifest/generation": 2,
+      "/state/manifest/entries/0/bytes": 3,
+      "/state/repository/active_readers": 0,
+      "/state/repository/closed_readers": 1
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/outcomes/0/error": {"code":"INJECTED_FAILURE","field":"collection"},
+      "/outcomes/1/result": {"entries":[],"bytes":0,"generation":0},
+      "/outcomes/2/result": {"collected":["/lab/a"],"bytes":3},
+      "/state/manifest/generation": 1,
+      "/state/manifest/bytes": 3,
+      "/state/repository/active_readers": 0,
+      "/state/repository/closed_readers": 2
+    }
+  }
+}

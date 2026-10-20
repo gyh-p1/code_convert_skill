@@ -1,0 +1,35 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0010",
+      "/outcomes/1/result/accepted": false,
+      "/state/input_bytes": 4,
+      "/state/packets": [{"index":0,"hex":"e78c","bytes":2},{"index":1,"hex":"ab61","bytes":2}],
+      "/state/status/committed": true,
+      "/state/status/duplicates": 1,
+      "/state/status/attempts": 3,
+      "/state/status/active_buffers": 0,
+      "/state/status/closed_buffers": 3,
+      "/state/status/missing": []
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/outcomes/0/error": {"code":"INJECTED_FAILURE","field":"buffer"},
+      "/outcomes/1/result/received_chunks": 1,
+      "/outcomes/1/result/missing": [1],
+      "/outcomes/1/result/active_buffers": 0,
+      "/outcomes/1/result/closed_buffers": 2,
+      "/state/packets": [{"index":0,"hex":"6162","bytes":2},{"index":1,"hex":"63","bytes":1}],
+      "/state/status/committed": true,
+      "/state/status/attempts": 3,
+      "/state/status/active_buffers": 0,
+      "/state/status/closed_buffers": 3
+    }
+  }
+}

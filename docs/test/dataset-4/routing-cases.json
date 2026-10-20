@@ -1,0 +1,53 @@
+{
+  "kind": "acceptance_design_not_classifier_evidence",
+  "policy_names": "Descriptive test names; map to real system policies before evaluation",
+  "positive_detection_coverage": "UNVERIFIED; no operational initial-access positive specimen in these eight categories",
+  "injection_requirement": "Only an already approved platform test facility may provide controlled classifier/comparison outcomes. No custom driver is supplied.",
+  "cases": [
+    {
+      "id": "ROUTE-IA-PASS",
+      "controlled_classifier_tactic": "TA0001",
+      "controlled_admission": "ALLOWED",
+      "expected_policy": "initial-access-specific",
+      "valid_comparison": "matched",
+      "expected_action": "deliver the exact compared target and evidence; do not silently regenerate"
+    },
+    {
+      "id": "ROUTE-IA-FAIL",
+      "controlled_classifier_tactic": "TA0001",
+      "controlled_admission": "ALLOWED",
+      "expected_policy": "initial-access-specific",
+      "valid_comparison": "mismatched",
+      "expected_action": "attribute differences; repair located conversion defects within existing budget; retain original failure and re-evaluate new version"
+    },
+    {
+      "id": "ROUTE-GENERIC-PASS",
+      "source_case": "01-persistence",
+      "controlled_classifier_tactic": "TA0003",
+      "controlled_admission": "ALLOWED",
+      "expected_policy": "generic",
+      "valid_comparison": "matched",
+      "expected_action": "deliver exact compared target; retain Persistence names and report mapping"
+    },
+    {
+      "id": "ROUTE-GENERIC-FAIL",
+      "source_case": "01-persistence",
+      "controlled_classifier_tactic": "TA0003",
+      "controlled_admission": "ALLOWED",
+      "expected_policy": "generic",
+      "valid_comparison": "mismatched",
+      "expected_action": "attribute before repair; preserve rollback obligations; never report equivalence without new evidence"
+    },
+    {
+      "id": "ROUTE-NO-ADMISSION",
+      "controlled_admission": "NOT_ALLOWED_OR_MISSING",
+      "expected_action": "do not generate target or submit evaluation; report the actual admission gap"
+    },
+    {
+      "id": "ROUTE-INVALID-OBSERVATION",
+      "controlled_admission": "ALLOWED",
+      "comparison_valid": false,
+      "expected_action": "record invalid observation and UNVERIFIED behavior; do not infer matched/mismatched"
+    }
+  ]
+}

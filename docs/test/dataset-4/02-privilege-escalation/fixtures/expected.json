@@ -1,0 +1,27 @@
+{
+  "kind": "authored_expectations_not_observations",
+  "normal": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/tactic_id": "TA0004",
+      "/state/identity": "base",
+      "/state/scope_depth": 0,
+      "/outcomes/0/result/scope_results": [{"version":1}],
+      "/outcomes/1/result/identity": "base",
+      "/outcomes/2/result": {"value":"v1","version":1}
+    }
+  },
+  "exception": {
+    "exit_code": 0,
+    "stderr": "",
+    "assertions": {
+      "/outcomes/0/error": {"code":"INJECTED_FAILURE","field":"scope"},
+      "/outcomes/1/result/identity": "base",
+      "/outcomes/2/error": {"code":"ACCESS_DENIED","field":"capability"},
+      "/outcomes/3/result": {"value":"v1","version":1},
+      "/state/identity": "base",
+      "/state/scope_depth": 0
+    }
+  }
+}
