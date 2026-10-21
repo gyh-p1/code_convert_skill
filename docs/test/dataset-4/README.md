@@ -2,6 +2,8 @@
 
 当前入口：本批八例已完成目标转换及正常／异常两个核心情景的隔离评测，原比较共 16 个 matched；只支持这些精确版本与情景的结论。最终目标及 job 导航见 [批次索引](batch/README.md) 和 [批次汇总](batch/summary.md)，交付限制及用户确认的当前能力口径见 [交付审计](CLIENT-DELIVERY-AUDIT-2026-10-20.md)。
 
+2026-10-21 完成随机单例流程抽查（D4-006，C# → PowerShell）：真实健康检查返回 HTTP 200，经用户明确授权模拟评估不可达，按 Skill 加载、冻结、当前模型转换、自审及交付核对推进，未加载或调用分类器，未编译运行或提交评估。完整目标已交付，状态 PARTIAL，语法与功能均 UNVERIFIED；本次不替代或继承原已评测版本的结论。任务已清理，演练原件归档于本地忽略目录 outputs/conversion-task-archive，不随 Skill 分发。
+
 本批反馈用于 [优化方案](OPTIMIZATION-PLAN-2026-10-20.md)，已实施内容与检查范围见 [优化实施记录](OPTIMIZATION-RESULT-2026-10-20.md)，评估产品待办见 [评估侧优化建议](EVALUATOR-IMPROVEMENTS-2026-10-20.md)。以下样本准备说明及各原始类别目录的 result.md 记录准备阶段历史；当前转换结果以方向目录的 output/batch/result.md 为准。
 
 评估方案已结合用户补充的 dataset-3 两份归因报告和 Controller 恢复文档扩展为 E1–E16，新增本地分诊／超时／比较保护及管理者授权智能体维护的规则，实施与未部署范围见 [评估增补实施记录](EVALUATOR-OPTIMIZATION-IMPLEMENTATION-2026-10-20.md)。
