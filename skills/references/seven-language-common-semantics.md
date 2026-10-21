@@ -44,6 +44,9 @@
 |---|---|
 | 命令行守卫、参数下标、shift/解析后剩余范围 | 源/目标语言页 §一的参数规则；[C](languages/c.md)、[C++](languages/cpp.md)、[Ruby](languages/ruby.md)补计数与全部使用点联合映射；[Python L1-PY-07](languages/python.md#l1-py-07-getopt-的顺序策略由源解析器决定)区分扫描策略 |
 | 字节计数、非 ASCII 路径、文本流行尾 | 两语言页 §三；[Python L1-PY-03](languages/python.md#三字符串字节nulunicode-与编码)、[C++ L1-CPP-03](languages/cpp.md#三字符串字节nulunicode-与编码)；实际文件操作还读文件场景 |
+| NFC/NFD/NFKC/NFKD、casefold、大小写键及码点限长 | [Python L1-PY-16](languages/python.md#l1-py-16-unicode-规范化折叠与文本长度分别保持)、[Go L1-GO-14](languages/go.md#l1-go-14-大小写映射不提供完整规范化与-casefold)、[C++ L1-CPP-07](languages/cpp.md#l1-cpp-07-文本容器与-locale-不等于-unicode-规范化)、[C# L1-CS-09](languages/csharp.md#l1-cs-09-lengthrune-与文本元素的单位不同)；按源实际调用，不把缺离线库变成语义等效 |
+| JSON 重复键、孤立代理项、内嵌 NUL、数值和深度 | [Python L1-PY-17](languages/python.md#l1-py-17-json-接受域不由输出长得相同决定)、[Go L1-GO-15](languages/go.md#l1-go-15-encodingjson-的替换重复键与数值路径)、[C L1-C-07](languages/c.md#l1-c-07-json-解码字符串的长度须保留到校验与输出)、[PowerShell L1-PS-09](languages/powershell.md#l1-ps-09-json-解析深度与序列化深度是不同约束)；同时读另一语言实际解析 API，区分 raw 字节校验与 JSON 转义解码 |
+| 函数返回嵌套集合、0/1/多项、JSON 序列化泛型绑定 | [PowerShell L1-PS-08](languages/powershell.md#l1-ps-08-函数-success-流集合对象与泛型调用)；C#→PowerShell 同读方向 CS-PS-01/04 及两侧长度单位，不用 @() 假定保留容器类型 |
 | 固定文本、长字节常量、拼接/转义 | [C L1-C-06](languages/c.md#l1-c-06-字面量内容终止-nul-与显式长度分别保持)、C++ §三、Python L1-PY-06、[PowerShell L1-PS-06](languages/powershell.md#l1-ps-06-固定文本须区分字面值插值与输出终止符)；另一语言正文同时读取 |
 | 标签/goto、case 跳转跨局部初始化 | [PowerShell §九](languages/powershell.md#九普通控制流)；按方向读 [CPP-PS-05](../directions/cpp-to-powershell/SKILL.md)、[C→C++ 规则 9](../directions/c-to-cpp/SKILL.md)；不因普通控制流加载并发场景 |
 | 文件失败仍继续、创建目录 | 两语言页 §五及 [file-io L2-FILE-02](../scenes/file-io/SKILL.md)；C++→PowerShell 另读该方向的文件错误映射 |

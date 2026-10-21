@@ -123,12 +123,15 @@ description: Use when converting C source to Ruby; apply this direction's langua
 7. **资料依据（名称/版本/章节）**：WG14-N1570 §6.2.6, §6.5.7；RB-DOC-STRING；RB-DOC-ARRAY。
 
 ### 规则 C-RB-06：C 返回计数/EOF 向 Ruby IO 映射须保留源打开模式
+
+本规则只覆盖返回计数、EOF/错误、文本模式和长度消费者等局部义务。触发列表中的 `splice` 等平台专有原语不因此获得普通 Ruby IO 的整体等价映射；下方 `IO#read`/`IO#write` 候选只用于源操作本身满足其语义的情形。
+
 1. **源码触发条件**：C 源码用 `while ((c = fgetc(f1)) != EOF)`、`while (fgets(outgoingoutp + total, ..., stdoutp) != NULL)`、`recv`/`read`/`write`/`splice` 的返回值控制循环，用 `if (nbytes < 0)`/`(size_t)nbytes < data_size` 判失败或短写，用 `fopen(path, "r")`/`"w"` 文本模式，或读完后用 `strlen(outgoingoutp)` 重算长度。
 2. **冻结版本/运行时/API 前提**：源语言 ISO C11（WG14-N1570 §7.21）与 POSIX 读写返回约定（POSIX）；目标语言 CRuby 3.4（RB-DOC-CORE）。
 3. **原可观察行为**：`fgetc` 在 EOF/错误时返回 `EOF`（负值，与 0..255 的字节值不重叠）；`read`/`recv` 返回实际字节数，可能小于请求量，失败返回 -1；文本模式在 Windows 上会把 `\r\n` 转换成 `\n`，改变字节数与内容。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：源要求原始字节时显式二进制模式 `File.open(path, 'rb') { |f| ... }`；源文本模式的换行翻译影响行计数/内容时须按冻结 OS、编码与 Ruby IO 配置保持该翻译，不无条件切换到 rb。整块读取用无参 `IO#read`（读到 EOF），分块读取用 `IO#read(n)`（EOF 时返回 `nil`）；流式/套接字读取用 `readpartial`（EOF 抛 `EOFError`）或 `each_byte`/`each_line` 迭代；写入用 `IO#write` 并说明短写由运行时处理，需要时显式比较其返回的字节数。
-   - *不适用条件*：严禁把 `EOF`/`-1` 直译为 `0`：Ruby `IO#read(n)` 在 EOF 返回 `nil`，`File#getc` 在 EOF 也返回 `nil`，与 C 的 `EOF` 判断形状不同，`while (n = f.read(1))` 之类的写法必须按 `nil` 语义重写；源要求字节保持时不能省略 `'b'`，源要求文本翻译时也不能盲目加 `'b'`；长度依源实际消费者确定，显式字节数用返回值/`#bytesize`，源确用 strlen 则须保留首 NUL 截断义务。
+   - *不适用条件*：严禁把 `EOF`/`-1` 直译为 `0`：Ruby `IO#read(n)` 在 EOF 返回 `nil`，`File#getc` 在 EOF 也返回 `nil`，与 C 的 `EOF` 判断形状不同，`while (n = f.read(1))` 之类的写法必须按 `nil` 语义重写；源要求字节保持时不能省略 `'b'`，源要求文本翻译时也不能盲目加 `'b'`；长度依源实际消费者确定，显式字节数用返回值/`#bytesize`，源确用 strlen 则须保留首 NUL 截断义务。平台专有原语涉及本条未覆盖的内核状态、对象共享或其他系统副作用时，不能仅凭最终字节相同就替换为普通读取再写入；不得把未知语义写成已保持。
 5. **错误机械替换反例**：
    ```ruby
    # 仅对源要求二进制字节的分支：以下文本模式、EOF/长度映射错误
@@ -141,7 +144,7 @@ description: Use when converting C source to Ruby; apply this direction's langua
    File.open(path, 'rb') { |f2| out << f2.read }   # 无参 read 读到 EOF
    total = out.bytesize
    ```
-6. **信息不足或实现相关时的处理**：源文件的打开模式（`"r"` 与 `"rb"`）、目标平台是否为 Windows、以及"部分读/短写是否必须显式循环"未确认时，必须停标并说明换行/编码转换与短写语义可能改变；不得假定文本模式与二进制模式等价。
+6. **信息不足或实现相关时的处理**：源文件的打开模式（`"r"` 与 `"rb"`）、目标平台是否为 Windows、以及"部分读/短写是否必须显式循环"未确认时，必须停标并说明换行/编码转换与短写语义可能改变；不得假定文本模式与二进制模式等价。涉及专有原语时，另记源操作义务、合法本地接口资料、平台/ABI、目标依赖及知识缺口；本条不提供专用绑定实现，不能用普通 IO 示例填补未知。`ruby -c` 只支持语法层结论，不证明 `require`、原生库或符号可用；按[检查阶段与结论范围](../../../references/workflow/build-prerequisites.md#241-检查阶段与结论范围)分层，仅编译分支不为补依赖证据而执行加载。
 7. **资料依据（名称/版本/章节）**：WG14-N1570 §7.21；POSIX；RB-DOC-CORE。
 
 ### 规则 C-RB-07：fork 与 exec 的返回分支、环境和失败映射

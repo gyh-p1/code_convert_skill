@@ -5,3 +5,4 @@
 /tools/loading-registration.json text eol=lf
 /tools/safety_classifier_v2.py text eol=lf
 /tools/test_safety_classifier_v2.py text eol=lf
+/tools/classifier-registration.json text eol=lf

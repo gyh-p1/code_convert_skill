@@ -22,7 +22,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 - **指针算术与内存越界保护**：C 允许通过指针加减（`ptr + offset`）自由漫游内存；Go 显式指针禁止算术运算（除 `unsafe` 以外）。必须将连续内存块映射为切片（`[]T`），并通过子切片 `slice[offset:]` 或数组索引代替裸指针移动。
 - **显式类型系统与定宽整数**：C 允许在不同宽度的有符号/无符号整数间发生隐式整型提升与转换；Go 严禁任何隐式类型转换（即便是 `int` 与 `int32` 也必须显式强转），且常数算术溢出在 Go 中直接属于**编译期错误**。
 - **错误模型转换**：C 依赖返回码及适用调用的 `errno`。Go 可以保留返回码，也可在接口和整条调用链允许时采用 `(result, error)`；后者是候选惯用法，不是语言强制。保持源检查、忽略、错误类型及传播，不以 panic 或新增传播改变源普通失败。
-- **`defer` 与作用域生命周期**：C 在退出作用域或函数时释放资源；Go 的 `defer` 语句仅在**外层函数返回前**按 LIFO 逆序执行，其生命周期与包含块（如 `for`、`if`）无关。
+- **`defer` 与作用域生命周期**：C 动态内存、文件等资源按源码显式的释放调用处理，不因离开块自动释放；Go 的 `defer` 语句在**外层函数返回前**按 LIFO 逆序执行，不在包含块（如 `for`、`if`）结束时执行。选择目标释放方式须对应源的实际时点、顺序和所有权。
 
 ---
 
@@ -79,20 +79,20 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 ### 规则 3：C 手动资源释放向 Go `defer` 语句映射与循环泄露防范
 
-1. **触发条件**：C 源码中使用 `fopen`/`fclose`、`malloc`/`free`、互斥锁锁定/解锁，在函数退出前执行清理。
+1. **触发条件**：C 源码中使用 `fopen`/`fclose`、`malloc`/`free`、互斥锁锁定/解锁，在迭代内、函数退出前或移交所有权后执行清理。
 2. **适用前提**：源语言 ISO C11，目标语言 Go 1.27。
 3. **应保留行为**：逐路径保持源取得/释放时点、顺序、关闭条件和被忽略/传播的错误；源漏清理单列风险，不能自动补成全路径清理。
 4. **可选映射与不适用条件**：
    - *可选映射*：仅源释放点为当前函数退出且对应注册/逆序时，考虑 defer；源在内层块、循环中途或跨函数移交时显式对应释放点。关闭错误按源分流，不任意追加传播。
-   - *不适用条件*：**严禁在紧凑的长循环体内部直接使用 `defer`**。Go 规范规定 `defer` 延迟调用的执行时机是**外层函数返回时**，而不是包含它的代码块结束时！在 `for` 循环中直接使用 `defer file.Close()` 会导致所有文件句柄一直累积占用，直至整个外层函数退出，极易在循环中途耗尽系统句柄。
+   - *不适用条件*：源在每次迭代内释放时，不能用外层函数的 `defer` 把释放延迟到函数返回；这会改变跨迭代资源占用及后续失败条件。源有意跨迭代持有资源、在函数末尾按对应逆序释放时，循环内注册 `defer` 可以是候选，须保持实参、关闭条件、所有权和错误传播；不能仅因存在循环就要求提取子函数、提前关闭。
 5. **错误机械替换反例**：
    ```go
-   // 错误反例：在循环体内部直接使用 defer，导致句柄耗尽崩溃
+   // 反例前提：源在每次迭代结束前显式关闭文件；目标却延迟了关闭
    func processFiles(paths []string) error {
        for _, p := range paths {
            f, err := os.Open(p)
            if err != nil { return err }
-           defer f.Close() // 致命错误：defer 直到 processFiles 返回时才执行，循环中文件句柄全部泄露累积！
+           defer f.Close() // 本源条件下错误：推迟到 processFiles 返回，跨迭代占用句柄
            // 处理文件...
        }
        return nil
@@ -182,6 +182,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 > 若源码实际涉及线程、socket、文件或跨 OS API，加载对应 B 类场景/系统 Skill；A 类规则仅说明需要保留的语言层错误、资源、并发、文本或所有权契约。
 
+- **Windows API 的 Go 包归属**：源实际调用 Win32 API 时，先读 [Go L1-GO-13](../../references/languages/go.md#l1-go-13-windows-api-的包归属与导出边界)。区分标准库声明、扩展模块与动态绑定，不把 C 头文件中的名称机械加上 `syscall.`，也不默认引入外部依赖。
 - **网络套接字场景**：涉及原始网络通信时，加载 [`skills/scenes/network-io/SKILL.md`](../../scenes/network-io/SKILL.md)；跨 POSIX/Windows 套接字加读 [`skills/systems/posix-winsock/SKILL.md`](../../systems/posix-winsock/SKILL.md)。
 - **文件与路径场景**：涉及底层文件与目录操作时，加载 [`skills/scenes/file-io/SKILL.md`](../../scenes/file-io/SKILL.md)；跨 OS 路径分隔符加读 [`skills/systems/posix-windows-filesystem/SKILL.md`](../../systems/posix-windows-filesystem/SKILL.md)。
 - **并发与原生线程**：C 原生线程映射至 Go 并发体系时，加载 [`skills/scenes/concurrency/SKILL.md`](../../scenes/concurrency/SKILL.md)；跨 OS 线程调度加读 [`skills/systems/posix-windows-threads/SKILL.md`](../../systems/posix-windows-threads/SKILL.md)。
@@ -192,7 +193,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 ## 五、模型自检与质量结论声明
 
-1. **模型自检重点**：核对切片边界检查是否完善、循环内 `defer` 是否被正确剥离至子函数、常量溢出是否在编译前消除。该自检属于模型自评，严禁作为编译通过证据。
+1. **模型自检重点**：核对切片边界检查是否完善、资源释放时点/顺序/条件是否与源一致、常量溢出是否在编译前消除。循环内 `defer` 按规则 3 的源释放点判断，不把提取子函数作为必须达成的目标。该自检属于模型自评，严禁作为编译通过证据。
 2. **证据状态声明**：本项精确目标版本尚无对应第三方构建证据时保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；取得后按实际编译、执行与观察范围分层报告。本页静态知识不替代本项证据，不从其他任务继承结论。
 
 ---
@@ -203,7 +204,7 @@ description: Use when converting C source code (ISO C11) to Go (Go 1.27) while p
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性；可达走源预检及适用评估，不可达仍冻结、分类 `ALLOWED`、转换、自审和交付报告，不编译运行。细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性；可达走分类、源预检及适用评估；不可达仅冻结、转换、自审和交付报告，不加载或调用分类器、不要求分类产物，不编译运行。细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
 
 ## 网络 API 映射
 

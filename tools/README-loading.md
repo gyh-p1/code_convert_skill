@@ -2,9 +2,9 @@
 
 ## 1. 执行者、登记与边界
 
-本页命令仅供转换系统维护侧执行。第三方智能体加载本 Skill 后仍不得编写、生成、保存或运行辅助脚本，含 Python/PowerShell/JavaScript 内联程序和委托生成形式；只能通过原生工具手工、串行、逐项调度，读取、核对和引用系统提供的结果。把工具放在仓库中不构成第三方智能体执行许可。
+本页的加载工具及文本回归命令仅供系统维护侧执行。第三方智能体不得编写、生成、保存或运行辅助脚本，含内联程序和委托形式；以原生工具手工逐项调度、回读加载证据。登记分类器的有限调用例外由[分类准入](../references/workflow/classifier-agent-gate.md)单独规定，不受本页“加载工具仅维护侧执行”替代；也不能反过来用分类许可执行本页加载工具或任意仓库脚本。
 
-登记组件为 `loading_preflight.py` 1.0.0 和其文本回归 `test_loading_preflight.py`；精确摘要见 [登记文件](loading-registration.json)。系统维护侧更新脚本后须重新回归、核对并更新登记摘要，不自动信任所有 tools/ 文件。原安全分类器的版本/SHA 和外部临时目录约束继续按[准入契约](../references/workflow/classifier-agent-gate.md)，加载工具不修改它。
+登记组件为 `loading_preflight.py` 和其文本回归 `test_loading_preflight.py`；当前版本、验证状态及精确摘要见 [登记文件](loading-registration.json)。系统维护侧更新脚本后须重新回归、核对并更新登记摘要；待回归候选不冒称已验收，不自动信任所有 tools/ 文件。评估运行分类器的版本/SHA 和外部临时目录约束继续按准入契约；不可达仅转换不加载该契约或分类器。
 
 工具只处理指定 Markdown、读取返回和本项加载依据，不运行样本或构建、不调用转换模型、不提交评估、不改 phase/lifecycle。所有 PASS 都仅在 `scope=loading-only` 或报告声明的结构范围内有效，不是安全、分类、冻结完成或功能许可。它是流程检查，未安装不可绕过的宿主 hook 或 Controller 门禁。
 
@@ -67,14 +67,14 @@ python -B tools/loading_preflight.py check-next --repo . --record <run>/01-froze
 
 ### 4.1 可达与不可达两条路径的加载动作
 
-两条路径都先加载同一组 7 份核心契约及实际适用的 batch/long-file 工作流。不可达改变编译运行步骤的适用性，不减少冻结、分类、模型/知识、自审与交付规则的读取；build 契约仍用于声明平台/依赖和待验证计划，不要求本轮有构建原件。Controller 连接适配在健康检查前读取；现场平台/runner 证据仅在后续正常评估动作适用时核。Controller/语言/方向/场景/系统仍在本工具覆盖外，由 Agent 按根入口手工加载和留依据。
+两条路径先加载 task-state、safety、delivery、build、evaluation、loop 六份通用契约及实际适用的 batch/long-file 工作流。连接坐标与健康检查正文在检查前读取；确认可达后、冻结前才补分类准入及评估适配。不可达仅转换不加载分类准入或分类器、不执行分类、不要求分类产物；build 契约仍用于声明平台/依赖和待验证计划，不要求本轮有构建原件。Controller/语言/方向/场景/系统仍在本工具覆盖外，由 Agent 手工加载。
 
 | 本轮路径 | 调用既有加载动作的时点 | 不要求的动作/原件 |
 |---|---|---|
 | 可达正常流程 | `start` 后按已加载连接适配检查可达性；长文件建图前 `map`；随后 `freeze`、`classify`、`source-precheck`、`generate`、`review`、适用 `submit`、`close`，恢复新增动作前 `resume` | 不要求未发生的额外修复或 job；LIB 分支的行为件按评估准备契约不适用 |
-| 不可达仅转换 | 同样 `start`/适用 `map`、`freeze`、`classify`，再直接 `generate`、`review` 和 `close`；恢复前 `resume`，重新检查可达性后决定后续适用动作 | 不调用本轮未发生的 `source-precheck`/`submit`，不提供源构建/job/比较原件；仍必须有自审及 result.md |
+| 不可达仅转换 | `start`/适用 `map`、`freeze`，直接 `generate`、`review` 和 `close`；恢复前 `resume`，重新检查可达性后决定后续适用动作 | 不调用 `classify`/`source-precheck`/`submit`，不要求分类准入正文、分类输入/结果或源构建/job/比较原件；仍必须有自审及 result.md |
 
-`check-next` 不要求先调用过某个动作，不消费源预检/分类/job 结果或网络诊断，不根据任意 `evaluationMode` 声明放宽正文覆盖；每次 PASS 仅表示该动作的加载条件满足，`executionAuthorized=false`。因此无需给加载记录增加不可达开关，不新增网络探测或自动跳步功能。业务分流及其证据由评估准备 §1.0 和 Agent 手工核对，产物按[交付骨架](../references/framework/delivery-handoff-contract.md#2111-不可达仅转换的产物骨架)。缺必要契约、工作流、版本或时序仍失败，不能借不可达免加载。
+`check-next` 按动作核加载范围：`classify`、`source-precheck`、`submit` 要求七份（含分类准入）；其他非恢复例外动作只要求六份通用契约及适用工作流。结构检查仍保留完整七契约目录清单，不能把“路径已登记”当分类正文已加载。工具不判断网络分支，不消费分类/job 结果，不要求此前调用顺序，也不添加 evaluationMode 开关；每次 PASS 仅为 `loading-only`、`executionAuthorized=false`。可达分支生成前的分类及源预检仍由 Agent 按根入口核真实原件，六份加载 PASS 不能代替它们。业务分流及交付按评估准备 §1.0 和[交付骨架](../references/framework/delivery-handoff-contract.md#2111-不可达仅转换的产物骨架)。缺适用契约、工作流、版本或时序仍失败。
 
 默认检查当前日志末尾的前置条件。审计已发生动作时传 `--before-call <actual-action-call-id>`，只采信该动作之前的正文返回；补读不能追认历史合规。系统在每次动作前保存本次 next 原件并由 Agent 核对引用；未留历史检查原件时，当前 PASS 不能外推此前动作已合规。跨来源顺序不可比较时不合并，跨会话或已知 epoch 变化须重新提供。
 
@@ -88,6 +88,6 @@ query/collect/terminate/cleanup 是已发生 job 的加载缺件例外：可不�
 
 退出码 0：本次记录或限定范围检查成功；1：已知结构/覆盖/版本/时序缺项；2：用法、证据格式、读取/解析能力或输出保存不可用。结构报告内的已知文件缺失按 FAIL 记录；缺宿主日志不能生成强读取凭证。记录成功不等于完整加载。
 
-无系统接入时第三方智能体用原生读取工具手工核同范围：根表身份、路径/锚点和路由，7 份及适用工作流正文、精确版本、分段覆盖、消费时点和缺口。保存 `manual` 说明及实际工具依据，未完成则 UNAVAILABLE；人工记录不升级为 HOST_RETURN_OBSERVED。自填声明不证明理解或独立提供。加载回退不省略适用分类/源构建/评估门禁；第三方评估系统不可达的仅转换分支独立按[评估准备 §1.0](../references/framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)留证和分流，加载工具不检查网络或决定该分支。
+无系统加载接入或新候选待系统维护侧回归时，第三方智能体用原生读取工具手工核同范围：根表身份、路径/锚点和路由，六份通用契约、可达分支适用的分类准入及工作流正文、精确版本、分段覆盖、消费时点和缺口。手工核对完整即可保存 manual 依据并继续核其余门禁；系统强证据不可用不等于手工加载未完成。实际正文/核对仍缺失才停止受影响新增动作；人工记录不升级为 HOST_RETURN_OBSERVED。加载回退不省略可达分支的分类/源构建/评估，不可达仅转换按[评估准备 §1.0](../references/framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)留证且分类不适用；加载工具不检查网络或决定分支。
 
 本工具及其回归与示例属于系统维护设施，所有测试输入均为文本 fixture；不得将说明中的系统命令作为第三方智能体辅助脚本许可。

@@ -20,6 +20,8 @@ description: Retrieval/classification index mapping ATT&CK Enterprise tactics to
 3. 表中标"暂无对应 Skill"的,说明该行为维度当前没有知识,须按缺口处理并在交付中报告,不用相近规则冒充。
 4. 严守 [安全边界](../../references/framework/safety-boundary.md):索引用于组织知识,不用于新增监听/外联、规避、凭证窃取等能力。
 
+安全分类器的 ALLOWED、人工战术标注和生成策略选择是不同对象。用户要求初始访问／非初始访问分流时，应关联源版本、真实识别依据、实际策略及产物；此索引不定义“初始访问专用生成器”，也不因表中存在 TA0001 宣称该能力已实现。真实识别测试与受控分类结果的路由测试分别报告，按[评估准备 §4.1](../../references/framework/evaluation-readiness-contract.md#41-当前能力范围内的验证计划)记录能力、覆盖和缺口。
+
 ## 战术 → 转换知识映射（含覆盖缺口）
 
 "当前可用知识"仅指本项目已有的转换知识;"—/缺口"表示该行为维度目前无 Skill,须按实际行为分析并报告缺口。同一战术常跨多个场景,同一场景也服务多个战术(多对多)。

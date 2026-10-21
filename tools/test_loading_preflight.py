@@ -227,11 +227,11 @@ class LoadingChecks(unittest.TestCase):
         data = self.record(omit=lp.CORE["safety"])
         self.assertEqual(self.check(data)["status"], "FAIL")
 
-    def test_two_evaluation_paths_use_same_required_loading(self):
+    def test_two_evaluation_paths_use_action_scoped_loading(self):
         paths = {
             "reachable": ("start", "freeze", "classify", "source-precheck", "generate",
                           "review", "submit", "close"),
-            "unreachable-conversion-only": ("start", "freeze", "classify", "generate",
+            "unreachable-conversion-only": ("start", "freeze", "generate",
                                             "review", "close"),
         }
         for batch, long in ((False, False), (True, False), (False, True), (True, True)):
@@ -247,6 +247,8 @@ class LoadingChecks(unittest.TestCase):
                         result = self.check(data, action)
                         self.assertEqual(result["status"], "PASS", result)
                         selected = expected - ({lp.WORKFLOWS["long-file"]} if action == "start" else set())
+                        if action not in lp.CLASSIFIER_ACTIONS:
+                            selected.discard(lp.CORE["classifier"])
                         self.assertEqual(set(result["selected"]), selected)
                         self.assertFalse(result["executionAuthorized"])
                         self.assertEqual(result["scope"], "loading-only")
@@ -256,8 +258,10 @@ class LoadingChecks(unittest.TestCase):
             self.assertFalse((self.base / "04-evaluation").exists())
             self.assertFalse((self.base / "classification-1.json").exists())
 
-    def test_conversion_only_still_requires_each_core_contract(self):
-        for name in lp.CORE.values():
+    def test_conversion_only_still_requires_each_common_contract(self):
+        for key, name in lp.CORE.items():
+            if key == "classifier":
+                continue
             with self.subTest(missing=name):
                 if (self.base / "structure.json").exists():
                     (self.base / "structure.json").unlink()
@@ -265,6 +269,25 @@ class LoadingChecks(unittest.TestCase):
                 result = self.check(data, "generate")
                 self.assertEqual(result["status"], "FAIL")
                 self.assertIn({"severity": "error", "code": "coverage", "detail": name}, result["findings"])
+                self.assertFalse(result["executionAuthorized"])
+
+    def test_conversion_only_does_not_require_classifier_read(self):
+        data = self.record(batch=True, long=True, omit=lp.CORE["classifier"])
+        for action in ("start", "map", "freeze", "generate", "review", "resume", "close"):
+            with self.subTest(action=action):
+                result = self.check(data, action)
+                self.assertEqual(result["status"], "PASS", result)
+                self.assertNotIn(lp.CORE["classifier"], result["selected"])
+                self.assertFalse(result["executionAuthorized"])
+
+    def test_evaluation_admission_actions_require_classifier_read(self):
+        data = self.record(omit=lp.CORE["classifier"])
+        for action in ("classify", "source-precheck", "submit"):
+            with self.subTest(action=action):
+                result = self.check(data, action)
+                self.assertEqual(result["status"], "FAIL", result)
+                self.assertIn({"severity": "error", "code": "coverage",
+                               "detail": lp.CORE["classifier"]}, result["findings"])
                 self.assertFalse(result["executionAuthorized"])
 
     def test_conversion_only_keeps_conditional_workflow_requirements(self):

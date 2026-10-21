@@ -53,6 +53,12 @@ stdout、stderr 分别选择，例如允许 stdout 的展示噪声而保留 stde
 
 这些规则减少冻结允许的展示差异，不证明端口真实动态分配或资源/业务行为等价。允许的原始输出差异会留下 minor diff；核实际 rule/版本。diff 摘要只保存有限前缀，不能代替完整观察。输出差异按实际 `execution.stdout` / `execution.stderr` 路径与双侧 evidenceRefs 回查；路径或引用不足时直接读取相应流原件，不改写原 diff。
 
+**临时路径的保护性复核**：允许临时根变化不等于允许相对路径、文件名或分隔符缺失。按本项实际可取得的完整原始流表示／structuredValue、文件观察及冻结关系定位业务后缀；不能把 token 命中或 minor 标签当保护项已检查。已有报告记载目标漏写分隔符却获 semantic_pass，这只说明该历史配置可能吞掉了业务差异，不证明现役规则已修复，也不证明所有临时路径都须字面相同。
+
+冻结时需要保留业务后缀而 temporary-paths 无法表达时，按现有能力选能保护它的 exact、结构模式或平台已支持且精确的 workspace_path_pairs；混合流无法表达则记策略能力缺口，不伪造逐字段开关、不在看到 diff 后删除字段求匹配。配置存疑时保留原判及双侧未归一化内容，说明保护项是否仍成立；已确认目标差异按有限修复闭环处理，不等平台修复才承认误译，不本机重算分数。
+
+平台维护验收应同时包括允许的动态根变化，以及必须保留的业务文件名／漏分隔符／固定端点变化，展示归一化前后与规则范围；这是维护建议，不是 Agent 新造反例或每项追加运行的授权。阶段与责任交叉时见[评估故障分诊](evaluation-failure-triage.md)。
+
 ### 2.2 JSON 字段忽略的声明与消费
 
 InputProfile 1.0/1.1 在 `comparisonPolicy.output.ignoredJsonPaths` 声明字符串列表；这不是任意流预处理或通用 JSONPath。字段忽略只按点分名称遍历字典并移除命中键，不遍历数组、不支持通配符，字段名自身含点时也不能据此表达其字面键。它消费流中的实际 structuredValue，不会把外层包装里的 stdout 字符串自动变成业务 JSON。
@@ -140,6 +146,14 @@ InputProfile 1.0/1.1 在 `comparisonPolicy.output.ignoredJsonPaths` 声明字符
 5. 对账 source/target、job/case、输入/目标版本、观察范围与清理。提交前后配置变化或回传配置与冻结不一致时，保留该结果并记配置疑点；已知新配置不能覆盖冻结的行为义务时暂停相关评估，交平台处理后另记变体重评，不自动归因目标代码。
 
 建议将 `controller-health-before.json`、`runners-before.json` 与 `controller-health-after.json` 保存到既有任务记录/returned-evidence。它们是本项留证文件，不是 Controller 请求字段；缺功能证据仍写 UNVERIFIED。已有批次固定同一比较配置，中断恢复时复核配置，不能将 strict 与 noise-tolerant-v1 的结果混作同一质量口径。
+
+### 候选 v3 临时路径保护
+
+2026-10-20 平台候选源码新增 opt-in noise-tolerant-v3，尚未部署。2026-10-21 审查修订后，默认同时关闭 temporary-paths 和 ephemeral-ports，默认文本 token 仅 timestamps；显式启用 temporary-paths 必须声明精确 workspace_path_pairs，否则配置拒绝。根对仍受数量、绝对路径、尾分隔符、具体程度及无穿越／重复约束；只替换根，不吞未登记根、业务后缀、文件名、重复关系或漏分隔符。没有把后缀的跨 OS 分隔符一律重写成等价。
+
+数值位于临时端口区间不能证明该字段是动态分配。只有本次冻结允许且流内固定端点不被误掩盖时，才显式启用 ephemeral-ports／endpoint-ports；现有 token 没有字段级固定／动态识别能力，混合流无法保护时用严格比较。v1/v2 的旧默认不变；新 v3 不靠数值范围默认消掉固定高端口差异。历史报告不重算，当前部署须重新核身份和实际 comparison 配置。
+
+同一候选修复 v2 有显式根对后仍套用整条临时路径 token 的问题；v1 与无根旧 v2 保留兼容行为，仍可能掩盖路径拼接差异。新任务有路径义务时选择已证实支持的 strict 或受限 v3；旧服务不假定已修复，不悄悄改变冻结配置或重算历史结果。实际 preset／token／根对由服务器合法配置提供并留原件，不能写成 capsule 的自造字段。
 
 ## 6. 配置调整与回退边界
 

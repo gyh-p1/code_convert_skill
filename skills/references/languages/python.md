@@ -278,6 +278,21 @@ split要核分隔符、maxsplit、首尾空项和首个等号；dict读取默认
 3. **保持行为/反例**：调用成功、输出参数与业务允许/拒绝分开；把 API 调用失败一律当“权限为假”，或删除真实权限调用改固定字符串，不能保持源判断。声明类型也不能证明 API 对象、返回缓冲及释放时机正确。
 4. **未知/依据**：原型/ABI未知时记该调用缺口，不猜偏移、造返回值或读取本机状态验证；Windows令牌/权限消费[进程身份系统页](../../systems/posix-windows-process-identity/SKILL.md#原生环境块令牌与缓冲的选择引导)。依据：Python3.12 ctypes 的返回类型、函数原型、指针和结构说明；Win32语义由系统页维护，不新增权限能力。
 
+### L1-PY-16 Unicode 规范化、折叠与文本长度分别保持
+
+1. **触发／前提**：CPython 3.12 的 `unicodedata.normalize`、`str.casefold`、`len(str)` 参与键、去重、排序、限长或输出。
+2. **事实**：`len(str)` 按码点计数；`casefold()` 可将一个字符展开成多个码点，如 `ß`→`ss`；lower 不是完整 casefold。normalize 的 NFC/NFD 与 NFKC/NFKD 分别保留规范／兼容关系，不等于大小写转换，调用顺序也是源语义。
+3. **映射／反例**：记录规范化形式、Unicode 数据版本、折叠及长度使用时点；`\u1100\u1161` 经 NFC 组合为 `\uac00`，只写 Latin-1 组合表不能保持该行为。将码点限长换成 UTF-16 Length 或 UTF-8 字节数同样改变接受域；视觉字符数不等于码点数。
+4. **未知与边界**：目标库／Unicode 表缺失按构建前提记录离线依赖和具体支持范围，不静默退化成 ToLower；子集实现存在不表示子集已验证，不由一个 ASCII 样例证明完整 Unicode 等价。
+5. **依据**：Python 3.12 标准类型 str 的 len/casefold；unicodedata.normalize/unidata_version；Unicode Standard Annex #15 的规范／兼容形式。
+
+### L1-PY-17 JSON 接受域不由输出长得相同决定
+
+1. **触发／前提**：CPython 3.12 `json.loads/dumps` 及其 hooks、parse_constant、strict、ensure_ascii、allow_nan；包括先做 UTF-8 解码的入口。
+2. **事实**：默认 loads 的重复同名键保留后值；object_pairs_hook 可改变该策略。默认解析可接受 NaN/Infinity，parse_constant 可改为拒绝；dumps 的 allow_nan 属输出约束，不自动约束 loads。合法原始 UTF-8 字节中的 JSON `\ud800` 转义仍可得到孤立代理项，原始 UTF-8 校验不替代该层处理。
+3. **映射／反例**：保持源实际配置、错误码／时点和后续编码策略；不能照搬另一用例的拒绝重复键 hook，或将 Go 的代理项替换规则误当 Python 默认。字面 `"\\u0000"` 与解析为 U+0000 的 `"\u0000"` 分开；层数限制和递归错误依实际入口核对，不强造通用 64 层限制。
+4. **未知与依据**：独立核输入字节、解析值和输出转义；合法 JSON 转义表示可按冻结结构比较，但字符串值不能被替换字符、大小写或二次转义改写。依据：Python 3.12 json 的 Standard Compliance、Repeated Names、Infinite and NaN Number Values、Character Encodings、loads/dumps 参数。
+
 ## 使用边界
 
 将本页与所选的源→目标方向 Skill 及另一语言的共性页组合使用；映射前先确认源码真实行为。文件、网络、并发和跨 OS API 的具体差异仍按[共性索引的场景/系统分流](../seven-language-common-semantics.md)选读，不从语言事实直接推断系统 API 等价。没有逐例第三方证据时，语法/构建与功能结论保持 `UNVERIFIED`；本机不运行或编译样本。

@@ -125,6 +125,12 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。
 
+### 文本键、JSON 与上下文的补充选择
+
+源出现 normalize/casefold 或 JSON hooks 时，读 [Python L1-PY-16/17](../../references/languages/python.md#l1-py-16-unicode-规范化折叠与文本长度分别保持) 与 [Go L1-GO-14/15](../../references/languages/go.md#l1-go-14-大小写映射不提供完整规范化与-casefold)，对应到具体键、字段与错误消费者。完整 Unicode 的离线依赖缺口不由 ToLower 子集自动解决；字节校验不替代代理项／重复键接受域。
+
+`contextmanager` 的生成器协议不强制用 goroutine 重建；事务快照须复制被修改的字段／容器，错误返回时按源决定恢复数据、仅恢复身份还是保留已确认结果。清理、审计和历史结果快照分别核对，不把一次成功和一次注入失败外推到所有操作。命名与职责是否保留按交付契约核对，不为 Go 惯用风格无依据地改写合法源名。
+
 ## 四、跨场景与系统规则按需加载
 
 > 若源码实际涉及线程、socket、文件或跨 OS API，加载对应 B 类场景/系统 Skill；A 类规则仅说明需要保留的语言层错误、资源、并发、文本或所有权契约。
@@ -138,7 +144,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 ## 五、模型自检与质量结论声明
 
 1. **模型自检范围**：模型转换完成后核对切片负索引是否全部换算、生成器是否具有生命周期退出保护、共享 map 是否加锁。该自检属于模型自评，严禁充当客观测试依据。
-2. **证据状态声明**：当前 Python→Go 方向无项目目标编译 PASS 证据，状态保持为 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`，不宣称转换成功。
+2. **证据状态声明**：本知识页不是逐例评测证据。本项未取得目标构建原件时保持 `AWAITING-THIRD-PARTY-COMPILE` / `UNVERIFIED`；已有独立证据只用于其精确版本、输入及环境，不外推整个 Python→Go 方向或全部规则已通过。
 
 ---
 
@@ -148,7 +154,7 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 先守住输入输出、失败路径、状态、资源释放和副作用，再考虑目标语言惯用写法；不明确的版本、平台或调用约定写为待确认。目标代码的语法/构建与行为结论分别以获批隔离评估返回的逐例证据为准；**本机不编译或运行源码及转换产物**。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)。
 
-**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性；可达走源预检及适用评估，不可达仍冻结、分类 `ALLOWED`、转换、自审和交付报告，不编译运行。细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
+**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性；可达走分类、源预检及适用评估；不可达仅冻结、转换、自审和交付报告，不加载或调用分类器、不要求分类产物，不编译运行。细节见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。本方向 Skill 只提供语言映射规则，**不替代门禁、不构成执行授权**。
 
 ## 网络 API 映射
 

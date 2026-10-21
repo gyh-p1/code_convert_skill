@@ -213,6 +213,13 @@
 5. **未知处理**：源重载、权限/链接状态或目标错误 API 不明时记具体缺口，不默认不存在，也不吞异常求空结果；观察条件不足不改变映射义务。
 6. **依据**：C++17 filesystem 的 [fs.op.exists]、[fs.op.status]、[fs.op.is_directory] 与错误报告条款；源/目标语言页同时消费，不以本规则声称已验证具体文件系统。
 
+### L1-CPP-07 文本容器与 locale 不等于 Unicode 规范化
+
+1. **触发／前提**：ISO C++17 目标需要承接源的 normalize、casefold、Unicode 键或非 ASCII 限长。
+2. **事实**：`std::string`／`std::u32string` 是代码单元容器，标准库没有完整 NFC/NFD/NFKC/NFKD 或 full casefold 接口；转换到 UTF-32 或调用 tolower 不会自动规范化。locale 相关大小写 API 也不等价于不受地区影响的完整折叠。
+3. **选择／反例**：使用本项合法提供且版本已知的 Unicode 库／表，分别保持解码、规范化、折叠、编码和限长；手写 Latin-1 表不能处理全部 Jamo 组合或规范重排。`\u1100\u1161`→NFC `\uac00` 可作相关候选边界，不以 ASCII roundtrip 证明 normalize 操作等价。
+4. **未知与依据**：离线库可用性按构建前提记录；确有受限交付口径时明示子集和未支持项，不靠删 normalize 分支或原样返回伪装实现。依据：ISO C++17 basic_string、locale 字符分类／转换接口范围；Unicode Standard Annex #15；具体库语义以其本地版本资料为准。
+
 ## 使用边界
 
 将本页与所选的源→目标方向 Skill 及另一语言的共性页组合使用；映射前先确认源码真实行为。文件、网络、并发和跨 OS API 的具体差异仍按[共性索引的场景/系统分流](../seven-language-common-semantics.md)选读，不从语言事实直接推断系统 API 等价。没有逐例第三方证据时，语法/构建与功能结论保持 `UNVERIFIED`；本机不运行或编译样本。

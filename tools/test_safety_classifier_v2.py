@@ -16,6 +16,11 @@ spec.loader.exec_module(module)
 
 
 class StaticClassifierChecks(unittest.TestCase):
+    def test_registration_pins_this_exact_candidate(self):
+        registration = json.loads(MODULE.with_name("classifier-registration.json").read_text(encoding="utf-8"))
+        self.assertEqual(registration["classifierVersion"], module.VERSION)
+        self.assertEqual(registration["sha256"], hashlib.sha256(MODULE.read_bytes()).hexdigest())
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -278,6 +283,8 @@ class StaticClassifierChecks(unittest.TestCase):
              'import requests\nrequests.get(document.split(\'"\')[1])', "python-to-go"),
             ('[assembly: AssemblyVersion("1.0.0.0")]', ".cs",
              'var client = new HttpClient();\nclient.GetAsync(address);', "csharp-to-go"),
+            ('[TypeForwardedFrom("mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]', ".cs",
+             'var client = new HttpClient();\nclient.GetAsync(address);', "csharp-to-go"),
         )
         for metadata_text, suffix, consumer_text, direction in cases:
             metadata = self.root / ("metadata" + suffix)
@@ -338,7 +345,7 @@ class StaticClassifierChecks(unittest.TestCase):
         row = rows[0]
         self.assertEqual(row["admissionStatus"], "BLOCKED")
         self.assertEqual(row["blockingReason"], "public_network_unverified")
-        self.assertEqual(row["classifierVersion"], "2.5")
+        self.assertEqual(row["classifierVersion"], "2.6")
         self.assertEqual(row["classifierSha256"], hashlib.sha256(MODULE.read_bytes()).hexdigest())
         self.assertEqual(row["inputManifestSha256"], hashlib.sha256(batch.read_bytes()).hexdigest())
         self.assertEqual({file["sha256"] for file in row["details"]["files"]},
@@ -597,6 +604,75 @@ class StaticClassifierChecks(unittest.TestCase):
             "sourcePath":"source/sample.py", "sourceSha256":hashlib.sha256(source.read_bytes()).hexdigest()}]}), encoding="utf-8-sig")
         result = module.reclassify_batch(batch, self.root/"out.json", self.root)
         self.assertEqual(result[0]["cls"], "LOW_SIGNAL")
+
+
+    def test_type_forwarded_from_version_is_scoped_metadata(self):
+        source = '[TypeForwardedFrom("mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]\nclass Example {}'
+        result = self.classify(source, ".cs")
+        self.assertAllowed(result)
+        self.assertFalse(result.details["files"][0]["network_targets"])
+        self.assertTrue(any(item["reason"] == "type-forwarded-assembly-version" for item in result.details["files"][0]["excluded_network_literals"]))
+        self.assertBlocked(self.classify(source + '\nsocket.connect(("4.0.0.0", 80));', ".cs"), "public_network_unverified")
+
+    def test_version_assignment_or_unknown_attribute_is_not_a_whitelist(self):
+        for source in ('var version = "4.0.0.0";', '[UnknownAttribute("mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]'):
+            with self.subTest(source=source):
+                self.assertBlocked(self.classify(source, ".cs"), "public_network_unverified")
+
+    def test_locally_proved_error_field_is_not_a_hostname(self):
+        source = '''class ModelError(Exception):
+    def __init__(self, code, field):
+        super().__init__(code)
+        self.code = code
+        self.field = field
+def text_value(value, field):
+    if not isinstance(value, str):
+        raise ModelError("TEXT_REQUIRED", field)
+    return value
+name = text_value(data.get("name"), "host.name")
+raise ModelError("DUPLICATE_HOST", "host.name")
+'''
+        result = self.classify(source)
+        self.assertAllowed(result)
+        self.assertFalse(result.details["files"][0]["network_targets"])
+        self.assertEqual(sum(item["reason"] == "declared-field-label" for item in result.details["files"][0]["excluded_network_literals"]), 2)
+        self.assertBlocked(self.classify(source + '\nrequests.get("https://host.name")'), "public_network_unverified")
+
+    def test_unknown_or_rebound_validator_cannot_hide_network_destinations(self):
+        sources = (
+            'name = text_value(data, "host.name")',
+            'def text_value(value, field):\n    return custom_sender(field)\nname = text_value(data, "host.name")',
+            'def text_value(value, field):\n    raise ValueError(field)\ntext_value = other\nname = text_value(data, "host.name")',
+            'class ModelError(Exception):\n    def __init__(self, code, field):\n        custom_sender(field)\nraise ModelError("CODE", "host.name")',
+            'custom_sender({"field": "host.name"})',
+        )
+        for source in sources:
+            with self.subTest(source=source):
+                self.assertBlocked(self.classify(source), "public_network_unverified")
+
+    def test_field_label_guards_include_other_source_files(self):
+        metadata = self.root / "metadata.py"
+        metadata.write_text('def label(value, field):\n    if value is None:\n        raise ValueError(field)\n    return value\nlabel(None, "host.name")', encoding="utf-8")
+        consumer = self.root / "consumer.py"
+        consumer.write_text('socket.connect((args.host, 80))', encoding="utf-8")
+        for paths in ([metadata, consumer], [consumer, metadata]):
+            self.assertBlocked(self.classifier.classify_files("T", "python-to-go", "fixture", paths), "public_network_unverified")
+
+    def test_rebound_builtin_exception_and_super_are_not_trusted_consumers(self):
+        sources = (
+            'ValueError = unknown_sender\ndef label(value, field):\n    raise ValueError(field)\nlabel(None, "host.name")',
+            'from unknown import ValueError\ndef label(value, field):\n    raise ValueError(field)\nlabel(None, "host.name")',
+            'def ValueError(field):\n    return unknown_sender(field)\ndef label(value, field):\n    raise ValueError(field)\nlabel(None, "host.name")',
+            'Exception = unknown_base\nclass ModelError(Exception):\n    def __init__(self, code, field):\n        self.field = field\nraise ModelError("CODE", "host.name")',
+            'super = unknown_factory\nclass ModelError(Exception):\n    def __init__(self, code, field):\n        super().__init__(field)\nraise ModelError("CODE", "host.name")',
+            'class ModelError(Exception):\n    field = unknown_descriptor\n    def __init__(self, code, field):\n        self.field = field\nraise ModelError("CODE", "host.name")',
+            'class ModelError(Exception):\n    def __init__(self, code, field):\n        self = unknown_receiver\n        self.field = field\nraise ModelError("CODE", "host.name")',
+            'class ModelError(Exception):\n    def __init__(self, code, field):\n        self.field = field\nModelError.__init__ = unknown_sender\nraise ModelError("CODE", "host.name")',
+            'class ModelError(Exception):\n    def __new__(cls, code, field):\n        unknown_receiver.field = field\nraise ModelError("CODE", "host.name")',
+        )
+        for source in sources:
+            with self.subTest(source=source):
+                self.assertBlocked(self.classify(source), "public_network_unverified")
 
 
 if __name__ == "__main__":

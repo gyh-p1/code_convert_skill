@@ -14,7 +14,7 @@
 | 提交端（转换 Agent 工作区） | 与 Controller **同机** | 经回环直达 8443，不设隧道；**同机不代表隔离**（宿主可连公网），样本执行与网络隔离仍只在 VM Agent，见下《同机共处的边界》 |
 | VM Agent（三个现役 runner） | 由 Controller 按 `runnerId` 编排 | 提交方**不直连** Agent |
 
-runnerId、语言与快照核对规则见 [Runner 能力矩阵](runner-capability-matrix.md)。已登记 windows/linux/macos × x64 七语言不等于逐例依赖就绪；C# 的平台语言标识按接口使用 dotnet。其他 job 的证据不证明本项转换。
+runnerId、语言与快照核对规则见 [Runner 能力矩阵](runner-capability-matrix.md)。已登记 windows/linux/macos × x64 七语言不等于逐例依赖就绪；C# 的分类／请求身份 `csharp`、runner 能力名 `dotnet` 和工具名须按该页逐层核对，不统一替换。其他 job 的证据不证明本项转换。
 
 > 提交前用 `GET /api/runners` 复核 `supportedLanguages`、`lifecycleState`、`baselineSnapshot`、`contaminated`，保存本项实际响应。
 
@@ -63,7 +63,9 @@ Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2]
 
 ### 当前协议的强制适配核对
 
-使用 Controller 渠道时必读[当前协议适配](platform-revision-adapter.md)，按当前协议选择适用形状；可达时在适用源预检/提交前核实际平台身份与能力，不可达仅转换不要求实时平台证据。该页登记 source-preflights、SourcePreflightReport 1.0、EvaluationReport 3.2、closure/原件导出、submissionId/busy/恢复、追加归因与 v2 配置。`closureBlocked=true` 或 `jobPhase=CLEANING` 不能因 jobStatus 属终态枚举就收尾；平台 closure 不免转换端 result.md 与适用产物门禁。历史 job 缺 closure 时沿用真实原件/清理核对，不造成功记录。
+确认 Controller 可达并准备源预检/目标评估时必读[当前协议适配](platform-revision-adapter.md)，按当前协议选择适用形状，在适用源预检/提交前核实际平台身份与能力。不可达仅转换只需本页连接坐标和健康检查正文，不加载分类准入或分类器，不要求实时平台证据；其余评估适配待恢复评估前加载。该页登记 source-preflights、SourcePreflightReport 1.0、EvaluationReport 3.2、closure/原件导出、submissionId/busy/恢复、追加归因与 v2 配置。`closureBlocked=true` 或 `jobPhase=CLEANING` 不能因 jobStatus 属终态枚举就收尾；平台 closure 不免转换端 result.md 与适用产物门禁。已有 job 的恢复仍按适用协议核对，历史 job 缺 closure 时沿用真实原件/清理核对，不造成功记录。
+
+遇拒收、阶段超时、命令空跑、编译总标签或比较疑点时，按[评估故障分诊](evaluation-failure-triage.md)在既有记录定位事实、采信、责任与去向；它引用本页既有传输／取证／恢复规则，不新增请求、对照程序或自动重试。
 
 ### 提交结果未知时的恢复
 
@@ -100,6 +102,8 @@ Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2]
 
 任一必填/条件必填缺失、无效或授权过期，覆盖该授权的提交暂停，不逐项降级放行；只阻断独立分类的项则记录该项原因。每次提交单项 classification 对象与授权 JSON，单项也必附。服务端不 lift 旧 BLOCKED，不以 configured=true 改判；条件解除后重新分类取得 ALLOWED。
 
+提交前复核 UTC 时间来源和转换，授权／隔离核验时间不得晚于真实提交或越过有效期。客户端显示时区与服务端 UTC 分开记录；出现未来时间拒收时保留原 HTTP/body，核真实授权发生时间、时区和可合法取得的服务端时间资料，不把时间任意提前来通过校验、不修改真实隔离核验时间。确有时钟问题交平台维护，授权事实未确认前不重投。
+
 ## 批量任务逐项提交
 
 批量编排规则见[批量转换工作流](../../../skills/workflows/batch-conversion/SKILL.md)；本节只记录**适配层**已知事实，不重复编排语义。批量任务与单项走同一个 `POST /api/jobs`，**没有**批量提交端点。
@@ -117,6 +121,14 @@ Agent 在新提交（含源预检及重提）前，须先按[任务状态 §2.2]
 **批量提交的引用核对**：逐项核 ALLOWED、精确输入、独立授权/隔离，再提交。字段只见本页 batchAuthorization 节；分类逐项消费。单项条件不足记原因，可继续独立未受影响项；共享批次授权无效则暂停其全部覆盖项，不把等待记目标失败。
 
 **批量取证**：逐项按"回传证据布局与结论回填规则"落盘到该 run 的 `04-evaluation/<job-dir>/returned-evidence/`；批次汇总按批量流程 §6 分列各维度，**不合成单一"转换成功率"**。
+
+### 持久化 busy 的平台维护恢复
+
+持续 `409 controller_busy` 且 `jobCreated=false` 时，先保留该次响应及 health/runners 原件；`ready=true`、runner READY 或重启成功不证明历史 job 已清理。不要定时无限重投，不把忙碌当评估系统不可达，也不在转换工作区读写 Controller 的 jobs。按[Controller 作业恢复适配](controller-job-recovery-adapter.md)逐项诊断；获管理者独立维护授权的智能体可在范围内执行，不要求管理员亲自操作。已有授权覆盖时直接沿用；缺权限／实际接口／可证 scope 时记录具体交接，受影响项按任务状态契约保持 WAITING。
+
+2026-10-19 的平台**待发布源码**新增管理员维护恢复，来源文档记录旧 1.0.32 不具备此能力；当前是否部署须另核。受支持版本可在 health 的 `submissionReadiness` 和 409 detail 返回 blockingJobs；受独立维护凭据保护的 plan/recover 接口，在原清理证据充分时解除调度占用，或按受理时记录的精确 VM scope 实际回滚成功后解除。原 state/closure/失败报告不改为成功，恢复回执须可复核，旧 submissionId 仍返回原 job。执行者可以是管理员授权的智能体，授权范围、凭据注入、资格、互斥、结果和中断处置按恢复适配逐项核对；只有精确部署与实际返回支持时才消费新增字段，不能以源码文档宣称线上已生效。
+
+收到管理员成功恢复回执后，继续取得原 job 的现存证据，如实保留原失败/缺档与 closureBlocked；调度释放本身不关闭转换任务，也不补足交付证据。需要重新评估时修正实际原因、按冻结与准入规则记录新 attempt，并使用新 submissionId（如使用该字段）。若管理员采用整体归档，旧 job 可能退出 API 与去重集合；已留证的维护迁移导致 404 不等于从未接收，不能据此盲重投。
 
 ## 比较 capsule 组装
 
@@ -149,6 +161,32 @@ capsule.zip
 
 独立源预检按[当前协议适配 §2](platform-revision-adapter.md#2-独立源侧预检请求)使用 source-only 请求；实际平台身份不符、能力或本项前置条件缺失时记 PREPARATION_GAP，按统一收尾入口暂停，不发送普通双侧示例或伪 target。已有适用授权与精确契约依据沿用，不重复请求授权。
 
+### ZIP 条目与打包核对
+
+本渠道的提交归档统一使用 `/` 分隔相对条目路径，根部直接放本次 manifest/profile/metadata 及适用文件树，不包裹额外父目录。已有 Windows PowerShell 5.1 现场记录中，`Compress-Archive` 产生过反斜杠条目；该形态是否被平台拒收未实测，不能写成已发生的拒收。为复用已成功的归档形态，Windows 提交宿主使用其已核验的系统 bsdtar（`System32/tar.exe`，`--format=zip`），不直接沿用上述未核验形态。
+
+归档前核精确文件集合，归档后用原生 `tar -tf` 回读并保存条目名，逐项核分隔符、根布局、遗漏/额外/重复条目及不安全路径；不能只看 zip 存在或归档命令退出 0。归档中的 `source/` 文件集合和哈希仍须与本次分类严格对应。原生工具不可用或产生不同形态时，记录组装准备缺口，只采用已有合法工具且经回读确认的等价归档方式，不编写打包程序。
+
+以下两种提交示例使用系统工具的明确路径；其他宿主按实际工具位置替换，不从 `PATH` 中同名 `tar` 推定为同一实现。有既有 fixture 时显式加入本项准许的树，不把整个临时目录打包。每次保存精确 capsule 原字节；重新打包导致归档字节变化时，按[提交标识与恢复](platform-revision-adapter.md#5-提交标识busy-与恢复)另记实际尝试，不以同名文件复用旧 submissionId。
+
+### 构建命令传递与解析证据
+
+本节适用于源预检及双侧任务中经外壳传递的 `buildCommand`，尤其 PowerShell 的不运行语法检查。已有现场记录出现过外层先展开 `$` 变量、改写内层引号，使解析器没有检查目标文件但外壳退出码为 0 的情况。冻结的命令正文正确，只能证明计划；还须核对传输后实际消费的文件与解析结果，不能从 `buildAssessment=passed` 或 shell 0 补出有效语法证据。
+
+对该已知 PowerShell 传递形态，使用获批平台已提供的精确解析入口，按 `-EncodedCommand` 传入其 **UTF-16LE 字节的 Base64 表示**，避免把含 `$` 的解析正文直接嵌入多层 `-Command` 引号。传输形状如下；占位内容不执行，不在此新造解析逻辑：
+
+```text
+pwsh -NoProfile -NonInteractive -EncodedCommand <合法解析正文的UTF-16LE-Base64>
+```
+
+Microsoft PowerShell 7.6 `about_Pwsh` 的 `-EncodedCommand` 约定即为上述编码；它处理命令文本的传递，不证明正文安全、解析成功或平台已经修复。只引用合法提供版本，Agent 不编写检查脚本，也不把样本执行、import/require 或动态求值改名为语法检查。缺入口/精确正文时按既有准备缺口处理。
+
+在既有冻结和提交材料中保留解析入口的来源/版本、原始正文及其编码表示、目标文件路径和版本、实际 `buildCommand`，核对解码结果与原正文一致；编码步骤不改变解析语义。按 schema 保存原命令结构，不擅自把命令列表当 argv 拆分或增加平台字段。Python `-m py_compile`、Ruby `-c` 也须正确引用文件参数；`-c` 本身不保证免于外壳展开，不禁止合法的带空格路径。
+
+取证时将实际请求、合法解析入口及原始构建诊断对应到本次冻结文件。请求记录本身不证明执行层未改写；出现变量/引号丢失、仅回显命令或检查对象不符时，保留原 job 和平台标签，将该观察记为无效、对应侧语法层 UNVERIFIED。正常成功的解析可以没有输出，不设置“必须非空 stdout”的门槛；仍按[构建阶段判读](../../workflow/build-prerequisites.md#241-检查阶段与结论范围)核实际文件消费、解析错误集合与退出结果。
+
+修正传输条件须按任务状态记录关联变体/新 attempt，重新取得受影响证据，不覆盖原失败或空跑记录。新解析入口或传输形态的有效性存疑时，可由获批平台维护侧使用合法提供的无害有效/无效语法文本，只改变语法有效性取得阴性对照；证据仅适用于对应入口、版本与传输条件。不要求逐项追加对照，不由 Agent 新造测试程序，也不以旧入口的对照替代新条件证明。
+
 ## 提交—轮询—取证流程
 
 PowerShell 5.1 无 `Invoke-RestMethod -Form`；用 `curl.exe -F` 做 multipart，并手工保存回执；占位处按本项冻结事实替换。正常双侧用例按下例，仅编译按当前协议删 runCommand、核实际不运行支持；本例的运行/比较件不强加给 LIB 分支。
@@ -160,7 +198,9 @@ curl.exe --fail -sS "http://127.0.0.1:8443/api/runners" -o runners-before.json
 # 核对 ready、comparison、契约与本次任务策略；配置不适用时先处理受影响项
 
 # 1) 核完整源/目标树和清单，仅归档冻结输入，不修改只读源来清缓存
-Compress-Archive -Path source,target,comparison_manifest.json,input_profile.json,metadata.json -DestinationPath capsule.zip -Force
+& "$env:SystemRoot\System32\tar.exe" -c --format=zip -f capsule.zip source target comparison_manifest.json input_profile.json metadata.json
+& "$env:SystemRoot\System32\tar.exe" -tf capsule.zip > capsule-entries.txt
+# 回读 capsule-entries.txt，按“ZIP 条目与打包核对”确认后再提交
 
 # 2) 提交 → 202 {jobId, jobStatus}
 #    每次提交**必附**两份已准备好的 JSON：

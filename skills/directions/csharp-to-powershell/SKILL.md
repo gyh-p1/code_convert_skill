@@ -160,6 +160,16 @@ description: Use when converting C# source to PowerShell; apply this direction's
 6. **信息不足或实现相关时的处理**：基类实现/程序集缺失、重载不明时记录依赖缺口；语法支持不证明特定基类可加载，也不证明构造副作用等价。
 7. **资料依据（名称/版本/章节）**：about_Classes_Inheritance，Derived class constructors；C# 构造函数。
 
+### 规则 CS-PS-09：迭代器清理、集合返回与字段单位分别保持
+
+1. **触发／前提**：C# 12/.NET 8 源使用 yield/foreach、嵌套集合或 JSON 对象、Rune 限长和原子状态快照；目标 PowerShell 7.6 基线，实际宿主另冻。
+2. **应保留行为**：首次枚举才发生的副作用、break／异常后的确定性清理、成功前后状态及数据对象的类型／形状；语义事实读 [L1-PS-08](../../references/languages/powershell.md#l1-ps-08-函数-success-流集合对象与泛型调用) 和 [L1-CS-09](../../references/languages/csharp.md#l1-cs-09-lengthrune-与文本元素的单位不同)。
+3. **可选映射**：按源设计带显式退出协议的块式枚举或状态对象，try/finally 管 reader；成功流只产约定结果，嵌套集合按各返回边界防展开。原子 catch 恢复业务状态但不自动撤销清理审计；源非原子路径保留已成功写入。
+4. **不适用／反例**：不能先全量枚举再截断 limit，不能把 source 的 Rune 计数换成 PowerShell Length，也不能用外层 @() 假定递归 ArrayList 类型已保持。limit=0 若源不启动枚举，目标也不能先打开资源；“回滚业务”不等于“删除 finally 的关闭事件”。
+5. **核对方式**：在本项正常自审覆盖中对应源状态和调用点；相关输入候选包括 0／1／多项、提前退出、取得资源前后失败、非原子和补充平面文本。实际评估按冻结计划和预算，不新增审阅轮次或辅助驱动。
+6. **未知处理**：依赖缺失／合法入口不足与代码映射问题分别登记；泛型绑定未知采用有依据的宿主 API 调用，不吞异常或补固定结果。
+7. **依据**：C# iterator/foreach/IDisposable、.NET Rune；PowerShell about_Return/about_Pipelines/about_Try_Catch_Finally；库方法签名仍按本项实际版本。
+
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。

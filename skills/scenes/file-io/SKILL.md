@@ -94,4 +94,4 @@ description: Use alongside a matching conversion direction when source code crea
 - Microsoft `CreateFileA`、`MoveFileExA`、`LockFile`、`FlushFileBuffers`：共享模式、替换、锁与落盘。
 - Microsoft C 运行时 `fopen`（文本/二进制模式）：CRLF/EOF 翻译差异。
 
-以上为语言/平台规则依据，不是特定编译器、SDK 或转换结果的验证记录；目标为具体版本/文件系统时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/framework/safety-boundary.md)。**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性，可达走源预检及适用评估，不可达仍冻结、分类 `ALLOWED`、转换、自审和交付报告，不编译运行；见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。
+以上为语言/平台规则依据，不是特定编译器、SDK 或转换结果的验证记录；目标为具体版本/文件系统时须核对对应文档。同时遵守根入口和 [安全边界](../../../references/framework/safety-boundary.md)。**执行顺序与适用门禁统一按根入口分流**：先检查评估系统可达性，可达走分类、源预检及适用评估；不可达仅冻结、转换、自审和交付报告，不加载或调用分类器、不要求分类产物，不编译运行；见 [AGENTS.md](../../../AGENTS.md) 执行约束 §3。遵守根[转换入口](../../../SKILL.md)与[安全边界](../../../references/framework/safety-boundary.md)；本场景 Skill **不替代门禁、不构成执行授权**。

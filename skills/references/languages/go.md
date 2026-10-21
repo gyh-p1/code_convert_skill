@@ -173,7 +173,7 @@
 - **内存管理模型**：`[语言规范保证]` 自动内存管理；编译器逃逸分析；运行时垃圾收集器回收无引用堆对象。
 - **资源确定性释放机制**：`[语言规范保证]` `defer` 语句将资源清理延迟到**外层函数返回前按 LIFO 逆序确定性执行**；无作用域级自动析构。
 - **垃圾收集（GC）停顿与机制**：`[指定运行时的实现相关事实]` 并发三色标记清除垃圾回收（依据 `GO-RT-DOC`）；非内存资源通过显式 `Close` 配合 `defer` 逆序释放。
-- **悬垂与泄漏防范**：在长循环内部直接使用 `defer` 会导致资源直到整函数退出才释放，极易耗尽句柄。
+- **跨迭代资源占用**：循环内注册的 `defer` 仍等到外层函数返回才执行，资源可能持续占用。是否属于转换引入的缺陷取决于源实际释放时点；源逐次释放不能被延迟，源跨迭代持有也不能被目标提前关闭。
 - **官方资料依据**：GO-SPEC #Defer_statements<br>GO-RT-DOC
 
 ## 七、异步、并发、取消与阻塞
@@ -251,6 +251,30 @@ os/exec另有启动、Context取消、直接进程退出和管道排空：Comman
 io.Reader允许在返回n>0时同时返回错误，也允许最后一块数据先返回err=nil、下次再返回EOF；0,nil本身不是EOF。先对应源实际消费p[:n]和错误的顺序。源按Reader契约消费时保留有效字节后再处理错误；源实际丢弃部分数据时记录源行为/风险，不替源修复。目标异常式API没有天然的n、err二元返回，可选择对应已得块和失败状态的表示，不能从异常猜出未取得字节。
 
 CombinedOutput取得合并stdout/stderr；分别采集后stdout+stderr拼接不保留合流关系。源需要来源分离时也不能反向合并。映射以源的共同输出接收点、已得字节、错误及等待范围为依据，不承诺并发输出跨运行具有固定顺序。仅能分流而无等价合流条件时说明限制，不新增装置代码。依据：Go 1.27 io.Reader、os/exec CombinedOutput；方向映射按实际两语言正文。
+
+### L1-GO-13 Windows API 的包归属与导出边界
+
+1. **触发/前提**：向 Go 映射 Windows 平台 API，或源使用 `syscall`、`golang.org/x/sys/windows`、动态库入口。冻结实际 Go 工具链、GOOS/GOARCH、SDK/ABI 与必要模块版本；本节说明包和调用层的边界，不声明完整 Win32 API 已覆盖。
+2. **标准库范围**：`syscall` 的 Windows 实现只导出其中实际声明的成员，不是 Win32 SDK 的完整同名投影。`NewLazyDLL`/`NewProc` 是动态库及符号查找入口，不会为 Go 包自动增加其他函数或 `MEM_*`/`PAGE_*` 常量。不能从 C 头文件存在某符号，就写出 `syscall.<同名符号>`；已有转换曾因这种假设出现未定义成员的真实编译错误。
+3. **扩展模块范围**：`golang.org/x/sys/windows` 是单独的扩展模块，不因安装 Go 工具链就成为标准库。选择其中 API 时核本项已冻结版本的导出声明、参数/返回类型和合法依赖材料；不静默增加/下载模块，不从包名推定所有 Windows API 都存在。依赖准备仍按[构建前提](../../../references/workflow/build-prerequisites.md#23--go)。
+4. **动态绑定范围**：动态找到库/符号不证明 ABI、参数宽度、返回/错误含义、指针生命周期或调用条件正确，也不由语法/编译通过证明运行时符号存在。只有源义务和对应接口事实足够明确时，才能把已有合法绑定方式作为候选；不把动态绑定设为所有 API 的统一替换方案。
+5. **选择与未知处理**：在既有映射依据中记录“源使用点→目标包/符号→本地声明来源和精确版本→依赖及未验证条件”。必要导出或 ABI 事实缺失时标记该映射缺口，不编造声明、常量或成功结果；不把联网查询作为后续调用者的必需步骤。本页只提供选择依据，不增加自审轮次或本机检查。
+6. **反例**：把扩展模块中的函数写成标准库成员；把查到符号当作签名已确认；把某一平台/版本的可用性推到所有 GOOS/GOARCH。这些都不能凭名字或一次编译通过推定成立。
+7. **依据与结论范围**：Go 官方 `syscall` Windows 实现的 `dll_windows.go`（`LazyDLL`/`NewLazyDLL`/`NewProc`）及 `golang.org/x/sys` 模块说明。具体 API 导出仍以本任务的合法本地声明/冻结版本为准；本节不替代该目标的编译、加载或行为证据，不提供专用平台调用实现。
+
+### L1-GO-14 大小写映射不提供完整规范化与 casefold
+
+1. **触发／前提**：Go 1.27 的 unicode/strings/utf8 与源端规范化、折叠或码点计长对应；Unicode 数据版本按实际工具链与库冻结。
+2. **事实**：`unicode.ToLower` 是单 rune 的大小写映射，不提供 `ß`→`ss` 这样的多码点完整折叠；Go 标准库不提供完整 NFC/NFD/NFKC/NFKD 接口。`golang.org/x/text/unicode/norm` 和 `golang.org/x/text/cases` 是单独模块，不因包路径带 golang.org 就成为离线已安装的标准库。
+3. **选择／反例**：按源语义及合法离线库选择 norm/cases 或有完整依据的实现，明确 normalization 与 fold 的顺序；不能用 ToLower 加少数特例对所有输入宣称等效。`len(s)`、RuneCountInString 和源 UTF-16 长度分别选择；NFC 的 Jamo 组合或 fold 的字符扩展应进入相关候选边界。
+4. **未知与依据**：缺模块不在提交宿主编译探测、不临时联网取库，消费构建前提 §0.2 的支持范围／依赖记录。依据：Go unicode.ToLower/Version、unicode/utf8；x/text norm 的 Form、cases.Fold；对应 Unicode 版本的规范化／折叠资料。本条不是模块可用性或转换效果证明。
+
+### L1-GO-15 encoding/json 的替换、重复键与数值路径
+
+1. **触发／前提**：Go 1.27 标准库 `encoding/json`（不是任意第三方或实验 JSON 实现），Marshal/Decoder、UseNumber、目标类型及读取 EOF 的实际组合。
+2. **事实**：该包接受重复同名键，后遇值按解码目标替换或合并，不自动报重复键；对字符串的非法 UTF-8／孤立 UTF-16 代理项可替换为 U+FFFD。向 interface 解码数字默认浮点；UseNumber 保留 json.Number，随后 ParseInt 的词法、位宽与范围检查属于另外一层。一次 Decode 成功不证明输入后无第二个 JSON 值，源若检查 EOF 须保留。
+3. **映射／反例**：先定位源的原始 UTF-8 校验、重复键 hooks、非有限常量和整数／布尔区分；不能用 Python 默认 loads 原样代替 Go 的代理项处理，也不能在 Go 目标默认接受重复键来替代源的拒绝。nil slice 的 JSON null 与非 nil 空 slice 的 [] 有外部区别；保留是否返回数组对象的协议。
+4. **未知与依据**：JSON 层的转义代理项处理和原始字节解码分开，源深度限制／错误分流不从另一个包默认值推定。依据：Go encoding/json 的 Security Considerations、Unmarshal、Decoder.Decode/UseNumber、Marshal；strconv.ParseInt。实际编译及行为仍独立取证。
 
 ## 使用边界
 

@@ -17,18 +17,18 @@
 
 | 文档 | 触发 | 职责 |
 |---|---|---|
-| [单项闭环](workflow/conversion-evaluation-loop.md) | 每项正式转换必读 | 先按可达性分流，再冻结→分类→适用源预检→生成/自审→适用评估→有限修复→收尾；计数与反馈分流 |
+| [单项闭环](workflow/conversion-evaluation-loop.md) | 每项正式转换必读 | 先按可达性分流；可达走分类/源预检/评估，不可达冻结后直接生成/自审/有限修订/收尾；计数与反馈分流 |
 | [批量工作流](../skills/workflows/batch-conversion/SKILL.md) | 请求含多项 | 手工串行、接入/恢复、每 40 终态增量对账及终局核对 |
 | [长文件工作流](../skills/workflows/long-file-conversion/SKILL.md) | 长/复杂单文件 | 全文件地图、语义分段、跨单元核对；不重置单项预算 |
 | [行为指导](workflow/behavior-preservation-contract.md) | 单文件行为目标/差异说明 | 目标与允许差异建议；提交门禁引用准备契约 |
 | [构建前提](workflow/build-prerequisites.md) | 冻结前及源/目标构建必读 | 冻结构建命令、工程/依赖/工具链条件，真实诊断分流 |
-| [分类准入](workflow/classifier-agent-gate.md) | 冻结/分类前、源预检前、提交/重提必读 | 分类输入、ALLOWED、精确身份及重新分类；不替代授权/隔离 |
+| [分类准入](workflow/classifier-agent-gate.md) | 确认评估可达后、冻结/分类前、源预检前、提交/重提必读；不可达仅转换不加载 | 评估运行验收的分类输入、ALLOWED、精确身份及重新分类；不作为仅转换前置，不替代授权/隔离 |
 
 ## 契约：所有入口共享的真源
 
 | 文档 | 消费者/时点 | 职责 |
 |---|---|---|
-| [任务状态](framework/task-state-contract.md) | 开始处理每项即读；冻结/分类、各请求/新提交、恢复及收尾核对 | 身份、冻结落盘、知识加载/实际消费、版本关联、接入去向、变体、phase/lifecycle；验证结论独立 |
+| [任务状态](framework/task-state-contract.md) | 开始处理每项即读；冻结/分类、生成/自审/修订与新提交、恢复及收尾核对 | 身份、冻结落盘、当前模型上下文/产物、版本关联、接入去向、变体、phase/lifecycle；验证结论独立 |
 | [评估准备](framework/evaluation-readiness-contract.md) | 转换前可达性检查、冻结计划、源预检前、生成前、恢复及双侧提交/取证判读 | 可达正常流程/不可达仅转换自审交付、源构建/适用基线及复用失效、合法来源驱动、四要素、两侧对称、oracle、仅编译和原始/归一化观察 |
 | [交付移交](framework/delivery-handoff-contract.md) | 开始处理每项时必读；结束/失败/阻断/暂停前核对 | 统一收尾入口、全去向 result.md、逐件核对/记录、适用件、布局与移交字段来源 |
 | [移交模板](framework/evaluator_manifest.example.json) | 消费方要求 manifest 时 | 本仓库清单占位形状，不是 Controller capsule |
@@ -41,6 +41,8 @@
 | [Controller 适配](adapter/controller/remote-controller-adapter.md) | 连接、外部 schema、classification/batchAuthorization、手工提交/轮询/取证与未知提交恢复 |
 | [Controller 当前协议适配](adapter/controller/platform-revision-adapter.md) | 使用该渠道时随主适配读取；独立源预检/报告 kind、closure/原件、精确 submissionId 与比较配置，提交前核实际平台身份与能力 |
 | [比较策略适配](adapter/controller/comparison-policy-adapter.md) | 平台实际字段、策略/维度能力与已知缺口；不承诺通用语义 oracle |
+| [评估故障分诊](adapter/controller/evaluation-failure-triage.md) | 拒收、阶段超时、解析空跑、原始观察与归一化疑点的按证据归因；引用现有契约，不新增状态／脚本或必经实验 |
+| [Controller 作业恢复适配](adapter/controller/controller-job-recovery-adapter.md) | busy／孤立作业的诊断、管理者授权智能体维护、plan／恢复资格／实际 VM scope、结果与中断核对；不因授权方式增加安装目录访问或样本运行许可 |
 | [Runner 能力矩阵](adapter/controller/runner-capability-matrix.md) | 登记组合、能力和组件身份；任务核实际接口/证据 |
 
 语言/方向/场景/系统只提供事实和映射，不替代门禁、工作流或授权；能力与结果以实际接口和精确版本证据为准。

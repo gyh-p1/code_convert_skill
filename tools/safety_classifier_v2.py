@@ -16,6 +16,7 @@ Samples are read as text, never imported, compiled, or executed.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import ipaddress
 import json
@@ -25,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-VERSION = "2.5"
+VERSION = "2.6"
 MAX_BYTES = 2 * 1024 * 1024
 MAX_FILES = 128
 SOURCE_EXTENSIONS = {".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".cs",
@@ -148,7 +149,136 @@ def _metadata_literal_reason(code: str, start: int, suffix: str) -> str | None:
         statement,
     ):
         return "assembly-version"
+    if suffix == ".cs" and re.search(
+        r'''\[\s*(?:System\.Runtime\.CompilerServices\.)?TypeForwardedFrom(?:Attribute)?\s*\(\s*"[A-Za-z_][\w.]*,\s*Version=$''',
+        statement,
+    ) and re.match(r'''\d+\.\d+\.\d+\.\d+,\s*Culture=[A-Za-z_-]+,\s*PublicKeyToken=[a-fA-F0-9]+"\s*\)\s*\]''', code[start:]):
+        return "type-forwarded-assembly-version"
     return None
+
+
+def _python_field_label_spans(code: str) -> list[tuple[int, int, str]]:
+    """Only locally proved exception/validator field arguments.
+
+    Parsing text does not import/evaluate it. Unknown syntax, receivers, rebinding
+    or field uses remain candidates. The caller disables this across the entire
+    source set if any network signal is present; no hostname is whitelisted.
+    """
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError, RecursionError, MemoryError):
+        return []
+    parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+    builtin_errors = {"Exception", "ValueError", "TypeError", "KeyError", "RuntimeError", "AssertionError"}
+    error_fields = {}
+    rebound = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+            rebound.add(node.id)
+        elif isinstance(node, ast.arg):
+            rebound.add(node.arg)
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            rebound.update(alias.asname or alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.Attribute) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            target = node
+            while isinstance(target, ast.Attribute):
+                rebound.add(target.attr)
+                target = target.value
+            if isinstance(target, ast.Name):
+                rebound.add(target.id)
+        elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in {"setattr", "delattr", "globals", "locals", "vars", "eval", "exec", "__import__"}:
+            return []  # Dynamic namespace/class mutation has no local binding proof.
+    if rebound & {"__class__", "__dict__"}:
+        return []
+    definitions = Counter(node.name for node in ast.walk(tree) if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)))
+    trusted_builtin_errors = builtin_errors - rebound - set(definitions)
+    trusted_super = "super" not in rebound and "super" not in definitions
+    for node in tree.body:
+        if (not isinstance(node, ast.ClassDef) or node.name in rebound or definitions[node.name] != 1
+                or node.decorator_list or node.keywords or len(node.bases) != 1
+                or not isinstance(node.bases[0], ast.Name) or node.bases[0].id not in trusted_builtin_errors):
+            continue
+        methods = [item for item in node.body if isinstance(item, ast.FunctionDef)]
+        if any(item.decorator_list or (item.name.startswith("__") and item.name.endswith("__") and item.name != "__init__") for item in methods):
+            continue
+        if any(not isinstance(item, (ast.FunctionDef, ast.Pass)) and not (
+                isinstance(item, ast.Expr) and isinstance(item.value, ast.Constant) and isinstance(item.value.value, str)) for item in node.body):
+            continue
+        calls = [item for item in ast.walk(node) if isinstance(item, ast.Call)]
+        def safe_call(call):
+            return trusted_super and ((isinstance(call.func, ast.Name) and call.func.id == "super" and not call.args and not call.keywords) or (
+                isinstance(call.func, ast.Attribute) and call.func.attr == "__init__"
+                and isinstance(call.func.value, ast.Call) and isinstance(call.func.value.func, ast.Name)
+                and call.func.value.func.id == "super" and not call.func.value.args and not call.func.value.keywords))
+        if not all(safe_call(call) for call in calls):
+            continue
+        initializer = next((item for item in methods if item.name == "__init__"), None)
+        if initializer and not initializer.args.vararg and not initializer.args.kwarg:
+            parameters = {argument.arg for argument in initializer.args.args}
+            def simple_value(value):
+                return isinstance(value, ast.Constant) or isinstance(value, ast.Name) and value.id in parameters
+            def simple_initializer(statement):
+                if isinstance(statement, ast.Pass):
+                    return True
+                if isinstance(statement, ast.Expr):
+                    value = statement.value
+                    return isinstance(value, ast.Constant) and isinstance(value.value, str) or (
+                        isinstance(value, ast.Call) and safe_call(value) and not value.keywords and all(simple_value(arg) for arg in value.args))
+                return (isinstance(statement, ast.Assign) and len(statement.targets) == 1
+                    and isinstance(statement.targets[0], ast.Attribute) and isinstance(statement.targets[0].value, ast.Name)
+                    and statement.targets[0].value.id == "self" and not statement.targets[0].attr.startswith("__") and simple_value(statement.value))
+            if not all(simple_initializer(statement) for statement in initializer.body):
+                continue
+            names = [arg.arg for arg in initializer.args.args][1:]
+            error_fields[node.name] = {index for index, name in enumerate(names) if name in {"field", "field_path", "field_name"}}
+    error_names = trusted_builtin_errors | set(error_fields)
+    validators = {}
+    for function in tree.body:
+        if (not isinstance(function, ast.FunctionDef) or function.name in rebound or definitions[function.name] != 1
+                or function.decorator_list or function.args.vararg or function.args.kwarg):
+            continue
+        fields = {}
+        for index, argument in enumerate(function.args.args):
+            if argument.arg not in {"field", "field_path", "field_name"}:
+                continue
+            uses = [item for item in ast.walk(function) if isinstance(item, ast.Name) and item.id == argument.arg]
+            valid = bool(uses)
+            for use in uses:
+                if not isinstance(use.ctx, ast.Load):
+                    valid = False
+                    break
+                parent = parents.get(use)
+                if (not isinstance(parent, ast.Call) or not isinstance(parent.func, ast.Name)
+                        or parent.func.id not in error_names or not isinstance(parents.get(parent), ast.Raise)):
+                    valid = False
+                    break
+                if parent.func.id in error_fields and not any(parent.args[position] is use for position in error_fields[parent.func.id] if position < len(parent.args)):
+                    valid = False
+                    break
+            if valid:
+                fields[index] = argument.arg
+        if fields:
+            validators[function.name] = fields
+    lines = code.splitlines(keepends=True)
+    offsets, offset = [], 0
+    for line in lines:
+        offsets.append(offset)
+        offset += len(line)
+    spans = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Constant) or not isinstance(node.value, str) or not re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+", node.value):
+            continue
+        parent = parents.get(node)
+        label = False
+        if isinstance(parent, ast.Call) and isinstance(parent.func, ast.Name):
+            allowed = validators.get(parent.func.id, error_fields.get(parent.func.id, {}))
+            label = any(position < len(parent.args) and parent.args[position] is node for position in allowed)
+            label = label or any(keyword.value is node and keyword.arg in set(validators.get(parent.func.id, {}).values()) for keyword in parent.keywords)
+        if label:
+            begin = offsets[node.lineno - 1] + len(lines[node.lineno - 1].encode("utf-8")[:node.col_offset].decode("utf-8"))
+            end = offsets[node.end_lineno - 1] + len(lines[node.end_lineno - 1].encode("utf-8")[:node.end_col_offset].decode("utf-8"))
+            spans.append((begin, end, "declared-field-label"))
+    return spans
 
 
 
@@ -307,7 +437,7 @@ class SafetyClassifierV2:
                    for name, pattern in COMPILED.items()}
         targets = {}
         excluded_literals = []
-        metadata_spans: list[tuple[int, int, str]] = []
+        metadata_spans: list[tuple[int, int, str]] = _python_field_label_spans(code) if suffix == ".py" and not signals["network"] and not source_set_has_network else []
         for pattern in (URL, IPV4, QUOTED_HOST):
             for match in pattern.finditer(code):
                 value = match.group(1) if pattern is not IPV4 else match.group()
@@ -407,7 +537,7 @@ class SafetyClassifierV2:
         # and malformed-address exclusions rather than promoting every literal.
         if any(file["signals"]["network"] for file in files):
             for file, text, file_path in analyzed_sources:
-                if any(entry["reason"] in {"xml-namespace", "assembly-version"}
+                if any(entry["reason"] in {"xml-namespace", "assembly-version", "type-forwarded-assembly-version", "declared-field-label"}
                        for entry in file["excluded_network_literals"]):
                     file.update(self.analyze_behavior(
                         text, file_path, direction.split("-to-", 1)[0], source_set_has_network=True))

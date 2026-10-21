@@ -152,6 +152,12 @@ description: Use when converting Python source to C++; apply this direction's la
 6. **信息不足或实现相关时的处理**：若该函数会被 C 代码或回调调用（ABI 边界不明确），先把调用方语言与调用约定标为待确认；若 Python 侧依赖异常消息文本做分支，需说明 C++ 侧无同构消息契约。
 7. **资料依据（名称/版本/章节）**：PY-REF-EXCEPT；WG21-N4659 Clause 18。
 
+### Unicode 及头文件消费点
+
+源使用 unicodedata.normalize/casefold 时，读 [Python L1-PY-16](../../references/languages/python.md#l1-py-16-unicode-规范化折叠与文本长度分别保持) 与 [C++ L1-CPP-07](../../references/languages/cpp.md#l1-cpp-07-文本容器与-locale-不等于-unicode-规范化)，分别对应规范化形式、键／长度消费者与离线依赖。容器换成 u32string 不自动提供规范化，子集表须按明确交付范围报告。
+
+引入 zlib 等头文件后，宏替换可影响看似位于命名空间内的常量；按[构建前提](../../../references/workflow/build-prerequisites.md) §2.1 及真实诊断记录必要局部改名，不能以删分支或改常量值解决冲突。构建失败与库可用性／业务等价分别报告。
+
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。

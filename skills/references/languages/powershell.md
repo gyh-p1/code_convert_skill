@@ -32,7 +32,7 @@
    if ($null -eq $cmdline) { return -1 }
    if (@($items).Count -eq 0) { 'empty' }  # 显式表达空集合
    ```
-6. **信息不足或实现相关时的处理**：无法确定源的判断表达“无值”“空集合”还是“单元素标量”时，标为“空值与集合语义待确认”，不得用统一真值判断合并；**必须**用 `@()` 显式包裹以保证数组合同。
+6. **信息不足或实现相关时的处理**：无法确定源的判断表达“无值”“空集合”还是“单元素标量”时，标为“空值与集合语义待确认”，不得用统一真值判断合并。源确有数组合同可用 `@()` 收集流；源要求保留 ArrayList 等具体容器时，须另核返回边界和类型，不能统一包裹后声称保持了对象合同，见 L1-PS-08。
 7. **资料依据（名称/版本/章节）**：about_Booleans（集合转换）；about_Arrays；about_Comparison_Operators。
 
 ### L1-PS-05 参数绑定与实参来源必须显式重建
@@ -228,6 +228,21 @@ PowerShell7.6的管道对象、输出流和外部进程是不同语义层。先�
 - class方法中区分局部/参数与属性，PowerShell变量名不靠大小写区分。迁入源的区分大小写名称时核每个绑定/写入；属性明确用实例或静态成员访问，局部采用不冲突名称并更新全部引用，不能仅改大小写。实际出现Cannot assign property等诊断时按精确作用域/成员归因，不把它当普通运行时属性错误、也不删除赋值绕过。反例是源局部计数与类属性被合并后修改了共享状态；版本/绑定不明记缺口，不全局替换输出文本。依据：PowerShell7.6 about_Variables、about_Classes_Properties/Methods。
 
 依据：PowerShell7.6 about_Automatic_Variables、Start-Process、about_Preference_Variables、about_Pipelines、about_Character_Encoding；.NET对应类型/API。示例是选择引导，非语法/行为验证记录。
+
+### L1-PS-08 函数 success 流、集合对象与泛型调用
+
+1. **触发／前提**：PowerShell 7.6 基线，实际宿主 .NET 版本另冻；函数返回 ArrayList／数组／byte[]，递归构造 JSON，或调用重载／泛型 .NET API。
+2. **事实**：函数所有未抑制的 success 输出共同形成结果，`return` 不会撤销此前输出；可枚举对象通常展开。`return ,$result` 或适用的 NoEnumerate 方式可保留一个集合对象，`@(...)` 在消费端收集流则通常得到 object[]，不保证保留原 ArrayList 类型。嵌套数组／字典的每个返回边界均须按原协议核对。
+3. **选择／反例**：在源要求集合对象时保留 0／1／多元素及嵌套形态，抑制源本来丢弃的 Add 返回值／计数器，不全局给每个函数套一元逗号。ArrayList 被展开后再做类型检查可能错误返回 LIST_REQUIRED；空数组变 null、单字节变整数也不是等价。成功序列化不能靠忽略错误或追加固定 JSON 获得。
+4. **.NET 调用**：C# 的编译期泛型重载选择不能原样假定适用于 PowerShell；按实际 API／宿主版本选择可解析的显式参数／类型或非泛型重载。`JsonSerializer.Serialize` 的单参数形式绑定失败不表示数据不可序列化；优先使用有依据的库调用，不改用遗漏代理项／控制字符处理的自写转义来“修复”。Serialize、ConvertTo-Json 的深度／转义／类型约定分别核对。
+5. **未知与依据**：字符串 Length 的 UTF-16 单位见 C# L1-CS-09，不能替代 Rune 计数；错误、finally 和返回流分别保留。依据：PowerShell about_Return/about_Arrays/about_Pipelines、Write-Output NoEnumerate、about_Methods；实际 .NET JsonSerializer 重载及 ConvertTo-Json 文档。没有本项运行证据时不宣称绑定已验证。
+
+### L1-PS-09 JSON 解析深度与序列化深度是不同约束
+
+1. **触发／前提**：PowerShell 7.6 基线的 `ConvertFrom-Json -Depth`、`-AsHashtable`、`-NoEnumerate` 或 `ConvertTo-Json -Depth`；逐项按实际版本和显式参数冻结。
+2. **事实**：ConvertFrom-Json 的 Depth 限制输入解析的嵌套深度；ConvertTo-Json 的 Depth 决定输出遍历的深度，不能代替前者。输入合法且目标解码成功，不证明满足源指定的解析上限；输入根数组在成功流中的展开行为还须按 NoEnumerate 和实际消费点核对。
+3. **映射／反例**：源显式 `ConvertFrom-Json -Depth 64` 时，目标不能只采用 Go 解码器更宽的自身上限。分别对应源的错误捕获、退出或续行、初始化是否已发生，以及输出序列化约束。深度按源解析器的计数口径核，不能把 JSON 字符串值里的括号当嵌套，也不能按输出缩进计数；边界前／等于／超过上限是候选输入，具体预期从源和合法资料确定。
+4. **未知与依据**：显式参数与运行时默认分开；无法确认相同口径时写深度语义待核，不删除源约束或用固定错误匹配样例。依据：Microsoft.PowerShell.Utility 的 ConvertFrom-Json Depth/AsHashtable/NoEnumerate 与 ConvertTo-Json Depth 参数说明；本页不提供辅助解析器或动态验证结论。
 
 ## 使用边界
 

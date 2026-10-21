@@ -20,17 +20,17 @@ description: Use when converting PowerShell source to Go; apply this direction's
 2. **冻结版本/运行时/API 前提**：源语言 PowerShell 7.6（MS-PS-PIPE）；目标语言 Go 1.27（GO-SPEC #Struct_types）。
 3. **原可观察行为**：弱类型反射访问，属性缺失返回 `$null`。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：在 Go 中定义静态 `type Record struct`，属性定义为显式字段；通过结构体切片 `[]Record` 批量传递。
-   - *不适用条件*：严禁全部使用 `map[string]interface{}` 替代，会丧失静态编译检查且必须频繁进行类型断言。
+   - *可选映射*：字段和类型封闭时可定义 `type Record struct` 与 `[]Record`；源需枚举未知字段、区分缺失/null 或处理动态对象时，可保留 `map[string]any`、原始字段或显式存在标志，按源逐点校验。
+   - *不适用条件*：不能为静态类型偏好丢失源实际读取／拒绝的字段；也不能以 map 为由跳过存在性、数值类型和错误分流。选结构体还是 map 由源可观察行为决定。
 5. **错误机械替换反例**：
    ```go
-   // 错误：在 Go 中大量使用 map[string]any，类型断言失败引发运行时 panic
+   // 错误：未经类型核对的单返回断言引发 panic；问题不在使用 map 本身
    m := map[string]any{"id": 1}
    id := m["id"].(string) // panic: interface conversion: any is int, not string
    // 正确：定义明确结构体
    type Record struct { ID int }
    ```
-6. **信息不足或实现相关时的处理**：若源数据来自未知外部 JSON，结合 `json.Unmarshal` 到结构体进行验证。
+6. **信息不足或实现相关时的处理**：若源来自外部 JSON，核源是否枚举／拒绝未知键及是否区分缺失/null；默认结构体解码忽略未知字段不能代替源的 UNKNOWN_FIELD 路径。验证与解码分开，错误字段、选择顺序与时点按源，不默认所有未知字段都拒绝。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Struct_types；MS-PS-PIPE。
 
 ### 规则 PS-GO-02：PowerShell 错误流重定向向 Go 显式 error 与 stderr 隔离映射
@@ -140,6 +140,10 @@ description: Use when converting PowerShell source to Go; apply this direction's
    ```
 6. **信息不足或实现相关时的处理**：消费方期望的编码、是否需要 BOM、以及源里 `GetBytes`/`GetString` 所用的编码器实例（ASCII/Unicode/UTF8/默认）都必须逐点确认；确认不了就停下标注，不要假定默认编码，也不要把“字节数”和“字符数”互换使用。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #String_types；GO-PKG-UNICODE-UTF16。
+
+### JSON 深度与集合形状的补充消费点
+
+源使用 ConvertFrom-Json 时，按 [PowerShell L1-PS-08/09](../../references/languages/powershell.md#l1-ps-08-函数-success-流集合对象与泛型调用) 和 [Go L1-GO-15](../../references/languages/go.md#l1-go-15-encodingjson-的替换重复键与数值路径)分别保持输入深度、原数组对象／成功流、重复键和输出约定。Go 解码器能接受更深的文档不表示保持了源的 -Depth；nil slice 与空 slice 不一律互换。具体边界按源入口的失败时点和冻结预期核对，不新增解析驱动或统一硬编码某个用例的上限。
 
 ## 转换与验证边界
 

@@ -14,7 +14,7 @@ import tempfile
 import unicodedata
 from urllib.parse import unquote, urlsplit
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 SCHEMA = "loading-preflight/v1"
 MARKER = "LOADING_READ_V1\n"
 CORE = {
@@ -32,6 +32,8 @@ ENTRIES = (".agents/skills/code-convert/SKILL.md", "AGENTS.md", "SKILL.md")
 ACTIONS = ("start", "map", "freeze", "classify", "source-precheck", "generate",
            "review", "submit", "resume", "close", "query", "collect", "terminate", "cleanup")
 RECOVERY = ("query", "collect", "terminate", "cleanup")
+# Classification serves evaluator admission; conversion-only actions use six common contracts.
+CLASSIFIER_ACTIONS = ("classify", "source-precheck", "submit")
 
 
 class Invalid(ValueError):
@@ -408,7 +410,8 @@ def check_next(root, record_path, action, transcript, before_call=None):
     epoch = context_at(rows, boundary)
     require(data["context"]["sessionId"] == session and data["context"]["epoch"] == epoch,
             "current session/context differs from loading record")
-    selected = list(CORE.values())
+    selected = [name for key, name in CORE.items()
+                if key != "classifier" or action in CLASSIFIER_ACTIONS]
     for key, name in WORKFLOWS.items():
         condition = data["workflows"][key]
         require(isinstance(condition["basis"], str) and condition["basis"].strip(),

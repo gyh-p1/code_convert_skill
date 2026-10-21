@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0",
+  "component": "safety-classifier",
+  "path": "tools/safety_classifier_v2.py",
+  "classifierVersion": "2.6",
+  "sha256": "9a74610cbd293dea2280002a43edf71f28be3fc4e64ea866dcd2224b1c34d28d",
+  "status": "maintenance-tested-candidate-not-deployed",
+  "scope": "source-text classification only; no sample execution, authorization or isolation proof",
+  "regression": "tools/test_safety_classifier_v2.py",
+  "supersededCandidateSha256": ["42a93525d02cd710c83ee2673f6a389e0d66388def68c2ccfe31820fad9c846a"],
+  "legacyBuilds": [{
+    "classifierVersion": "2.5",
+    "sha256": "299f339b57dfb83ce2b9bf1fe640c2b32ccdb6badf8c898a7116f7613d26f57f"
+  }]
+}

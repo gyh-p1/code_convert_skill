@@ -227,6 +227,25 @@ Console.WriteLine 写值后追加当前 writer 的行终止符；控制台 write
 
 依据：.NET8 StructLayoutAttribute/Marshal、Dictionary/TryGetValue、字符串/排序API；C#抽象类与接口实现、dotnet/runtime v8.0.0 System.IO.Stream的抽象成员声明；Win32精确事实按已加载系统页。不新增身份能力、不把托管便利当跨平台等价。
 
+## 十一、SDK 工程输入与入口诊断
+
+### L1-CS-08 磁盘上的入口声明不等于本次编译实际包含它
+
+1. **触发**：源或目标采用 `Microsoft.NET.Sdk` 工程，依赖默认 `Compile` 文件枚举，设置了输出/中间目录，或出现源码可见 `Main` 而构建报告 CS5001 的情况。本条帮助识别实际编译输入，不规定评估调度。
+2. **前提**：以下为 `[指定运行时的实现相关事实]` 中的 SDK 构建实现事实，依据 .NET SDK 8.0.100；具体任务仍核实际 SDK、项目目录、构建工作目录、`OutputType`、默认项开关与输出配置。不是 C# 语言规范保证，不外推所有 SDK/工程形态。
+3. **事实**：编译器处理的是工程最终传入的 `Compile` 项，不是目录内所有 `.cs` 文件。SDK 默认项启用时，以语言源文件通配枚举，并应用 `DefaultItemExcludes` 等排除项。SDK 8.0.100 的默认输出路径配置在未启用 `UseArtifactsOutput` 的形态下，将 `OutputPath`、`IntermediateOutputPath` 对应范围加入排除，发生在追加目标框架子目录之前；默认项配置还排除 `BaseOutputPath`、`BaseIntermediateOutputPath` 范围。若实际排除模式覆盖项目源码，含入口的文件可能未参与编译，即使磁盘上存在有效 `Main` 仍可能得到缺入口诊断。启用 artifacts 输出、自定义导入或显式文件项时须按其实际规则判断。
+4. **转换关注点**：C# 作为源时，区分原工程合法选择的条件分支与错误排除，不能把目录里所有文件都推为本次选中分支；冻结要求消费的源码若被错误排除，也不能反向缩小转换范围或把遗漏后的构建当作该源已验证。作为目标时，入口表示须符合源程序/库形态，并被本次工程实际包含。遇到 CS5001，区分入口声明本身不合法与入口文件未进入 `Compile`：不能只因看到 `Main` 就排除工程输入问题，也不能为输出布局问题另造或删改业务入口。库不因缺 `Main` 就必须改成可执行程序。
+5. **反例与适用边界**：`-o .` 的含义依实际工作目录与 SDK 求值结果而定，不能一律判错；只有输出相关排除确实覆盖源码时，才采用上述归因。反过来，入口文件已参与编译却签名不合法的情况，不能用输出目录解释。显式 `Compile` 项和其他导入可能改变最终集合，不能只看一个命令选项或磁盘文件名定案。
+6. **未知与范围**：实际 SDK/工程属性或编译输入不可回读时，保留“入口声明/工程输入待核”的具体缺口，不凭一个诊断推定原因。本条只补充语言工具链知识；工程变更和构建验证仍按既有[构建前提](../../../references/workflow/build-prerequisites.md#22-c--net源侧或目标侧)处理，不新增本机 MSBuild 检查、AfterBuild 复制钩子、生成器或辅助脚本，也不把本条作为编译通过证据。
+7. **依据**：dotnet/sdk **v8.0.100** 的 `Microsoft.NET.Sdk.DefaultItems.props`（默认 Compile Include/Exclude）、`Microsoft.NET.Sdk.DefaultItems.targets`（基础输出/中间目录排除）、`Microsoft.NET.DefaultOutputPaths.targets`（输出路径求值与排除顺序）。必要机制与条件已在正文给出，资料名仅用于追溯，后续使用不要求联网。
+
+### L1-CS-09 Length、Rune 与文本元素的单位不同
+
+1. **触发／前提**：C# 12/.NET 8 源用 `string.Length`、`EnumerateRunes().Count()`、`StringInfo` 或编码字节数做限长、截断、配额和排序键。
+2. **事实**：Length 计 UTF-16 代码单元；Rune 枚举计 Unicode 标量；文本元素／字素簇和 UTF-8 字节又是其他单位。有效 U+1F600 占 2 个 UTF-16 单元、1 个 Rune、4 个 UTF-8 字节；组合字符可能构成一个文本元素。无效代理序列的替换／拒绝另核实际 API，不因有效输入样例推定。
+3. **映射／反例**：PowerShell 字符串也有 Length，不表示源 EnumerateRunes 可直接改成 Length。上限 80 时 41 个有效补充平面字符在 Rune 路径应接受而 Length=82，改写会错误拒绝；反向把源 Length 换成 Python len 同样扩大接受域。按每个字段的源消费者保持单位，不能以同一个 helper 承接所有长度。
+4. **未知与依据**：未核宿主是否支持所选 Rune API 时记录具体版本条件，不能悄改单位；内存资源清理由原作用域保持。依据：.NET 8 String.Length/EnumerateRunes、System.Text.Rune、StringInfo、Encoding.GetByteCount。
+
 ## 使用边界
 
 将本页与所选方向和另一语言事实页组合；具体场景/系统差异按[共性索引](../seven-language-common-semantics.md)选读。缺逐例第三方证据保持 UNVERIFIED，本机不运行或编译。
