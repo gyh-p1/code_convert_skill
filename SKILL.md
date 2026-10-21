@@ -68,7 +68,7 @@ metadata:
 
 **系统（按实际 API/子系统多选）**：[POSIX ↔ Winsock](skills/systems/posix-winsock/SKILL.md)、[文件路径](skills/systems/posix-windows-filesystem/SKILL.md)、[进程创建/身份权限](skills/systems/posix-windows-process-identity/SKILL.md)、[线程](skills/systems/posix-windows-threads/SKILL.md)、[Windows 注册表/服务](skills/systems/windows-registry-service-subsystem/SKILL.md)。同 OS 的专有子系统也适用；双向标题不证明全面映射或验证。macOS 当前只含文件位置约定；PE、ptrace/seccomp、Keychain/launchd/CoreFoundation 无对应系统 Skill。
 
-**工作流**：[长单文件](skills/workflows/long-file-conversion/SKILL.md)按复杂度/长度加载；[批量](skills/workflows/batch-conversion/SKILL.md)按任务集合加载，两者可同时使用。批量只手工串行，整批一个 batchId，每新增 40 项 DONE+PARTIAL 增量对账并带入遗留项，缺档立即停新增转换，关闭前终局核对。
+**工作流**：普通单文件直接走本入口六步和[单项闭环](references/workflow/conversion-evaluation-loop.md)，无需批量工作流；长/复杂单文件在建图前加读[长单文件](skills/workflows/long-file-conversion/SKILL.md)，不强制分段。[批量](skills/workflows/batch-conversion/SKILL.md)按多项任务集合加载，批次中遇到长文件时两者并用。三种形态共享可达性分流、冻结、适用分类/源预检、自审及单项交付门禁。批量只手工串行，整批一个 batchId，每新增 40 项 DONE+PARTIAL 增量对账并带入遗留项，缺档立即停新增转换，关闭前终局核对。
 
 [ATT&CK 战术索引](skills/attack-tactic-index/SKILL.md)仅核对标签与定位知识，不生成战术规则，不参与授权；无证据记 none。HTTP/socket/文件 API 本身不构成战术。
 

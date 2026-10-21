@@ -17,9 +17,10 @@
 
 | 文档 | 触发 | 职责 |
 |---|---|---|
+| [单文件入口](../SKILL.md#按以下顺序执行) | 独立普通单文件；无需批量工作流 | 根入口六步与单项闭环；共享可达性分流/冻结/适用门禁及单项收尾，长/复杂时加读长文件工作流 |
 | [单项闭环](workflow/conversion-evaluation-loop.md) | 每项正式转换必读 | 先按可达性分流；可达走分类/源预检/评估，不可达冻结后直接生成/自审/有限修订/收尾；计数与反馈分流 |
 | [批量工作流](../skills/workflows/batch-conversion/SKILL.md) | 请求含多项 | 手工串行、接入/恢复、每 40 终态增量对账及终局核对 |
-| [长文件工作流](../skills/workflows/long-file-conversion/SKILL.md) | 长/复杂单文件 | 全文件地图、语义分段、跨单元核对；不重置单项预算 |
+| [长文件工作流](../skills/workflows/long-file-conversion/SKILL.md) | 独立或批次中的长/复杂单文件，建图前加载 | 全文件地图、按容量选择整体或分段、跨单元核对及分支收尾/恢复；两语言页和一个方向仍必读，不重置单项预算 |
 | [行为指导](workflow/behavior-preservation-contract.md) | 单文件行为目标/差异说明 | 目标与允许差异建议；提交门禁引用准备契约 |
 | [构建前提](workflow/build-prerequisites.md) | 冻结前及源/目标构建必读 | 冻结构建命令、工程/依赖/工具链条件，真实诊断分流 |
 | [分类准入](workflow/classifier-agent-gate.md) | 确认评估可达后、冻结/分类前、源预检前、提交/重提必读；不可达仅转换不加载 | 评估运行验收的分类输入、ALLOWED、精确身份及重新分类；不作为仅转换前置，不替代授权/隔离 |

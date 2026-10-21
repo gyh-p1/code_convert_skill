@@ -8,14 +8,14 @@
 - [执行约束](AGENTS.md)：手工调度、门禁、安全和交付要求。
 - [42 个语言方向](skills/directions/)与[七语言语义导航](skills/references/seven-language-common-semantics.md)：每项必读源/目标语言页和一个方向。
 - [场景](skills/scenes/)与[系统方向](skills/systems/)：按源码实际行为和条目前提加载。
-- [长文件工作流](skills/workflows/long-file-conversion/SKILL.md)、[批次工作流](skills/workflows/batch-conversion/SKILL.md)与[单项闭环](references/workflow/conversion-evaluation-loop.md)：规定准备、推进、恢复与收尾。
+- 普通单文件按根入口与[单项闭环](references/workflow/conversion-evaluation-loop.md)执行；长/复杂时加读[长文件工作流](skills/workflows/long-file-conversion/SKILL.md)，多项请求加读[批次工作流](skills/workflows/batch-conversion/SKILL.md)，批次中的长文件同时适用两者。
 - [参考总索引](references/README.md)：任务状态、评估准备、交付、安全和 Controller 适配。
 
 Codex 从 `.agents/skills/code-convert/SKILL.md` 进入；其他 Agent 从根入口进入。所有入口均执行相同门禁，不以单独加载方向页代替必读契约。
 
 ## 转换与评估
 
-单文件和批量每项转换前先按[评估准备 §1.0](references/framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)检查第三方评估系统可达性。可达时逐项冻结并回读，再分类 ALLOWED、源侧预检、生成、自审、评估准备、提交、取证及归因；缺合法行为入口但源可构建时，按 LIB_UNOBSERVABLE_COMPILE_ONLY 转换并验证目标语法/编译。不可达时说明原因，仍冻结、分类、转换和自审，不编译运行，交完整目标与 `result.md`，未开展维度 UNVERIFIED、适用件齐备后 PARTIAL。所有已处理项均核对应产物后才记终态，未知提交/未决执行仍 WAITING。
+单文件（含片段、长文件）和批量每项转换前先按[评估准备 §1.0](references/framework/evaluation-readiness-contract.md#10-转换前可达性检查与仅转换分支)检查第三方评估系统可达性。可达时逐项冻结并回读，再分类 ALLOWED、源侧预检、生成、自审、评估准备、提交、取证及归因；缺合法行为入口但源可构建时，按 LIB_UNOBSERVABLE_COMPILE_ONLY 转换并验证目标语法/编译。不可达时说明原因，仍冻结、转换和自审，不加载分类准入、不调用分类器、不要求分类产物，不编译运行或提交评估，交完整目标、自审记录与 `result.md`，未开展维度 UNVERIFIED、适用件齐备后 PARTIAL。所有已处理项均核对应产物后才记终态，未知提交/未决执行仍 WAITING。
 
 本机只读写和审阅文本，不编译或运行源码、转换产物及构建脚本。动态评估只在获批且逐例核实隔离的环境进行；READY、快照和分类 ALLOWED 不替代授权或网络隔离证据。
 
