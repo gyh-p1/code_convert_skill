@@ -95,13 +95,13 @@ description: Use when converting C++ source to Ruby; apply this direction's lang
    - *不适用条件*：严禁依赖 `ObjectSpace.define_finalizer` 模拟 C++ 析构（GC 回收时机不确定且受引用保留影响，进程退出行为亦有别）。
 5. **错误机械替换反例**：
    ```ruby
-   # 错误：将 C++ RAII 文件包装简化为显式 close 而不放进 ensure，提前 return 或异常即泄漏
+   # 错误：将 C++ RAII 文件包装简化为尾部的 close，提前 return 或异常即泄漏句柄
    def process(path)
      f = File.open(path, "rb")
-     return nil if f.size == 0 # 句柄泄漏！
-     f.read
-   ensure
-     # 若 f 在上面赋值且此处统一判断 f&.close，才可保安全，否则 return nil 漏掉 close
+     return nil if f.size == 0 # 句柄泄漏：跳过末尾 close！
+     data = f.read
+     f.close
+     data
    end
 
    # 正确：优先块作用域或 ensure 保护

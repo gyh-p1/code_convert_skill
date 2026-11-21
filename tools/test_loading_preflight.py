@@ -697,7 +697,7 @@ class KnowledgeRoutingTests(unittest.TestCase):
         bad_rows = [
             {"type": "session_meta", "payload": {"id": "sess-1"}},
             {"type": "tool_call", "call_id": "c1", "name": "read_file",
-             "arguments": {"text": offer["payload"]["text"]}},
+             "arguments": {"path": "skills/references/languages/c.md", "text": offer["payload"]["text"]}},
             {"type": "tool_result", "call_id": "c1", "output": {"truncated": True, "text": offer["payload"]["text"]}},
         ]
         bad_log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in bad_rows))
@@ -708,6 +708,96 @@ class KnowledgeRoutingTests(unittest.TestCase):
         bad_log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in bad_rows))
         with self.assertRaises(lp.Invalid):
             lp.make_receipt(offer, bad_log, "c1")
+
+    def test_generic_read_tool_path_binding_and_truncated_marker_rejected(self):
+        # Two distinct files with identical content: reading c.md must never satisfy cpp.md.
+        offer_cpp = lp.make_offer(self.repo, "skills/references/languages/cpp.md", 1, 4)
+        offer_c = lp.make_offer(self.repo, "skills/references/languages/c.md", 1, 4)
+        cross_log = self.base / "cross-file.jsonl"
+        cross_rows = [
+            {"type": "session_meta", "payload": {"id": "sess-1"}},
+            {"type": "tool_call", "call_id": "cross-1", "name": "read_file",
+             "arguments": {"path": "skills/references/languages/c.md", "startLine": 1, "endLine": 4}},
+            {"type": "tool_result", "call_id": "cross-1", "output": offer_c["payload"]["text"]},
+            {"type": "tool_call", "call_id": "no-path-1", "name": "read_file", "arguments": {"startLine": 1, "endLine": 4}},
+            {"type": "tool_result", "call_id": "no-path-1", "output": offer_c["payload"]["text"]},
+        ]
+        cross_log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in cross_rows))
+        with self.assertRaises(lp.Invalid):
+            lp.make_receipt(offer_cpp, cross_log, "cross-1")
+        with self.assertRaises(lp.Invalid):
+            lp.make_receipt(offer_c, cross_log, "no-path-1")
+        # Genuine path-matched read for c.md succeeds.
+        ok_receipt = lp.make_receipt(offer_c, cross_log, "cross-1")
+        self.assertEqual(ok_receipt["witness"]["adapter"], "generic-read-tool-v1")
+
+        # truncated: true with complete LOADING_READ_V1 marker must fail in BOTH adapters.
+        trunc_log = self.base / "trunc-marker.jsonl"
+        payload_str = lp.MARKER + json.dumps(offer_c["payload"], ensure_ascii=False)
+        trunc_rows = [
+            {"type": "session_meta", "payload": {"id": "sess-1"}},
+            {"type": "tool_call", "call_id": "g-trunc", "name": "read_file",
+             "arguments": {"path": "skills/references/languages/c.md", "startLine": 1, "endLine": 4}},
+            {"type": "tool_result", "call_id": "g-trunc",
+             "output": {"truncated": True, "text": payload_str}},
+            {"type": "response_item", "payload": {"type": "custom_tool_call", "name": "exec",
+                                                  "call_id": "e-trunc", "input": "read"}},
+            {"type": "response_item", "payload": {"type": "custom_tool_call_output", "call_id": "e-trunc",
+                                                  "output": json.dumps({"truncated": True, "text": payload_str})}},
+        ]
+        trunc_log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in trunc_rows))
+        with self.assertRaises(lp.Invalid):
+            lp.make_receipt(offer_c, trunc_log, "g-trunc")
+        with self.assertRaises(lp.Invalid):
+            lp.make_receipt(offer_c, trunc_log, "e-trunc")
+
+    def test_missing_manifest_in_knowledge_repo_fails_without_downgrade(self):
+        # Deleting routing-manifest.json in a repo with knowledge subdirs must FAIL check-repo and check-next.
+        data = self.build_record(self.build_routing(direction="c-to-cpp"))
+        rec_path = self.save_record(data)
+        (self.repo / lp.MANIFEST_PATH).unlink()
+        repo_res = lp.check_repo(self.repo)
+        self.assertEqual(repo_res["status"], "FAIL")
+        self.assertTrue(any(f["code"] == "manifest-missing" for f in repo_res["findings"]))
+        with self.assertRaises(lp.Invalid):
+            lp.check_next(self.repo, rec_path, "freeze", self.log)
+
+    def test_compaction_recovery_preserves_old_receipts(self):
+        routing = self.build_routing(direction="cpp-to-python", topics={"security-behavior": True})
+        data = self.build_record(routing)
+        rec_path = self.save_record(data)
+        self.assertEqual(lp.check_next(self.repo, rec_path, "freeze", self.log)["status"], "PASS")
+
+        # Simulate compaction event, preserve ALL epoch-0 receipts, and re-read everything in new epoch.
+        self.rows.append({"type": "compacted", "payload": {}})
+        self.write_log()
+        new_epoch = len(self.rows)
+        data["context"]["epoch"] = new_epoch
+        # Partial recovery (only one contract re-read, missing others) still fails with context + coverage.
+        old_reads_count = len(data["reads"])
+        data["reads"].append(self.offer_and_read("references/framework/task-state-contract.md"))
+        partial_res = lp.check_next(self.repo, self.save_record(data), "generate", self.log)
+        self.assertEqual(partial_res["status"], "FAIL")
+        self.assertTrue(any(f["code"] == "coverage" and f["detail"] == "skills/directions/cpp-to-python/SKILL.md"
+                            for f in partial_res["findings"]))
+        self.assertTrue(any(f["code"] == "context" and f["detail"] == "skills/directions/cpp-to-python/SKILL.md"
+                            for f in partial_res["findings"]))
+
+        # Re-read remaining required docs in current epoch while KEEPING all epoch-0 receipts.
+        manifest = lp.load_manifest(self.repo)[0]
+        required_docs = [p for k, p in lp.CORE.items() if k != "classifier"] + [
+            manifest["commonSemantics"],
+            manifest["languages"]["cpp"]["path"],
+            manifest["languages"]["python"]["path"],
+            manifest["directions"]["cpp-to-python"]["path"],
+            manifest["topics"]["security-behavior"]["path"],
+        ]
+        for doc in required_docs:
+            if doc != "references/framework/task-state-contract.md":
+                data["reads"].append(self.offer_and_read(doc))
+        recovered = lp.check_next(self.repo, self.save_record(data), "generate", self.log)
+        self.assertEqual(recovered["status"], "PASS", recovered["findings"])
+        self.assertEqual(recovered["supersededReceipts"], old_reads_count)
 
 
 if __name__ == "__main__":

@@ -154,8 +154,8 @@ description: Use when converting C++ source to Go; apply this direction's langua
    sub = append(sub, 99) // 覆盖了 orig[2] 变成 [1, 2, 99, 4]！
 
    // 正确：若要求与 orig 独立，显式 Clone 或使用完整切片表达式隔离容量
-   独立 := slices.Clone(orig[:2])
-   独立 = append(独立, 99)
+   isolated := slices.Clone(orig[:2])
+   isolated = append(isolated, 99)
    ```
 6. **信息不足或实现相关时的处理**：区分零长度非 nil 空切片 `[]T{}` 与 `nil` 切片（影响 `encoding/json` 输出为 `[]` 或 `null`，见 `L1-GO-15`）。
 7. **资料依据（名称/版本/章节）**：GO-SPEC #Slice_types、#Appending_and_copying_slices；标准库 `slices`/`maps`。

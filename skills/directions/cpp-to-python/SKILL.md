@@ -129,9 +129,9 @@ description: Use when converting C++ source to Python; apply this direction's la
    h = h + 2          # Python 得 4294967297（C++ uint32_t 回绕为 1）
 
    # 正确：保持向零除法与 32 位无符号模意义
-   q = -((-7) // 3) if (-7 < 0) != (3 < 0) else (-7) // 3  # 或精确向零符号函数
-   r = -7 - q * 3                                           # 得 -1
-   h = (0xFFFFFFFF + 2) & 0xFFFFFFFF                        # 得 1
+   q = -(abs(-7) // abs(3)) if (-7 < 0) != (3 < 0) else abs(-7) // abs(3)  # 得 -2
+   r = -7 - q * 3                                                           # 得 -1
+   h = (0xFFFFFFFF + 2) & 0xFFFFFFFF                                        # 得 1
    ```
 6. **信息不足或实现相关时的处理**：C++ 源码若自身发生有符号整数溢出（UB），须按源风险单独登记，不能把源 UB 伪称为可迁移规则。
 7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 8.6（Multiplicative operators）；Python Reference §6.7。

@@ -149,29 +149,45 @@ description: Use when converting C# source to C++; apply this direction's langua
 6. **信息不足或实现相关时的处理**：遇到含无效代理项或编码替换容错的路径时按 `L1-CS-09` 标注并保持源拒绝/替换策略。
 7. **资料依据（名称/版本/章节）**：.NET `System.String`、`Encoding`；WG21-N4659 Clause 24.3。
 
-### 规则 CS-CPP-07：C# `checked` / `unchecked` 整数溢出语义向 C++17 无 UB 算术映射
-1. **源码触发条件**：C# 源码在 `checked`/`unchecked` 上下文或默认上下文中执行有符号整数加减乘除/强转，或哈希/位运算依赖补码回绕，或期待 `OverflowException`。
-2. **冻结版本/运行时/API 前提**：C# 12 / .NET 8 → ISO C++17（WG21-N4659 Clause 8 / `<cstdint>`）。
-3. **原可观察行为**：C# 默认/显式 `unchecked` 下有符号整数溢出按确定性二补码回绕（无异常、非未定义行为）；`checked` 上下文溢出必定抛出 `OverflowException`（包含 `int.MinValue / -1`）。
+### 规则 CS-CPP-07：C# `checked` / `unchecked` 整数溢出语义向 C++17 无 UB 可移植算术映射
+1. **源码触发条件**：C# 源码在 `checked`/`unchecked` 上下文或默认上下文中执行有符号整数 `+`/`-`/`*`/一元 `-`/显式整转，或执行有符号 `/`、`%`（含 `int.MinValue / -1`、除数为 0），或依赖补码回绕计算哈希/位运算。
+2. **冻结版本/运行时/API 前提**：C# 12 / .NET 8 → ISO C++17（WG21-N4659 §7.8 `[conv.integral]`、Clause 8 / `<cstdint>`）。
+3. **原可观察行为**：C# 默认/`unchecked` 上下文中 `+`、`-`、`*`、一元 `-`、`++`、`--` 与显式整数转换按二补码模 $2^W$ 回绕；`checked` 上下文中上述溢出抛出 `OverflowException`。但**有符号整数除法与取余在 `checked` 和 `unchecked` 两种上下文下遇到 `int.MinValue / -1`、`long.MinValue / -1`、`int.MinValue % -1`、`long.MinValue % -1` 时都会确定抛出 `OverflowException`**（C# 规范 §12.12.3/§12.12.4），除数为 0 则抛出 `DivideByZeroException`；二者均非“静默回绕”。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：`unchecked` 有符号回绕运算必须在 C++ 中先转为对应宽度的**无符号类型**（如 `uint32_t`、`uint64_t`）执行模 $2^W$ 算术后再转换回目标有符号宽度（避免编译器优化假设无有符号溢出）；`checked` 上下文必须在运算前做显式范围校验并转入异常/错误路径。
-   - *不适用条件*：严禁将 C# `unchecked` 有符号溢出加减乘直接写成 C++ `int` / `int64_t` 运算——在 C++17 中有符号整数溢出属于**未定义行为（UB）**，优化器可直接删掉溢出检查分支！
+   - *可选映射*：`unchecked` 加/减/乘/一元负取模按对应宽度无符号类型（`uint32_t`、`uint64_t`）执行模 $2^W$ 算术；**回到 C++17 有符号整数时不得依赖超出 `INT32_MAX`/`INT64_MAX` 的直接 `static_cast<int32_t>(u)`**（在 ISO C++17 §7.8 中超范围有符号转换属于**实现定义行为**，二补码保证直到 C++20 才纳入标准），须使用值域分段可移植还原函数（见下例）。有符号除法/取余必须在目标执行除法前显式守卫 `b == 0` 与 `a == INT32_MIN && b == -1`（对应 `long` 为 `INT64_MIN && -1`），按源异常/错误契约分发；`checked` 加减乘转换前作显式边界判定。
+   - *不适用条件*：严禁将 C# `unchecked` 有符号加减乘直接写成 C++ `int` / `int64_t` 运算（C++ 有符号溢出是 UB）；严禁把有符号 `int.MinValue / -1` 或 `% -1` 概括为“在 `unchecked` 下无异常回绕”；严禁在宣称 C++17 可移植实现时直接对大于 `INT32_MAX` 的 `uint32_t` 使用 `static_cast<int32_t>`。
 5. **错误机械替换反例**：
    ```cpp
-   // 错误：直接用 C++ int32_t 做 C# unchecked 补码回绕乘法，触发有符号溢出 UB
-   int32_t hash_step(int32_t h, int32_t x) {
-       return h * 31 + x; // C++ 有符号溢出是 UB，与 C# 确定性 32 位回绕不等价！
+   // 错误1：直接用 C++ int32_t 做 C# unchecked 回绕乘法（有符号溢出 UB）
+   // 错误2：用 static_cast<int32_t>(u) 直接回转超 INT32_MAX 的无符号值（C++17 实现定义）
+   // 错误3：以为 unchecked 下 int.MinValue / -1 不会异常而直接执行除法（C11/C++17 为 UB）
+   int32_t bad(int32_t h, int32_t x) {
+       return static_cast<int32_t>(static_cast<uint32_t>(h) * 31u + static_cast<uint32_t>(x)); // >INT32_MAX 时在 C++17 为实现定义
    }
 
-   // 正确：在对应宽度无符号类型下执行确定性模算术，再显式转回
-   int32_t hash_step(int32_t h, int32_t x) {
+   // 正确：C++17 标准可移植的无符号模算术回转 + 显式除法溢出/零除守卫
+   inline int32_t wrap_u32_to_i32(uint32_t u) {
+       return (u <= static_cast<uint32_t>(INT32_MAX))
+                  ? static_cast<int32_t>(u)
+                  : static_cast<int32_t>(u - static_cast<uint32_t>(INT32_MAX) - 1u) - INT32_MAX - 1;
+   }
+
+   int32_t unchecked_hash_step(int32_t h, int32_t x) {
        uint32_t uh = static_cast<uint32_t>(h);
        uint32_t ux = static_cast<uint32_t>(x);
-       return static_cast<int32_t>(uh * 31u + ux);
+       return wrap_u32_to_i32(uh * 31u + ux);
+   }
+
+   bool checked_div_i32(int32_t a, int32_t b, int32_t& out) {
+       if (b == 0 || (a == INT32_MIN && b == -1)) {
+           return false; // 分别转入 DivideByZeroException / OverflowException 对应错误处理（checked/unchecked 均适用）
+       }
+       out = a / b;
+       return true;
    }
    ```
-6. **信息不足或实现相关时的处理**：工程若显式开启 `<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>` 改变全局默认策略，冻结工程配置后再选对应映射。
-7. **资料依据（名称/版本/章节）**：MS-CS `checked`/`unchecked` 语句；WG21-N4659 Clause 6.9.1/8。
+6. **信息不足或实现相关时的处理**：工程若显式开启 `<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>` 改变默认算术上下文，或已冻结特定 C++20/编译器二补码选项时，先在冻结记录中明确版本与约束再选择对应映射。
+7. **资料依据（名称/版本/章节）**：MS-CS `checked`/`unchecked` 语句、C# 语言规范 §12.12.3（Division operator）/ §12.12.4（Remainder operator）；WG21-N4659 §7.8 `[conv.integral]`、Clause 8。
 
 ### 规则 CS-CPP-08：C# `try / catch / finally` 向 C++17 RAII 清理守卫与析构异常边界映射
 1. **源码触发条件**：C# 源码使用 `try { ... } finally { ... }` 或 `try { ... } catch { ... } finally { ... }` 执行必经清理逻辑。

@@ -9,13 +9,14 @@ import json
 import ntpath
 import os
 from pathlib import Path
+import posixpath
 import re
 import sys
 import tempfile
 import unicodedata
 from urllib.parse import unquote, urlsplit
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 SCHEMA = "loading-preflight/v1"
 MARKER = "LOADING_READ_V1\n"
 MANIFEST_PATH = "skills/routing-manifest.json"
@@ -170,9 +171,35 @@ def _validate_manifest(manifest):
                         f"routing manifest {group_name} references invalid: {key}")
 
 
+def _requires_manifest(root):
+    root = Path(root)
+    if (root / MANIFEST_PATH).exists():
+        return True
+    skills_dir = root / "skills"
+    if skills_dir.is_dir():
+        allowed_rel = set(WORKFLOWS.values())
+        for md_file in skills_dir.rglob("*.md"):
+            rel = md_file.resolve().relative_to(root.resolve()).as_posix()
+            if rel not in allowed_rel:
+                return True
+        for child in skills_dir.iterdir():
+            if child.is_dir() and child.name != "workflows":
+                return True
+    skill_md = root / "SKILL.md"
+    if skill_md.is_file():
+        try:
+            text = skill_md.read_text(encoding="utf-8-sig")
+        except (OSError, UnicodeError):
+            return False
+        if "routing-manifest.json" in text or "skills/directions/" in text:
+            return True
+    return False
+
+
 def load_manifest(root):
     path = guard_path(Path(root) / MANIFEST_PATH)
     if not path.exists():
+        require(not _requires_manifest(root), "required routing-manifest.json missing in knowledge repository")
         return None
     raw = path.read_bytes()
     try:
@@ -308,15 +335,17 @@ def check_repo(root):
         if loaded is not None:
             manifest, manifest_sha = loaded
     except Invalid as exc:
-        findings.append({"severity": "error", "file": MANIFEST_PATH, "code": "manifest", "detail": str(exc)})
+        code = "manifest-missing" if "missing" in str(exc) and not (root / MANIFEST_PATH).exists() else "manifest"
+        findings.append({"severity": "error", "file": MANIFEST_PATH, "code": code, "detail": str(exc)})
     names = manifest_paths(manifest) if manifest is not None else list(ENTRIES) + list(CORE.values()) + list(WORKFLOWS.values())
+    md = parser()
     texts, tokens, files, skipped = {}, {}, {}, []
     for name in names:
         try:
             raw = safe_path(root, name).read_bytes()
             texts[name] = raw.decode("utf-8-sig")
             require(texts[name].strip(), f"empty required document: {name}")
-            tokens[name] = parser().parse(texts[name])
+            tokens[name] = md.parse(texts[name])
             files[name] = digest(raw)
         except (OSError, UnicodeError, Invalid) as exc:
             findings.append({"severity": "error", "file": name, "code": "unreadable", "detail": str(exc)})
@@ -410,18 +439,27 @@ def validate_offer(offer, allowed=None):
     return p
 
 
+def _is_truncated(node):
+    return isinstance(node, dict) and any(node.get(k) is True for k in ("truncated", "is_truncated", "isTruncated"))
+
+
 def output_strings(value):
     if isinstance(value, str):
-        yield value
         try:
             decoded = json.loads(value)
         except (ValueError, TypeError):
+            yield value
             return
+        if _is_truncated(decoded):
+            return
+        yield value
         yield from output_strings(decoded)
     elif isinstance(value, list):
         for part in value:
             yield from output_strings(part)
     elif isinstance(value, dict):
+        if _is_truncated(value):
+            return
         # Only tool result containers, never call arguments or arbitrary echoed fields.
         for key in ("output", "text", "content", "result"):
             if key in value:
@@ -441,7 +479,11 @@ def has_payload(output, payload):
 
 
 def _match_doc_path(candidate, expected):
-    norm = str(candidate).replace("\\", "/")
+    if not isinstance(candidate, str) or not candidate.strip():
+        return False
+    norm = posixpath.normpath(candidate.strip().replace("\\", "/"))
+    if norm in ("", ".") or norm == ".." or norm.startswith("../"):
+        return False
     return norm == expected or norm.endswith("/" + expected)
 
 
@@ -478,22 +520,26 @@ def _match_native_text_block(text, payload):
 
 
 def has_native_read_payload(output, payload):
-    if has_payload(output, payload):
-        return True
-
     def check_node(node):
         if isinstance(node, str):
-            if _match_native_text_block(node, payload):
-                return True
             try:
                 decoded = json.loads(node)
             except (ValueError, TypeError):
-                return False
-            return check_node(decoded)
+                decoded = None
+            if isinstance(decoded, (dict, list)):
+                return check_node(decoded)
+            normalized = node.replace("\r\n", "\n")
+            if normalized.startswith(MARKER):
+                try:
+                    if json.loads(normalized[len(MARKER):]) == payload:
+                        return True
+                except ValueError:
+                    pass
+            return _match_native_text_block(node, payload)
         if isinstance(node, list):
             return any(check_node(part) for part in node)
         if isinstance(node, dict):
-            if node.get("truncated") is True:
+            if _is_truncated(node):
                 return False
             doc_val = node.get("document", node.get("path", node.get("file")))
             if doc_val is not None and not _match_doc_path(doc_val, payload["document"]):
@@ -539,9 +585,35 @@ def _row_output(row):
     return None
 
 
-def read_log(path):
-    raw = guard_path(path).read_bytes()
+def _extract_call_args(call_row):
+    p = call_row.get("payload", {})
+    for container in (p, call_row):
+        for key in ("arguments", "input", "args"):
+            if key in container:
+                val = container[key]
+                if isinstance(val, dict):
+                    return val
+                if isinstance(val, str):
+                    try:
+                        decoded = json.loads(val)
+                    except (ValueError, TypeError):
+                        continue
+                    if isinstance(decoded, dict):
+                        return decoded
+    return {}
+
+
+def _load_log_entry(path, _log_cache=None):
+    resolved_key = str(guard_path(path))
+    if _log_cache is not None and resolved_key in _log_cache:
+        return _log_cache[resolved_key]
+    raw = Path(resolved_key).read_bytes()
+    raw_lines = raw.splitlines(keepends=True)
+    cum_bytes = [0]
+    for raw_ln in raw_lines:
+        cum_bytes.append(cum_bytes[-1] + len(raw_ln))
     rows = []
+    by_call_id = {}
     for i, line in enumerate(raw.splitlines(), 1):
         try:
             row = json.loads(line)
@@ -551,6 +623,9 @@ def read_log(path):
             continue
         require(isinstance(row, dict) and isinstance(row.get("payload", {}), dict), "invalid transcript row shape")
         rows.append((i, row))
+        cid = _row_call_id(row)
+        if cid is not None:
+            by_call_id.setdefault(cid, []).append((i, row))
     sessions = [r["payload"]["id"] for _, r in rows
                 if r.get("type") == "session_meta" and isinstance(r["payload"].get("id"), str)]
     if not sessions:
@@ -558,7 +633,16 @@ def read_log(path):
                     if isinstance(r.get("sessionId"), str) and r["sessionId"]]
     require(len(set(sessions)) == 1 and isinstance(sessions[0], str) and sessions[0],
             "transcript session identity unavailable/ambiguous")
-    return raw, rows, sessions[0]
+    entry = {"raw": raw, "cum_bytes": cum_bytes, "rows": rows,
+             "by_call_id": by_call_id, "session": sessions[0]}
+    if _log_cache is not None:
+        _log_cache[resolved_key] = entry
+    return entry
+
+
+def read_log(path, _log_cache=None):
+    entry = _load_log_entry(path, _log_cache=_log_cache)
+    return entry["raw"], entry["rows"], entry["session"]
 
 
 def context_at(rows, limit):
@@ -572,12 +656,12 @@ def context_at(rows, limit):
     return epoch
 
 
-def witness(path, call_id, payload):
-    raw, rows, session = read_log(path)
-    calls = [(n, r) for n, r in rows if _row_call_id(r) == call_id and
-             _row_kind(r) in ("function_call", "custom_tool_call", "tool_call")]
-    outputs = [(n, r) for n, r in rows if _row_call_id(r) == call_id and
-               _row_kind(r) in ("function_call_output", "custom_tool_call_output", "tool_result")]
+def witness(path, call_id, payload, _log_cache=None):
+    entry = _load_log_entry(path, _log_cache=_log_cache)
+    raw, rows, session = entry["raw"], entry["rows"], entry["session"]
+    matching = entry["by_call_id"].get(call_id, ())
+    calls = [(n, r) for n, r in matching if _row_kind(r) in ("function_call", "custom_tool_call", "tool_call")]
+    outputs = [(n, r) for n, r in matching if _row_kind(r) in ("function_call_output", "custom_tool_call_output", "tool_result")]
     require(len(calls) == len(outputs) == 1 and calls[0][0] < outputs[0][0], "call/output association unavailable")
     tool_name = _row_name(calls[0][1])
     line, row = outputs[0]
@@ -586,11 +670,26 @@ def witness(path, call_id, payload):
         require(has_payload(raw_out, payload), "final host output does not contain exact complete offered payload")
         adapter = "codex-rollout-v1"
     elif tool_name in READ_TOOL_NAMES:
+        call_args = _extract_call_args(calls[0][1])
+        req_path = next((call_args.get(k) for k in ("path", "Path", "file_path", "filePath", "document", "file")
+                         if call_args.get(k) is not None), None)
+        require(isinstance(req_path, str) and _match_doc_path(req_path, payload["document"]),
+                "read tool call target path missing or does not match offered document")
+        req_start = next((call_args.get(k) for k in ("startLine", "StartLine", "start_line")
+                          if call_args.get(k) is not None), None)
+        req_end = next((call_args.get(k) for k in ("endLine", "EndLine", "end_line")
+                        if call_args.get(k) is not None), None)
+        if req_start is not None:
+            require(type(req_start) is int and req_start <= payload["startLine"],
+                    "read tool call startLine exceeds offered startLine")
+        if req_end is not None:
+            require(type(req_end) is int and req_end >= payload["endLine"],
+                    "read tool call endLine precedes offered endLine")
         require(has_native_read_payload(raw_out, payload), "final read tool output does not contain exact offered text")
         adapter = "generic-read-tool-v1"
     else:
         raise Invalid("unsupported host read tool")
-    prefix = b"".join(raw.splitlines(keepends=True)[:line])
+    prefix = raw[:entry["cum_bytes"][line]]
     return {"adapter": adapter, "path": str(Path(path).resolve()),
             "prefixBytes": len(prefix), "prefixSha256": digest(prefix),
             "callId": call_id, "outputLine": line, "sessionId": session,
@@ -608,15 +707,19 @@ def make_receipt(offer, transcript, call_id):
                                "local logs are auditable evidence, not tamper-proof attestation"])
 
 
-def verify_receipt(receipt, allowed=None):
+def verify_receipt(receipt, allowed=None, _log_cache=None):
     require(receipt["schema"] == SCHEMA and receipt["kind"] == "receipt" and
             receipt["evidenceGrade"] == "HOST_RETURN_OBSERVED", "unverified/self-declared receipt")
     p = validate_offer(receipt["offer"], allowed=allowed)
     w = receipt["witness"]
-    with guard_path(w["path"]).open("rb") as stream:
-        prefix = stream.read(w["prefixBytes"])
+    resolved = str(guard_path(w["path"]))
+    if _log_cache is not None and resolved in _log_cache:
+        prefix = _log_cache[resolved]["raw"][:w["prefixBytes"]]
+    else:
+        with Path(resolved).open("rb") as stream:
+            prefix = stream.read(w["prefixBytes"])
     require(digest(prefix) == w["prefixSha256"], "host evidence prefix changed")
-    require(witness(w["path"], w["callId"], p) == w, "host evidence association changed")
+    require(witness(w["path"], w["callId"], p, _log_cache=_log_cache) == w, "host evidence association changed")
     return p, w
 
 
@@ -749,7 +852,8 @@ def check_next(root, record_path, action, transcript, before_call=None, sources=
     findings = []
     def issue(code, detail):
         findings.append({"severity": "error", "code": code, "detail": detail})
-    raw, rows, session = read_log(transcript)
+    log_cache = {}
+    raw, rows, session = read_log(transcript, _log_cache=log_cache)
     boundary = (rows[-1][0] if rows else 0) + 1
     if before_call:
         positions = [n for n, r in rows if _row_call_id(r) == before_call and
@@ -792,31 +896,43 @@ def check_next(root, record_path, action, transcript, before_call=None, sources=
     allowed = tuple(manifest_paths(manifest)) if manifest is not None else (*ENTRIES, *CORE.values(), *WORKFLOWS.values())
     ranges = {name: [] for name in selected}
     totals = {}
+    rejected_reasons = {name: [] for name in selected}
+    superseded_receipts = 0
+    resolved_transcript = Path(transcript).resolve()
     for pointer in data["reads"]:
         receipt = read_ref(pointer, base)
-        p, w = verify_receipt(receipt, allowed=allowed)
+        p, w = verify_receipt(receipt, allowed=allowed, _log_cache=log_cache)
         name = p["document"]
         if name not in ranges:
             continue
         if (w["sessionId"] != session or w["contextEpoch"] != epoch or
-                Path(w["path"]).resolve() != Path(transcript).resolve()):
-            issue("context", name)
+                Path(w["path"]).resolve() != resolved_transcript):
+            if "context" not in rejected_reasons[name]:
+                rejected_reasons[name].append("context")
+            superseded_receipts += 1
         elif w["outputLine"] >= boundary:
-            issue("late-read", name)
+            if "late-read" not in rejected_reasons[name]:
+                rejected_reasons[name].append("late-read")
+            superseded_receipts += 1
         elif p["sha256"] != current["files"][name]:
-            issue("version", name)
+            if "version" not in rejected_reasons[name]:
+                rejected_reasons[name].append("version")
+            superseded_receipts += 1
         else:
             ranges[name].append((p["startLine"], p["endLine"]))
             totals[name] = p["lineCount"]
     for name, intervals in ranges.items():
         if not coverage(intervals, totals.get(name, 1)):
+            for reason in rejected_reasons[name]:
+                issue(reason, name)
             issue("coverage", name)
     signal_conflicts = _scan_source_signals(manifest, data, dir_refs, sources or [], strict_signals)
     if strict_signals:
         for conflict in signal_conflicts:
             issue(conflict["code"], f"{conflict['slot']}: {conflict['detail']}")
     return report("next", status="FAIL" if findings else "PASS", findings=findings,
-                  signalConflicts=signal_conflicts, action=action, taskId=data["taskId"],
+                  signalConflicts=signal_conflicts, supersededReceipts=superseded_receipts,
+                  action=action, taskId=data["taskId"],
                   runId=data["runId"], scope="loading-only",
                   context={"sessionId": session, "epoch": epoch}, selected=selected,
                   boundary={"line": boundary, "prefixSha256": digest(raw)},
