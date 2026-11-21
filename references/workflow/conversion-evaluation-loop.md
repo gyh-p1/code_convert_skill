@@ -130,7 +130,7 @@ EVALUATOR_UNREACHABLE_CONVERSION_ONLY 不进入 CLASSIFIED、SOURCE_BUILDABLE、
 
 ## 4. 自审最小契约
 
-生成落盘后，当前模型另起明确的自审阶段，重新读取精确源、被审目标、冻结义务与适用知识，保存结构化审阅产物；不要求新会话、子智能体或独立模型请求。容量足够时整文件审阅；不足时按[长文件工作流 §4.1](../../skills/workflows/long-file-conversion/SKILL.md#41-分段自审与合并后的放行)逐单元审阅并核跨单元关系，不能用摘要替代未读代码。首次审阅不以生成时的自我解释为正确性前提，复审核旧问题与实际 diff。逐条核正常/错误/边界路径和源→目标对应，结论仍为 REPAIR-RECOMMENDED 或 NO-REPAIR-IDENTIFIED；reviewedScope、位置、evidence、origin、proposed_fix/无需修改、risk 均须明确。在 `EVALUATOR_UNREACHABLE_CONVERSION_ONLY` 分支下，本轮有限自审同步落实[§4.3 不可达分支的双通道静态自审](#43-不可达分支的双通道静态自审编译前端核对与行为推演)，以提升单轮审查深度，不增加额外审阅轮次。阶段分离不是独立验证；空/截断、结论矛盾或无编译证据却宣称通过均不能放行。
+生成落盘后，当前模型另起明确的自审阶段，重新读取精确源、被审目标、冻结义务与适用知识（同步对照 `frozen-inputs.md` 的全维度闭集路由表复核源码符号，严查是否误将适用的 `long-file-conversion`、`security-behavior.md`、场景、系统或方向子参考标为 `SKIP`），保存结构化审阅产物；不要求新会话、子智能体或独立模型请求。容量足够时整文件审阅；不足时按[长文件工作流 §4.1](../../skills/workflows/long-file-conversion/SKILL.md#41-分段自审与合并后的放行)逐单元审阅并核跨单元关系，不能用摘要替代未读代码。首次审阅不以生成时的自我解释为正确性前提，复审核旧问题与实际 diff。逐条核正常/错误/边界路径和源→目标对应，结论仍为 REPAIR-RECOMMENDED 或 NO-REPAIR-IDENTIFIED；reviewedScope、位置、evidence、origin、proposed_fix/无需修改、risk 均须明确。在 `EVALUATOR_UNREACHABLE_CONVERSION_ONLY` 分支下，本轮有限自审同步落实[§4.3 不可达分支的双通道静态自审](#43-不可达分支的双通道静态自审编译前端核对与行为推演)，以提升单轮审查深度，不增加额外审阅轮次。阶段分离不是独立验证；空/截断、结论矛盾或无编译证据却宣称通过均不能放行。
 
 当前模型直接写出 self-review-N.json，正文为一个裸 JSON 对象，沿用 verdict、reviewedScope、items 及条目字段，不带围栏/对象外解释。reviewedScope 说明实际读过的源/目标范围、是否仅静态、引用的既有第三方证据及未覆盖项；引用旧结果不称本轮执行。不新增“实测通过”自审档位。无问题时 items 可为空；格式有效不证明内容正确。有限有效的 NO-REPAIR-IDENTIFIED 可继续准备/评估，不为提高确定性额外重审。
 

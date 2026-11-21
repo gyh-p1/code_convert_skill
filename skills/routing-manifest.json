@@ -1,0 +1,611 @@
+{
+  "schema": "skill-routing-manifest/v1",
+  "version": "1.0.0",
+  "coreEntries": [
+    ".agents/skills/code-convert/SKILL.md",
+    "AGENTS.md",
+    "SKILL.md"
+  ],
+  "coreContracts": {
+    "task-state": "references/framework/task-state-contract.md",
+    "classifier": "references/workflow/classifier-agent-gate.md",
+    "build": "references/workflow/build-prerequisites.md",
+    "loop": "references/workflow/conversion-evaluation-loop.md",
+    "evaluation": "references/framework/evaluation-readiness-contract.md",
+    "delivery": "references/framework/delivery-handoff-contract.md",
+    "safety": "references/framework/safety-boundary.md"
+  },
+  "workflows": {
+    "batch": {
+      "path": "skills/workflows/batch-conversion/SKILL.md",
+      "tier": "conditional",
+      "triggerSummary": "请求包含多个待转换项（>=2 项）",
+      "triggerSignals": []
+    },
+    "long-file": {
+      "path": "skills/workflows/long-file-conversion/SKILL.md",
+      "tier": "conditional",
+      "lineThreshold": 700,
+      "triggerSummary": "源物理行 > 700、多类/复杂状态机，或动态→静态等预期目标膨胀超过 700 行的中等源文件",
+      "expansionDirections": [
+        "python-to-c",
+        "python-to-cpp",
+        "python-to-csharp",
+        "python-to-go",
+        "ruby-to-c",
+        "ruby-to-cpp",
+        "ruby-to-csharp",
+        "ruby-to-go",
+        "powershell-to-c",
+        "powershell-to-cpp",
+        "powershell-to-csharp",
+        "powershell-to-go"
+      ],
+      "triggerSignals": []
+    }
+  },
+  "commonSemantics": "skills/references/seven-language-common-semantics.md",
+  "languages": {
+    "c": {
+      "path": "skills/references/languages/c.md",
+      "baseline": "ISO C11"
+    },
+    "cpp": {
+      "path": "skills/references/languages/cpp.md",
+      "baseline": "ISO C++17"
+    },
+    "csharp": {
+      "path": "skills/references/languages/csharp.md",
+      "baseline": "C# 12 / .NET 8"
+    },
+    "go": {
+      "path": "skills/references/languages/go.md",
+      "baseline": "Go 1.27"
+    },
+    "powershell": {
+      "path": "skills/references/languages/powershell.md",
+      "baseline": "PowerShell 7.6"
+    },
+    "python": {
+      "path": "skills/references/languages/python.md",
+      "baseline": "CPython 3.12"
+    },
+    "ruby": {
+      "path": "skills/references/languages/ruby.md",
+      "baseline": "CRuby 3.4"
+    }
+  },
+  "directions": {
+    "c-to-cpp": {
+      "source": "c",
+      "target": "cpp",
+      "path": "skills/directions/c-to-cpp/SKILL.md",
+      "references": [
+        {
+          "id": "c-to-cpp-header-macro",
+          "path": "skills/directions/c-to-cpp/references/header-macro.md",
+          "triggerSummary": "C 源依赖隐式可见平台宏/函数（min/max/bzero/strlcpy）、存在整头跨平台缺失，或目标含 <windows.h> 宏冲突时加载",
+          "triggerSignals": [
+            "<sys/param.h>",
+            "<windows.h>",
+            "<libutil.h>",
+            "<fts.h>",
+            "<sys/queue.h>",
+            "<sysexits.h>",
+            "bzero",
+            "strlcpy",
+            "NOMINMAX",
+            "min(",
+            "max("
+          ]
+        },
+        {
+          "id": "c-to-cpp-type-abi",
+          "path": "skills/directions/c-to-cpp/references/type-abi.md",
+          "triggerSummary": "转换涉及共享头文件、extern \"C\" 导出接口、二进制结构布局（sizeof/offsetof）、void* 强转、typedef 符号冲突或指定初始化时加载",
+          "triggerSignals": [
+            "extern \"C\"",
+            "offsetof(",
+            "sizeof(",
+            "void*",
+            "typedef ",
+            "malloc("
+          ]
+        }
+      ]
+    },
+    "c-to-csharp": {
+      "source": "c",
+      "target": "csharp",
+      "path": "skills/directions/c-to-csharp/SKILL.md",
+      "references": []
+    },
+    "c-to-python": {
+      "source": "c",
+      "target": "python",
+      "path": "skills/directions/c-to-python/SKILL.md",
+      "references": []
+    },
+    "c-to-go": {
+      "source": "c",
+      "target": "go",
+      "path": "skills/directions/c-to-go/SKILL.md",
+      "references": []
+    },
+    "c-to-powershell": {
+      "source": "c",
+      "target": "powershell",
+      "path": "skills/directions/c-to-powershell/SKILL.md",
+      "references": []
+    },
+    "c-to-ruby": {
+      "source": "c",
+      "target": "ruby",
+      "path": "skills/directions/c-to-ruby/SKILL.md",
+      "references": []
+    },
+    "cpp-to-c": {
+      "source": "cpp",
+      "target": "c",
+      "path": "skills/directions/cpp-to-c/SKILL.md",
+      "references": []
+    },
+    "cpp-to-csharp": {
+      "source": "cpp",
+      "target": "csharp",
+      "path": "skills/directions/cpp-to-csharp/SKILL.md",
+      "references": []
+    },
+    "cpp-to-python": {
+      "source": "cpp",
+      "target": "python",
+      "path": "skills/directions/cpp-to-python/SKILL.md",
+      "references": []
+    },
+    "cpp-to-go": {
+      "source": "cpp",
+      "target": "go",
+      "path": "skills/directions/cpp-to-go/SKILL.md",
+      "references": []
+    },
+    "cpp-to-powershell": {
+      "source": "cpp",
+      "target": "powershell",
+      "path": "skills/directions/cpp-to-powershell/SKILL.md",
+      "references": []
+    },
+    "cpp-to-ruby": {
+      "source": "cpp",
+      "target": "ruby",
+      "path": "skills/directions/cpp-to-ruby/SKILL.md",
+      "references": []
+    },
+    "csharp-to-c": {
+      "source": "csharp",
+      "target": "c",
+      "path": "skills/directions/csharp-to-c/SKILL.md",
+      "references": []
+    },
+    "csharp-to-cpp": {
+      "source": "csharp",
+      "target": "cpp",
+      "path": "skills/directions/csharp-to-cpp/SKILL.md",
+      "references": []
+    },
+    "csharp-to-python": {
+      "source": "csharp",
+      "target": "python",
+      "path": "skills/directions/csharp-to-python/SKILL.md",
+      "references": []
+    },
+    "csharp-to-go": {
+      "source": "csharp",
+      "target": "go",
+      "path": "skills/directions/csharp-to-go/SKILL.md",
+      "references": []
+    },
+    "csharp-to-powershell": {
+      "source": "csharp",
+      "target": "powershell",
+      "path": "skills/directions/csharp-to-powershell/SKILL.md",
+      "references": []
+    },
+    "csharp-to-ruby": {
+      "source": "csharp",
+      "target": "ruby",
+      "path": "skills/directions/csharp-to-ruby/SKILL.md",
+      "references": []
+    },
+    "python-to-c": {
+      "source": "python",
+      "target": "c",
+      "path": "skills/directions/python-to-c/SKILL.md",
+      "references": []
+    },
+    "python-to-cpp": {
+      "source": "python",
+      "target": "cpp",
+      "path": "skills/directions/python-to-cpp/SKILL.md",
+      "references": []
+    },
+    "python-to-csharp": {
+      "source": "python",
+      "target": "csharp",
+      "path": "skills/directions/python-to-csharp/SKILL.md",
+      "references": []
+    },
+    "python-to-go": {
+      "source": "python",
+      "target": "go",
+      "path": "skills/directions/python-to-go/SKILL.md",
+      "references": []
+    },
+    "python-to-powershell": {
+      "source": "python",
+      "target": "powershell",
+      "path": "skills/directions/python-to-powershell/SKILL.md",
+      "references": []
+    },
+    "python-to-ruby": {
+      "source": "python",
+      "target": "ruby",
+      "path": "skills/directions/python-to-ruby/SKILL.md",
+      "references": []
+    },
+    "go-to-c": {
+      "source": "go",
+      "target": "c",
+      "path": "skills/directions/go-to-c/SKILL.md",
+      "references": []
+    },
+    "go-to-cpp": {
+      "source": "go",
+      "target": "cpp",
+      "path": "skills/directions/go-to-cpp/SKILL.md",
+      "references": []
+    },
+    "go-to-csharp": {
+      "source": "go",
+      "target": "csharp",
+      "path": "skills/directions/go-to-csharp/SKILL.md",
+      "references": []
+    },
+    "go-to-python": {
+      "source": "go",
+      "target": "python",
+      "path": "skills/directions/go-to-python/SKILL.md",
+      "references": []
+    },
+    "go-to-powershell": {
+      "source": "go",
+      "target": "powershell",
+      "path": "skills/directions/go-to-powershell/SKILL.md",
+      "references": []
+    },
+    "go-to-ruby": {
+      "source": "go",
+      "target": "ruby",
+      "path": "skills/directions/go-to-ruby/SKILL.md",
+      "references": []
+    },
+    "powershell-to-c": {
+      "source": "powershell",
+      "target": "c",
+      "path": "skills/directions/powershell-to-c/SKILL.md",
+      "references": []
+    },
+    "powershell-to-cpp": {
+      "source": "powershell",
+      "target": "cpp",
+      "path": "skills/directions/powershell-to-cpp/SKILL.md",
+      "references": []
+    },
+    "powershell-to-csharp": {
+      "source": "powershell",
+      "target": "csharp",
+      "path": "skills/directions/powershell-to-csharp/SKILL.md",
+      "references": []
+    },
+    "powershell-to-python": {
+      "source": "powershell",
+      "target": "python",
+      "path": "skills/directions/powershell-to-python/SKILL.md",
+      "references": []
+    },
+    "powershell-to-go": {
+      "source": "powershell",
+      "target": "go",
+      "path": "skills/directions/powershell-to-go/SKILL.md",
+      "references": []
+    },
+    "powershell-to-ruby": {
+      "source": "powershell",
+      "target": "ruby",
+      "path": "skills/directions/powershell-to-ruby/SKILL.md",
+      "references": []
+    },
+    "ruby-to-c": {
+      "source": "ruby",
+      "target": "c",
+      "path": "skills/directions/ruby-to-c/SKILL.md",
+      "references": []
+    },
+    "ruby-to-cpp": {
+      "source": "ruby",
+      "target": "cpp",
+      "path": "skills/directions/ruby-to-cpp/SKILL.md",
+      "references": []
+    },
+    "ruby-to-csharp": {
+      "source": "ruby",
+      "target": "csharp",
+      "path": "skills/directions/ruby-to-csharp/SKILL.md",
+      "references": []
+    },
+    "ruby-to-python": {
+      "source": "ruby",
+      "target": "python",
+      "path": "skills/directions/ruby-to-python/SKILL.md",
+      "references": []
+    },
+    "ruby-to-powershell": {
+      "source": "ruby",
+      "target": "powershell",
+      "path": "skills/directions/ruby-to-powershell/SKILL.md",
+      "references": []
+    },
+    "ruby-to-go": {
+      "source": "ruby",
+      "target": "go",
+      "path": "skills/directions/ruby-to-go/SKILL.md",
+      "references": []
+    }
+  },
+  "scenes": {
+    "network-io": {
+      "path": "skills/scenes/network-io/SKILL.md",
+      "references": [
+        "skills/scenes/network-io/references/security-behavior.md"
+      ],
+      "triggerSummary": "源码执行系统套接字、HTTP 客户端/服务端、DNS 或网卡统计等实际网络 I/O",
+      "triggerSignals": [
+        "socket(",
+        "WSAStartup",
+        "getaddrinfo",
+        "connect(",
+        "listen(",
+        "accept(",
+        "recv(",
+        "send(",
+        "setsockopt",
+        "net.Dial",
+        "net.Listen",
+        "http.ListenAndServe",
+        "http.Get",
+        "http.NewRequest",
+        "import socket",
+        "urllib",
+        "http.client",
+        "TcpClient",
+        "TcpListener",
+        "HttpClient",
+        "System.Net.Sockets",
+        "Invoke-WebRequest",
+        "Invoke-RestMethod",
+        "TCPSocket",
+        "Net::HTTP"
+      ]
+    },
+    "file-io": {
+      "path": "skills/scenes/file-io/SKILL.md",
+      "references": [],
+      "triggerSummary": "源码打开、读写、遍历、复制、删除真实文件/目录或执行跨路径规范化操作",
+      "triggerSignals": [
+        "fopen(",
+        "CreateFile",
+        "ReadFile(",
+        "WriteFile(",
+        "std::ifstream",
+        "std::ofstream",
+        "std::filesystem",
+        "FileStream",
+        "File.ReadAll",
+        "File.WriteAll",
+        "os.Open",
+        "os.Create",
+        "os.ReadFile",
+        "os.WriteFile",
+        "filepath.Join",
+        "pathlib",
+        "shutil.",
+        "File.open",
+        "File.read",
+        "Get-Content",
+        "Set-Content"
+      ]
+    },
+    "process-execution": {
+      "path": "skills/scenes/process-execution/SKILL.md",
+      "references": [],
+      "triggerSummary": "源码创建子进程、替换映像、执行 shell 命令、收集输出或终止进程/进程树",
+      "triggerSignals": [
+        "fork(",
+        "execv",
+        "execve",
+        "execl",
+        "posix_spawn",
+        "popen(",
+        "_popen",
+        "system(",
+        "CreateProcess",
+        "ShellExecute",
+        "subprocess.",
+        "os.exec",
+        "exec.Command",
+        "Process.Start",
+        "ProcessStartInfo",
+        "Start-Process",
+        "Open3.",
+        "Kernel.spawn"
+      ]
+    },
+    "concurrency": {
+      "path": "skills/scenes/concurrency/SKILL.md",
+      "references": [],
+      "triggerSummary": "源码使用原生线程、goroutine/Task/Thread、异步任务、原子/锁、条件变量、通道或协同取消",
+      "triggerSignals": [
+        "pthread_create",
+        "pthread_mutex",
+        "std::thread",
+        "std::mutex",
+        "std::atomic",
+        "std::condition_variable",
+        "CreateThread",
+        "_beginthreadex",
+        "threading.Thread",
+        "multiprocessing.",
+        "asyncio.",
+        "concurrent.futures",
+        "sync.Mutex",
+        "sync.WaitGroup",
+        "sync.Cond",
+        "Task.Run",
+        "CancellationToken",
+        "Mutex.new",
+        "Thread.new",
+        "Start-ThreadJob"
+      ]
+    }
+  },
+  "systems": {
+    "posix-winsock": {
+      "path": "skills/systems/posix-winsock/SKILL.md",
+      "triggerSummary": "源码涉及 POSIX sockets 与 Windows Winsock2 API、初始化或平台错误码映射",
+      "triggerSignals": [
+        "WSAStartup",
+        "WSAGetLastError",
+        "closesocket",
+        "INVALID_SOCKET",
+        "SOCKET_ERROR",
+        "winsock2.h",
+        "ws2_32",
+        "sys/socket.h",
+        "arpa/inet.h",
+        "netdb.h",
+        "MSG_NOSIGNAL",
+        "SO_REUSEADDR"
+      ]
+    },
+    "posix-windows-filesystem": {
+      "path": "skills/systems/posix-windows-filesystem/SKILL.md",
+      "triggerSummary": "源码涉及 POSIX/Windows/macOS 底层文件句柄、长路径前缀、符号链接、特殊文件名或模式匹配",
+      "triggerSignals": [
+        "CreateFileW",
+        "CreateFileA",
+        "GetFullPathName",
+        "FindFirstFile",
+        "realpath(",
+        "lstat(",
+        "symlink(",
+        "fnmatch(",
+        "dirent.h",
+        "fts.h",
+        "PathCch",
+        "MAX_PATH"
+      ]
+    },
+    "posix-windows-process-identity": {
+      "path": "skills/systems/posix-windows-process-identity/SKILL.md",
+      "triggerSummary": "源码涉及 POSIX fork/exec/uid 或 Windows CreateProcess/Token/特权/作业对象 API",
+      "triggerSignals": [
+        "fork(",
+        "execve",
+        "waitpid(",
+        "getuid(",
+        "geteuid(",
+        "setuid(",
+        "CreateProcessW",
+        "CreateProcessA",
+        "OpenProcessToken",
+        "GetTokenInformation",
+        "AdjustTokenPrivileges",
+        "CreateJobObject",
+        "STARTUPINFO",
+        "PROCESS_INFORMATION"
+      ]
+    },
+    "posix-windows-threads": {
+      "path": "skills/systems/posix-windows-threads/SKILL.md",
+      "triggerSummary": "源码涉及 POSIX pthread_* 与 Windows CRT/Win32 线程、互斥锁、条件变量、TLS 或 InitOnce",
+      "triggerSignals": [
+        "pthread_create",
+        "pthread_join",
+        "pthread_mutex",
+        "pthread_cond",
+        "pthread_key_create",
+        "pthread_once",
+        "pthread_detach",
+        "pthread_cancel",
+        "_beginthreadex",
+        "CreateThread",
+        "WaitForSingleObject",
+        "CRITICAL_SECTION",
+        "SRWLOCK",
+        "CONDITION_VARIABLE",
+        "TlsAlloc",
+        "FlsAlloc",
+        "InitOnceExecuteOnce"
+      ]
+    },
+    "windows-registry-service-subsystem": {
+      "path": "skills/systems/windows-registry-service-subsystem/SKILL.md",
+      "triggerSummary": "源码读写 Windows 注册表键值，或通过 SCM 创建、配置、启停或查询 Windows 服务",
+      "triggerSignals": [
+        "RegOpenKey",
+        "RegCreateKey",
+        "RegSetValue",
+        "RegQueryValue",
+        "RegDelete",
+        "OpenSCManager",
+        "CreateService",
+        "OpenService",
+        "StartService",
+        "ControlService",
+        "ChangeServiceConfig",
+        "HKEY_LOCAL_MACHINE",
+        "HKEY_CURRENT_USER",
+        "Microsoft.Win32.Registry",
+        "New-Service",
+        "Set-ItemProperty"
+      ]
+    }
+  },
+  "topics": {
+    "security-behavior": {
+      "path": "skills/references/security-behavior.md",
+      "triggerSummary": "源码涉及路径拼接/规范化校验、不可信长度/协议/JSON 解析、证书/签名校验、资源/递归上限或解码顺序",
+      "triggerSignals": [
+        "realpath",
+        "GetFullPathName",
+        "PathCch",
+        "hmac",
+        "Certificate",
+        "Content-Length",
+        "json.loads",
+        "JSON.parse",
+        "JsonDocument",
+        "encoding/json",
+        "ConvertFrom-Json",
+        "unquote",
+        "urldecode",
+        "max_depth",
+        "recursion"
+      ]
+    },
+    "attack-tactic-index": {
+      "path": "skills/attack-tactic-index/SKILL.md",
+      "triggerSummary": "任务附带 ATT&CK 战术标签或攻防场景归类需求时用于核对标签与检索，不作为生成规则",
+      "triggerSignals": []
+    }
+  }
+}

@@ -1,13 +1,24 @@
 {
-  "version": "1.0.1",
-  "status": "candidate-pending-system-regression",
+  "version": "1.1.0",
+  "status": "verified-system-regression",
   "executor": "conversion-system-only",
   "thirdPartyAgentPolicy": "native-tools-manual-per-item-no-helper-scripts",
   "files": {
-    "loading_preflight.py": "159f910982a9acaae8cd08c466eabf5a128730c88417d107ac9ffadf8d396dca",
-    "test_loading_preflight.py": "fa430ba2f9e896f79458bb68742f7a628500ae0cbed9ff169eb6b520d8b57f99",
+    "loading_preflight.py": "c189e79bacc16ed0364ecdee6f0e4eb8bf06a926e3745d129e33a3f0a386d03b",
+    "test_loading_preflight.py": "e50980764fd36d1d19b9ca7f735639e5c10f3d334689d9168a6974ff9109af1a",
     "requirements-loading.txt": "a321362197ec8d9b0d73b8e664f21ae49ebea61ea43676efc08274051d386397"
   },
-  "scope": ["repository-structure", "host-return-evidence", "next-action-loading-check"],
-  "excludes": ["sample-execution", "model-requests", "evaluation-submission", "task-state-mutation"]
+  "scope": [
+    "repository-structure",
+    "knowledge-routing-manifest",
+    "host-return-evidence",
+    "next-action-loading-check",
+    "readonly-trigger-signal-crosscheck"
+  ],
+  "excludes": [
+    "sample-execution",
+    "model-requests",
+    "evaluation-submission",
+    "task-state-mutation"
+  ]
 }

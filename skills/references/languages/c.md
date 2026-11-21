@@ -235,6 +235,16 @@ Microsoft CRT 文本模式向重定向文件/管道写 LF 时可翻译为 CRLF�
 
 stdout/stderr 分别对应实际源通道与末尾终止符；源已含 CRLF 时不能再无条件插 CR。文件头声称 bare LF、归一化后 matched 或长度相同均不能证明原始字节保持，按冻结字节/允许关系和真实证据判。已有源 CRT 事实见 L1-C-03；依据：Microsoft CRT `_setmode`/`_fileno`、文本/二进制模式；Go os.File 字节写入事实由另一语言维护，不增加本机运行授权。
 
+### L1-C-11 特性测试宏位置、隐式声明禁令与 goto 跨 VLA 初始化边界
+
+1. **触发／前提**：ISO C11 目标启用严格标准模式（`-std=c11` 等）并使用 POSIX/XOPEN/GNU 扩展接口、自定义清理标签，或变长数组（VLA）。
+2. **事实**：
+   - C11 已废除隐式函数声明与隐式 `int` 返回类型，未先声明原型即调用直接引发编译错误或致命指针截断警告（常见于 `strdup`、`getline`、`strtok_r`、`clock_gettime`、`sigaction` 等非 ISO C 标准库的 POSIX 符号）。
+   - POSIX/GNU 特性测试宏（如 `#define _POSIX_C_SOURCE 200809L`、`#define _GNU_SOURCE`）必须在翻译单元**包含任何系统头文件之前**定义，否则 glibc/musl 等 `<features.h>` 已经在首个标准头中锁定特性集，后续补宏无效。
+   - C11 规定 `goto`（及 `switch` 标签）不得跳过**变长数组（VLA）或指向 VLA 的指针类型声明作用域**（N1570 §6.8.6.1 constraint），否则直接报错。
+3. **选择／反例**：对所有局部状态与固定大小缓冲区在使用 `goto cleanup` 之前集中显式初始化；若确实必须使用动态长度数组，优先改用堆分配指针（在入口初始化为 `NULL` 并于 `cleanup:` 中统一 `free`）而不用跨越 `goto` 标签作用域的栈上 VLA。特性测试宏统一置于 `.c` 文件最顶部且写明所依赖平台标准边界，不靠切换全局 `-std=gnu89` 放宽隐式声明检查来掩盖漏声明。
+4. **未知与依据**：目标 C 库（glibc/musl/MSVC UCRT）对 POSIX 扩展的支持范围以冻结工具链为准，缺失扩展声明记为准备/平台缺口。依据：WG14-N1570 §6.5.2.2、§6.7.6.2、§6.8.6.1（`goto` 与可变修改类型约束）；POSIX.1-2008 `<features.h>` / `_POSIX_C_SOURCE`。本条只提供静态防错边界，不在本机执行编译器。
+
 ## 使用边界
 
 将本页与所选方向和另一语言事实页组合；具体场景/系统差异按[共性索引](../seven-language-common-semantics.md)选读。缺逐例第三方证据保持 UNVERIFIED，本机不运行或编译。

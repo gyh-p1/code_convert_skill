@@ -48,7 +48,21 @@ metadata:
 
 ## 选择适用知识
 
-先按源码事实画像再选知识，不由 ATT&CK 标签反推行为。[知识总索引](references/README.md)说明各层消费者与边界。
+先按源码事实画像再选知识，不由 ATT&CK 标签反推行为。[知识总索引](references/README.md)说明各层消费者与边界；机器可读单一真源路由清单见 [skills/routing-manifest.json](skills/routing-manifest.json)。
+
+### 一页式按需路由卡（闭集防漏清单）
+
+每项任务在冻结落盘前，必须对下表**全部维度逐行作出 `LOAD` / `SKIP` / `N/A` 裁决**（禁止遗漏整层或将必读契约折叠为“见批次记录”）：
+
+| 路由层 | 适用范围 / 闭集条目 | 裁决规则与必填依据 |
+|---|---|---|
+| 必读通用契约 | `task-state` / `safety` / `delivery` / `build` / `evaluation` / `loop`（可达分支补 `classifier`） | 本分支必读逐件 `LOAD`（完整已读行范围 `1-N/N` + SHA-256）；不可达分支 `classifier` 记 `SKIP` |
+| 条件工作流（2 个） | `batch-conversion`、`long-file-conversion` | 逐项标 `LOAD` 或 `SKIP`；`long-file` 标 `SKIP` 须同时写明**源物理行数 <=700 且预期目标代码不膨胀超 700 行** |
+| 语言与方向（4 必选） | [共性索引](skills/references/seven-language-common-semantics.md)、源语言页、目标语言页、一个方向 Skill | **100% 全项 `LOAD`**，写明完整行范围、SHA-256 及**源符号/行号 → 规则编号**对应 |
+| 方向随附子参考 | `C → C++` 含 [头文件与宏](skills/directions/c-to-cpp/references/header-macro.md)、[类型/接口与 C ABI](skills/directions/c-to-cpp/references/type-abi.md)；其余 41 方向当前无子参考 | `C → C++` 逐件标 `LOAD` / `SKIP`（含宏/隐式头/ABI 排除依据）；其余方向标 `N/A` |
+| 场景（4 个闭集） | [网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[进程执行](skills/scenes/process-execution/SKILL.md)、[并发](skills/scenes/concurrency/SKILL.md) | 逐行 `LOAD`（触发符号与行号）或 `SKIP`（静态排查无该类调用的依据）；`network-io` 另含[网络安全兼容入口](skills/scenes/network-io/references/security-behavior.md) |
+| 系统（5 个闭集） | [POSIX↔Winsock](skills/systems/posix-winsock/SKILL.md)、[文件系统](skills/systems/posix-windows-filesystem/SKILL.md)、[进程/身份](skills/systems/posix-windows-process-identity/SKILL.md)、[线程](skills/systems/posix-windows-threads/SKILL.md)、[Windows 注册表/服务](skills/systems/windows-registry-service-subsystem/SKILL.md) | 逐行 `LOAD` 或 `SKIP`；含同 OS 原生系统调用（如 `fork/exec`、Win32/注册表、pthread/Win32 同步）时同样触发 |
+| 共性专题（2 个闭集） | [安全行为共性](skills/references/security-behavior.md)、[ATT&CK 战术索引](skills/attack-tactic-index/SKILL.md) | 涉及路径/不可信解析(JSON/长度/解码)/校验认证/限流递归上限即 `LOAD` `security-behavior`；否则写具体 `SKIP` 依据 |
 
 **语言事实**：每项必读源、目标两页，由[七语言共性语义索引](skills/references/seven-language-common-semantics.md)导航；“按需”只用于选择适用规则和正文注入范围，不能省掉任一语言页。基线为 C11、C++17、C# 12/.NET 8、CPython 3.12、Go 1.27、PowerShell 7.6、Ruby 3.4；实际工具链仍须证据核验。
 
@@ -63,6 +77,8 @@ metadata:
 | **Go** | [Go → C](skills/directions/go-to-c/SKILL.md) ｜ [Go → C++](skills/directions/go-to-cpp/SKILL.md) ｜ [Go → C#](skills/directions/go-to-csharp/SKILL.md) ｜ [Go → Python](skills/directions/go-to-python/SKILL.md) ｜ [Go → PowerShell](skills/directions/go-to-powershell/SKILL.md) ｜ [Go → Ruby](skills/directions/go-to-ruby/SKILL.md) |
 | **PowerShell** | [PowerShell → C](skills/directions/powershell-to-c/SKILL.md) ｜ [PowerShell → C++](skills/directions/powershell-to-cpp/SKILL.md) ｜ [PowerShell → C#](skills/directions/powershell-to-csharp/SKILL.md) ｜ [PowerShell → Python](skills/directions/powershell-to-python/SKILL.md) ｜ [PowerShell → Go](skills/directions/powershell-to-go/SKILL.md) ｜ [PowerShell → Ruby](skills/directions/powershell-to-ruby/SKILL.md) |
 | **Ruby** | [Ruby → C](skills/directions/ruby-to-c/SKILL.md) ｜ [Ruby → C++](skills/directions/ruby-to-cpp/SKILL.md) ｜ [Ruby → C#](skills/directions/ruby-to-csharp/SKILL.md) ｜ [Ruby → Python](skills/directions/ruby-to-python/SKILL.md) ｜ [Ruby → PowerShell](skills/directions/ruby-to-powershell/SKILL.md) ｜ [Ruby → Go](skills/directions/ruby-to-go/SKILL.md) |
+
+> **方向随附子参考**：当前 `C → C++` 方向随附 [头文件与宏](skills/directions/c-to-cpp/references/header-macro.md) 与 [类型/接口与 C ABI](skills/directions/c-to-cpp/references/type-abi.md) 两份专页；选择 `c-to-cpp` 时须按宏/隐式头或跨边界布局信号一并逐件 `LOAD`/`SKIP`。
 
 **场景（按行为多选）**：[网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[进程执行](skills/scenes/process-execution/SKILL.md)、[并发](skills/scenes/concurrency/SKILL.md)。场景规定跨语言行为义务；普通单线程控制流与单一语言 API 语义按语言及方向页判断。
 
@@ -85,7 +101,7 @@ metadata:
 1. **确认边界与加载必读规则**：开始处理每项即依次读取任务状态、安全边界、交付契约（先落实 §1.1 的报告落点，再读适用布局）、构建前提、评估准备、单项闭环这六份通用契约；表中的消费时点还要求后续再次核对。请求含多项时，在首项前加载批量工作流；长/复杂单文件在建图和分段前加载长文件工作流。使用 Controller 时，先读离线连接适配的连接坐标和可达性检查正文，再按评估准备 §1.0 检查。确认可达后、冻结前补读分类准入、能力矩阵、比较策略及[当前协议适配](references/adapter/controller/platform-revision-adapter.md)，在适用源预检/提交前核实际平台身份、能力、runner 与工具链。确认不可达则不加载分类准入或分类器，不要求实时平台证据；其余评估专用适配待恢复评估时加载，转换所需平台知识仍按源码事实选读。确定本项身份、模式、报告与冻结落点，先记录准备草稿，未完成第 2–4 步不记 FROZEN。变更已冻结条件另记变体，版本关联按任务状态 §2.1。
 2. **静态画像**：盘入口、条件编译、API、状态、所有权、输入输出和副作用；参数计数/下标/消费范围、文本或字节单位、固定常量、控制流出口、进程替换/环境、枚举消费者、键或行输入、空白谓词与临时目录选择按实际使用点定位。环境未设/空值、存在/类型谓词、原生参数的语义对象及统计量的对象/范围/单位按共性索引读取适用正文。引用符号/位置，未知标未知，不执行样本。
 3. **形成标签**：语言方向、实际场景、系统与工作流按证据标；ATT&CK 单独核对，不由标签决定转换。
-4. **加载知识并完成冻结**：先读共性索引与源/目标两语言页，再读一个方向 Skill；按源码触发读场景、系统、安全行为及方向随附专题。按[易错语义导航](skills/references/seven-language-common-semantics.md#易错语义导航)将参数、字节/换行、常量、作用域、文件失败、进程/环境、枚举、键输入、空白和临时目录对应到实际正文；枚举/键输入不依赖进程/并发，原生 fork/exec 同 OS 也加载适用系统事实。记录“源符号/范围→规则路径/章节/精确版本→适用理由”，缺映射写缺口/探索假设。此步只准备当前模型所需上下文，不提前生成；将确定的身份/源集合、模式、模型/知识、构建/评估/授权计划写入本 run 的 `01-frozen/frozen-inputs.md`，按[任务状态 §2.2](references/framework/task-state-contract.md#22-冻结落盘门禁)回读后才记 FROZEN。各组字段按模式记录，不适用有理由、未知写待准备；当前动作所需条件另核，不能因记录齐而视为就绪。
+4. **加载知识并完成冻结**：先读共性索引与源/目标两语言页，再读一个方向 Skill；按源码触发读场景、系统、安全行为及方向随附专题。按[易错语义导航](skills/references/seven-language-common-semantics.md#易错语义导航)将参数、字节/换行、常量、作用域、文件失败、进程/环境、枚举、键输入、空白和临时目录对应到实际正文；枚举/键输入不依赖进程/并发，原生 fork/exec 同 OS 也加载适用系统事实。对照[一页式按需路由卡](#一页式按需路由卡闭集防漏清单)与 [skills/routing-manifest.json](skills/routing-manifest.json)，在本 run 的 `01-frozen/frozen-inputs.md` 中写入**全维度闭集勾选/排除表**：必读契约与 4 份必读语言/方向知识逐件标 `LOAD`（完整已读行范围 `1-N/N` + SHA-256 + `源符号/行号→规则路径/编号` 对应，禁止折叠为“见批次记录”），工作流/方向随附子参考/4 场景/5 系统/2 专题逐行写 `LOAD`、`SKIP`（须附静态排除依据；`long-file` 须同时排除源物理行 >700 与预期目标膨胀超 700 行）或 `N/A`（无子参考的方向）。此步只准备当前模型所需上下文，不提前生成；将确定的身份/源集合、模式、模型/知识、构建/评估/授权计划写入 `01-frozen/frozen-inputs.md`，按[任务状态 §2.2](references/framework/task-state-contract.md#22-冻结落盘门禁)回读并核对闭集无缺项后才记 FROZEN。各组字段按模式记录，不适用有理由、未知写待准备；当前动作所需条件另核，不能因记录齐而视为就绪。
 5. **当前模型执行与适用评估**：先回读本项可达性原件与冻结；源预检、每次生成/自审/修订和提交/重提前再核冻结。确认不可达按评估准备 §1.0 跳过分类，由当前模型生成、自审/有限修订并转第 6 步，不编译运行、不提交评估。可达先分类 ALLOWED，再按 §1.1/§1.3 分支：能合法评估行为的先取源 build completed/0 与有效运行基线，再生成、自审和有限修复；本轮缺合法入口/观察条件或无安全观察方式但源 build completed/0 的，冻结 LIB_UNOBSERVABLE_COMPILE_ONLY，继续生成、自审及目标语法/编译验证，行为未评估/UNVERIFIED、PARTIAL。库可沿用单文件模式，不补 main、改源包名或造驱动；不因暂缺目标验证能力反向跳过生成，未取得目标证据据实 UNVERIFIED。实际运行失败先归因，不借分支抹掉失败。每次双侧提交核适用准备及安全，仅编译不运行、不造 comparison；正常行为取证按评估准备 §4–5 核真实观察，先归因再报告/修复。
 6. **统一收尾或暂停**：前述任一步骤停止都跳转[交付契约 §1.1](references/framework/delivery-handoff-contract.md#11-统一收尾入口与报告义务)，成功/失败/非可转换/WAITING 均写 result.md。逐件回读适用产物，记录已取得/缺失/不适用、路径/版本、原因与核对结果；交付、编译、功能及安全分别报告，无证据 UNVERIFIED。缺应有件不得终态；未知提交/活动或未确认清理保持 WAITING，暂停报告不等于已收尾。批次逐项核对，40 项与终局对账另做；带遗留及真实补登依据，按同快照汇总，不用总 verdict 或条数证明成功。
 

@@ -149,6 +149,92 @@ description: Use when converting Python source to C; apply this direction's lang
 
 ---
 
+### 规则 PY-C-06：Python 向下取整 `//` / `%` 向 C11 向零截断 `/` / `%` 换算及除零 UB 防护
+
+1. **源码触发条件**：Python 源码出现整数 `//`、`%` 或 `divmod(a, b)`（尤其操作数可能为负或由输入控制），包括计算循环下标、校验偏移或负余数归一化。
+2. **冻结版本/运行时/API 前提**：CPython 3.12（PY-REF-DATA §6.7）→ ISO C11（WG14-N1570 §6.5.5）。
+3. **原可观察行为**：Python `a // b` 向下取整、`a % b` 结果符号与除数 `b` 一致（`-7 // 3 == -3`、`-7 % 3 == 2`）；除数为 `0` 时确定抛出 `ZeroDivisionError`。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：先显式判断除数 `b == 0` 走错误路径（防止 C11 `a / 0` 直接触发未定义行为或 `SIGFPE` 崩溃）；有符号 `INT64_MIN / -1` 同样在 C11 属 UB 须前置守卫；当仅保留整数地板除/余数时，对 C 的向零余数 `r = a % b` 与商 `q = a / b` 作符号不一致修正：`if (r != 0 && ((r < 0) != (b < 0))) { q -= 1; r += b; }`。
+   - *不适用条件*：严禁不判断除数为 0、不核符号就直接把 Python `//`、`%` 写成 C `/`、`%`（例如哈希环偏移 `(idx - 1) % n` 在 `idx == 0` 时 C 得 `-1`，越界访问数组！）。
+5. **错误机械替换反例**：
+   ```c
+   // 错误：直接用 C % 替代 Python % 计算环形缓冲区回退下标
+   // Python: prev = (idx - 1) % n  （idx=0, n=8 时得 7）
+   int64_t prev = (idx - 1) % n; // idx=0 时 C 计算 (-1) % 8 == -1，随后 buf[-1] 越界崩溃！
+
+   // 正确：检查 n > 0 并按 Python 地板余数修正符号
+   int64_t r = (idx - 1) % n;
+   if (r != 0 && ((r < 0) != (n < 0))) {
+       r += n;
+   }
+   ```
+6. **信息不足或实现相关时的处理**：若源运算可能出现 `INT64_MIN` 与 `-1` 相除（Python 中返回正值 `2^63` 而超过 `int64_t` 上界），按 `PY-C-03` 登记位宽溢出边界。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA §6.7；WG14-N1570 §6.5.5。
+
+---
+
+### 规则 PY-C-07：Python `try / except / else / finally` 异常传播链向 C11 错误码与清理路径映射
+
+1. **源码触发条件**：Python 源码跨多层函数调用依赖异常上浮、按异常基类/派生类顺序捕获（`L1-PY-20` first-match），或通过 `else`/`finally` 区分无异常分支与必经清理。
+2. **冻结版本/运行时/API 前提**：CPython 3.12 → ISO C11（WG14-N1570 §6.8.6）。
+3. **原可观察行为**：`try` 内任意调用点失败立即中断后续语句、按匹配序进首个兼容 `except`，无异常才执行 `else`，所有出口均执行 `finally`。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：使用明确错误码枚举（如 `0` 成功、负值/错误结构表示具体异常类别）+ 输出参数返回正常值；每个内部调用点逐一检查错误并按需跳转对应 `goto cleanup` / 错误处理标签；`else` 分支放到所有可能出错步骤均成功之后、`finally` 放到统一 `cleanup:` 标签之后。
+   - *不适用条件*：严禁忽略内部调用错误继续向下执行；严禁用 `setjmp`/`longjmp` 轻易模拟深层异常展开（`longjmp` 会跳过中间函数的局部资源释放与自动对象清理且易踩 `volatile` UB）；不得吞掉异常类型直接统一返回 `-1` 而丢失外层需要区分的错误分类。
+5. **错误机械替换反例**：
+   ```c
+   // 错误：把 Python else/finally 展开后漏掉中间错误分支检查或让错误穿透进 else
+   int rc = step_a();
+   // 错误地直接执行了原本只在 try 成功时才走的 else 逻辑
+   step_else();
+   cleanup();
+
+   // 正确：显式区分成功路由与统一清理出口
+   int err = step_a();
+   if (err == ERR_TIMEOUT) {
+       err = handle_timeout();
+       goto cleanup;
+   } else if (err != 0) {
+       goto cleanup;
+   }
+   err = step_else(); // 仅在无异常/未进 except 时执行
+   cleanup:
+   release_resources();
+   return err;
+   ```
+6. **信息不足或实现相关时的处理**：需要同时传递异常消息文本时，在错误上下文结构中固定缓冲区并用安全格式化截断策略（写明长度上限假设），避免返回悬垂栈字符串指针。
+7. **资料依据（名称/版本/章节）**：Python 3.12 §8.4 `try` statement；WG14-N1570 §6.8.6、`§7.13`（`setjmp` 限制）。
+
+---
+
+### 规则 PY-C-08：Python `str`（码点）与 `bytes`（含嵌入 NUL）向 C11 显式 `ptr + len` 切片映射
+
+1. **源码触发条件**：Python 源码对 `str` 执行 `len(s)`、`s[i]` 或对 `bytes` 执行切片、查找、拼接、Base64/网络/文件二进制处理。
+2. **冻结版本/运行时/API 前提**：CPython 3.12（PY-REF-DATA）→ ISO C11（WG14-N1570 §7.1.1、§7.24）。
+3. **原可观察行为**：`bytes` 是任意 `0..255` 字节序列，可包含任意多个 `\x00`，`len(b)` 返回字节数；`str` 按 Unicode 码点计数与索引（非 ASCII 多字节 UTF-8 字符一个码点在 UTF-8 中占 2–4 字节）。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：使用 `struct { uint8_t* data; size_t len; }`（或 `const uint8_t* + size_t` 参数对）承载 `bytes`，所有拷贝/比较/查找使用 `memcpy`/`memcmp`/`memchr` 并显式传递长度；文本字符串需计码点或按码点限长时显式实现 UTF-8 码点校验/解码计长，不把 UTF-8 `strlen` 等同于 `len(str)`。若同时传给需 C 字符串接口，额外保证缓冲区保留终止 `\0` 且校验原内容不含非法内嵌 `\0`。
+   - *不适用条件*：严禁对 `bytes` 使用 `strcpy`/`strcmp`/`strlen`/`strdup`——遇到首个 `\x00` 即静默截断，导致协议解析、校验或输出失真；严禁把 `strlen(utf8)` 直接当作 Python 非 ASCII `len(s)`。
+5. **错误机械替换反例**：
+   ```c
+   // 错误：用 strlen 处理 Python bytes（含 \x00）
+   // Python: packet = b"HDR\x00PAYLOAD"; return len(packet) -> 11
+   size_t packet_len(const char* packet) {
+       return strlen(packet); // 严重错误：在 \x00 处截断，错误返回 3！
+   }
+
+   // 正确：始终携带显式长度并使用基于长度的内存操作
+   typedef struct {
+       const uint8_t* ptr;
+       size_t len;
+   } ByteSlice;
+   ```
+6. **信息不足或实现相关时的处理**：遇到 Python `str.encode(encoding, errors=...)` 与 `bytes.decode(...)` 时冻结编码与错误处理模式（`strict`/`replace`/`ignore`），缺失非 UTF-8 离线编码表时登记缺口。
+7. **资料依据（名称/版本/章节）**：PY-REF-DATA (`str`, `bytes`)；WG14-N1570 §7.1.1, §7.24。
+
+---
+
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。

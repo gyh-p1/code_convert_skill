@@ -99,6 +99,9 @@ class LoadingChecks(unittest.TestCase):
     def test_real_repository_structure(self):
         result = lp.check_repo(ROOT)
         self.assertEqual(result["status"], "PASS", result["findings"])
+        self.assertEqual(len(result["files"]), 76)
+        self.assertEqual(result["scope"], "full-core-workflows-and-knowledge-manifest")
+        self.assertNotIn("languages", result["uncovered"])
 
     def test_same_count_replacement(self):
         self.edit("SKILL.md", lp.CORE["task-state"], lp.CORE["safety"])
@@ -476,6 +479,235 @@ class LoadingChecks(unittest.TestCase):
         with patch.object(lp, "load_json", side_effect=wrong_registration):
             with self.assertRaises(lp.Invalid):
                 lp.verify_registration()
+
+
+class KnowledgeRoutingTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.base = Path(self.temp.name)
+        self.repo = self.base / "repo"
+        self.repo.mkdir(parents=True, exist_ok=True)
+        real_manifest = json.loads((ROOT / lp.MANIFEST_PATH).read_text(encoding="utf-8"))
+        manifest_path = self.repo / lp.MANIFEST_PATH
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(json.dumps(real_manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+        for rel in lp.manifest_paths(real_manifest):
+            p = self.repo / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("# Fixture Doc\n\nline two\nline three\n", encoding="utf-8")
+        (self.repo / "AGENTS.md").write_text("# Agent\n[Root](SKILL.md)\n", encoding="utf-8")
+        (self.repo / lp.ENTRIES[0]).write_text("# Discovery\n[Root](../../../SKILL.md)\n", encoding="utf-8")
+        table = "# Root\n\n| 契约标识 | 必读真源 | 负责什么 | 何时消费 |\n|---|---|---|---|\n"
+        table += "".join(f"| {key} | [contract]({name}) | purpose | before |\n" for key, name in lp.CORE.items())
+        (self.repo / "SKILL.md").write_text(table, encoding="utf-8")
+        self.log = self.base / "host.jsonl"
+        self.rows = [{"type": "session_meta", "payload": {"id": "sess-1"}}]
+        self.count = 0
+        self.write_log()
+
+    def write_log(self):
+        self.log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in self.rows))
+
+    def artifact(self, name, data):
+        path = self.base / name
+        lp.save_new(path, lp.encoded(data))
+        return lp.ref(path)
+
+    def offer_and_read(self, rel, use_generic=False):
+        total = len((self.repo / rel).read_bytes().decode("utf-8").splitlines(keepends=True))
+        offer = lp.make_offer(self.repo, rel, 1, total)
+        self.count += 1
+        call = f"call-{self.count}"
+        if use_generic:
+            self.rows.append({"type": "tool_call", "call_id": call, "name": "read_file",
+                              "arguments": {"path": rel, "startLine": 1, "endLine": total}})
+            numbered = "\n".join(f"{idx}: {ln}" for idx, ln in enumerate(offer["payload"]["text"].splitlines(), 1))
+            out_body = f"Showing lines 1-{total} of {total}\n{numbered}"
+            self.rows.append({"type": "tool_result", "call_id": call, "output": out_body})
+        else:
+            self.rows.append({"type": "response_item", "payload": {
+                "type": "custom_tool_call", "name": "exec", "call_id": call, "input": "read"}})
+            self.rows.append({"type": "response_item", "payload": {
+                "type": "custom_tool_call_output", "call_id": call,
+                "output": lp.MARKER + json.dumps(offer["payload"], ensure_ascii=False)}})
+        self.write_log()
+        receipt = lp.make_receipt(offer, self.log, call)
+        return self.artifact(f"receipt-{self.count}.json", receipt)
+
+    def build_routing(self, direction="c-to-cpp", header_macro=False, type_abi=False,
+                      scenes=None, systems=None, topics=None):
+        scenes = scenes or {}
+        systems = systems or {}
+        topics = topics or {}
+        dir_refs = {}
+        if direction == "c-to-cpp":
+            dir_refs = {
+                "c-to-cpp-header-macro": {"applies": header_macro, "basis": "header/macro basis"},
+                "c-to-cpp-type-abi": {"applies": type_abi, "basis": "abi/type basis"},
+            }
+        return {
+            "direction": direction,
+            "directionReferences": dir_refs,
+            "scenes": {k: {"applies": scenes.get(k, False), "basis": f"{k} basis"} for k in lp.SCENE_KEYS},
+            "systems": {k: {"applies": systems.get(k, False), "basis": f"{k} basis"} for k in lp.SYSTEM_KEYS},
+            "topics": {k: {"applies": topics.get(k, False), "basis": f"{k} basis"} for k in lp.TOPIC_KEYS},
+        }
+
+    def build_record(self, routing, omit=None, long_file=False, use_generic=False):
+        structure = lp.check_repo(self.repo)
+        self.assertEqual(structure["status"], "PASS", structure["findings"])
+        manifest = lp.load_manifest(self.repo)[0]
+        data = {
+            "taskId": "T2",
+            "runId": "R2",
+            "context": {"sessionId": "sess-1", "epoch": 0},
+            "workflows": {
+                "batch": {"applies": False, "basis": "single item"},
+                "long-file": {"applies": long_file, "basis": "line count check"},
+            },
+            "routing": routing,
+            "structure": self.artifact("structure.json", structure),
+            "reads": [],
+        }
+        docs = [path for key, path in lp.CORE.items() if key != "classifier"]
+        if long_file:
+            docs.append(lp.WORKFLOWS["long-file"])
+        dir_info = manifest["directions"][routing["direction"]]
+        docs.extend([
+            manifest["commonSemantics"],
+            manifest["languages"][dir_info["source"]]["path"],
+            manifest["languages"][dir_info["target"]]["path"],
+            dir_info["path"],
+        ])
+        for ref_item in dir_info["references"]:
+            if routing["directionReferences"][ref_item["id"]]["applies"]:
+                docs.append(ref_item["path"])
+        for grp, items in (("scenes", manifest["scenes"]), ("systems", manifest["systems"]), ("topics", manifest["topics"])):
+            for k, meta in items.items():
+                if routing[grp][k]["applies"]:
+                    docs.append(meta["path"])
+        for doc in dict.fromkeys(docs):
+            if doc != omit:
+                data["reads"].append(self.offer_and_read(doc, use_generic=use_generic))
+        return data
+
+    def save_record(self, data):
+        p = self.base / "frozen-inputs.md"
+        p.write_text("# Frozen\n\n```loading-preflight\n" + json.dumps(data, ensure_ascii=False) + "\n```\n", encoding="utf-8")
+        return p
+
+    def test_manifest_unregistered_skill_fails(self):
+        rogue = self.repo / "skills" / "rogue.md"
+        rogue.write_text("# Rogue\n", encoding="utf-8")
+        result = lp.check_repo(self.repo)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertTrue(any(f["code"] == "manifest-unregistered" and f["file"] == "skills/rogue.md"
+                            for f in result["findings"]))
+
+    def test_knowledge_offer_and_unknown_rejected(self):
+        offer = lp.make_offer(self.repo, "skills/references/languages/cpp.md", 1, 2)
+        self.assertEqual(offer["payload"]["document"], "skills/references/languages/cpp.md")
+        with self.assertRaises(lp.Invalid):
+            lp.make_offer(self.repo, "source/sample.md", 1, 1)
+
+    def test_closed_set_routing_freeze_generate_and_missing_coverage(self):
+        routing = self.build_routing(
+            direction="c-to-cpp",
+            header_macro=True,
+            scenes={"network-io": True},
+            systems={"posix-winsock": True},
+            topics={"security-behavior": True},
+        )
+        data = self.build_record(routing)
+        res = lp.check_next(self.repo, self.save_record(data), "freeze", self.log)
+        self.assertEqual(res["status"], "PASS", res["findings"])
+        self.assertIn("skills/directions/c-to-cpp/references/header-macro.md", res["selected"])
+        self.assertIn("skills/references/security-behavior.md", res["selected"])
+
+        # Missing a mandatory language page or conditional scene triggers coverage failure.
+        for missing_doc in ("skills/references/languages/cpp.md", "skills/scenes/network-io/SKILL.md"):
+            (self.base / "structure.json").unlink()
+            bad = self.build_record(routing, omit=missing_doc)
+            fail_res = lp.check_next(self.repo, self.save_record(bad), "generate", self.log)
+            self.assertEqual(fail_res["status"], "FAIL")
+            self.assertIn({"severity": "error", "code": "coverage", "detail": missing_doc}, fail_res["findings"])
+
+    def test_routing_closed_set_rejects_omitted_key_and_empty_basis(self):
+        routing = self.build_routing()
+        data = self.build_record(routing)
+        del data["routing"]["scenes"]["concurrency"]
+        with self.assertRaises(lp.Invalid):
+            lp.check_next(self.repo, self.save_record(data), "freeze", self.log)
+
+        (self.base / "structure.json").unlink()
+        routing2 = self.build_routing()
+        routing2["systems"]["posix-windows-threads"]["basis"] = "   "
+        data2 = self.build_record(routing2)
+        with self.assertRaises(lp.Invalid):
+            lp.check_next(self.repo, self.save_record(data2), "freeze", self.log)
+
+    def test_compaction_invalidates_knowledge_reads(self):
+        routing = self.build_routing(direction="cpp-to-python")
+        data = self.build_record(routing)
+        self.rows.append({"type": "compacted", "payload": {}})
+        self.write_log()
+        data["context"]["epoch"] = len(self.rows)
+        res = lp.check_next(self.repo, self.save_record(data), "review", self.log)
+        self.assertEqual(res["status"], "FAIL")
+        self.assertTrue(any(f["code"] == "context" and f["detail"] == "skills/directions/cpp-to-python/SKILL.md"
+                            for f in res["findings"]))
+
+    def test_source_signal_crosscheck_and_strict_mode(self):
+        routing = self.build_routing(direction="cpp-to-go")
+        data = self.build_record(routing, long_file=False)
+        src = self.base / "sample.cpp"
+        src.write_text("#include <pthread.h>\n" + "\n".join(f"int x{i} = {i};" for i in range(705)) + "\nvoid f() { pthread_create(0,0,0,0); RegOpenKeyA(0,0,0); socket(0,0,0); }\n", encoding="utf-8")
+        warn_res = lp.check_next(self.repo, self.save_record(data), "freeze", self.log, sources=[src], strict_signals=False)
+        self.assertEqual(warn_res["status"], "PASS")
+        slots = {c["slot"] for c in warn_res["signalConflicts"]}
+        self.assertIn("workflows.long-file", slots)
+        self.assertIn("scenes.network-io", slots)
+        self.assertIn("systems.posix-windows-threads", slots)
+        self.assertIn("systems.windows-registry-service-subsystem", slots)
+
+        strict_res = lp.check_next(self.repo, self.save_record(data), "freeze", self.log, sources=[src], strict_signals=True)
+        self.assertEqual(strict_res["status"], "FAIL")
+        self.assertTrue(any(f["code"] == "trigger-signal-conflict" for f in strict_res["findings"]))
+
+        # CLI strict-signals exit code 1
+        out_json = self.base / "strict-out.json"
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = lp.cli(["check-next", "--repo", str(self.repo), "--record", str(self.save_record(data)),
+                           "--action", "freeze", "--transcript", str(self.log),
+                           "--source", str(src), "--strict-signals", "--out", str(out_json)])
+        self.assertEqual(code, 1)
+
+    def test_generic_read_tool_v1_adapter(self):
+        routing = self.build_routing(direction="python-to-c")
+        data = self.build_record(routing, use_generic=True)
+        res = lp.check_next(self.repo, self.save_record(data), "freeze", self.log)
+        self.assertEqual(res["status"], "PASS", res["findings"])
+        first_receipt = lp.load_json(data["reads"][0]["path"])
+        self.assertEqual(first_receipt["witness"]["adapter"], "generic-read-tool-v1")
+
+        # Call arguments alone or truncated/modified output must fail make_receipt.
+        offer = lp.make_offer(self.repo, "skills/references/languages/c.md", 1, 4)
+        bad_log = self.base / "bad-generic.jsonl"
+        bad_rows = [
+            {"type": "session_meta", "payload": {"id": "sess-1"}},
+            {"type": "tool_call", "call_id": "c1", "name": "read_file",
+             "arguments": {"text": offer["payload"]["text"]}},
+            {"type": "tool_result", "call_id": "c1", "output": {"truncated": True, "text": offer["payload"]["text"]}},
+        ]
+        bad_log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in bad_rows))
+        with self.assertRaises(lp.Invalid):
+            lp.make_receipt(offer, bad_log, "c1")
+
+        bad_rows[2]["output"] = "Showing lines 1-3 of 4\n1: # Fixture Doc\n2: \n3: line two"
+        bad_log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in bad_rows))
+        with self.assertRaises(lp.Invalid):
+            lp.make_receipt(offer, bad_log, "c1")
 
 
 if __name__ == "__main__":

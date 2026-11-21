@@ -253,6 +253,16 @@ C#12 的具名 ValueTuple 元素名不是任意合法标识符；`Rest` 在任�
 
 源 tuple 只按位置解包时，可选择合法元素名或位置表示，保持元素值、类型、顺序和解构行为；名称被调用点、公共接口或元数据消费者观察时，则记录必要改名与全部引用，不能仅因编译通过就认定名称无影响。还须区分元素名、解构局部名、Item 位置访问及类型本身。依据：C# tuple types/tuple element names、编译器 CS8126/CS8125 的命名/位置约束；本条只提供语言选择，不在本机运行编译器或新增检查脚本。
 
+### L1-CS-11 顶级语句冲突、显式命名空间与 Nullable/SDK 默认配置边界
+
+1. **触发／前提**：生成 C# 12 / .NET 8 单文件或工程代码时，未核验 `.csproj` 是否启用了 `<ImplicitUsings>enable</ImplicitUsings>` 或 `<Nullable>enable</Nullable>`，或同时组织多个 `.cs` 文件/类型与入口 `Main`。
+2. **事实**：
+   - 一个编译单元集合内**至多允许一个文件包含顶级语句（Top-level statements）**，且含顶级语句的文件不能在顶级语句之后再随意声明同级别可执行/类型混乱结构（CS8802/CS8803），也不能与显式传统 `class Program { static int Main(...) }` 并存于同一目标而引发入口冲突或预期偏差（VS/SDK CS7022）。
+   - `<ImplicitUsings>` 和 `<Nullable>` 属于 `.csproj` MSBuild 属性，**不是 C# 语言内建固定默认**：当工程关闭隐式 `using` 时，缺少显式 `using System;`、`using System.Collections.Generic;`、`using System.IO;`、`using System.Text;`、`using System.Text.Json;` 等会直接报 CS0246/CS0103；当文件开启 `#nullable enable`（或工程开启）时，未标注 `?` 的 `string`/`object` 赋 `null` 或返回可空将触发 CS8600/CS8603/CS8618，且未加 `<TreatWarningsAsErrors>` 时虽不报错，开启时直接阻断编译。
+   - 本地变量确定性赋值规则（CS0165）比动态语言严格：`if/else` 或 `try/catch` 某分支未给局部变量赋初始值即在外部读取，直接编译失败。
+3. **选择／反例**：在目标工程配置未明或需独立跨 `.csproj` 配置稳健编译时，统一采用**显式 `using` 指令 + 显式清晰命名空间/类型入口结构**（显式声明入口类与 `Main` 时不混用顶级语句；若采用单文件顶级语句则不另写入口 `Main` 且把类型定义置于顶级语句之后），对可为 `null` 的字段按需显式声明初始化或可空类型并守卫确定赋值，不依赖未核验的 `<ImplicitUsings>enable</ImplicitUsings>` 假定。
+4. **未知与依据**：具体 `<OutputType>`、`<TargetFramework>`、`<ImplicitUsings>`、`<Nullable>` 及 `<AllowUnsafeBlocks>` 以冻结 `.csproj` 与构建前提 §2.2 为准。依据：MS-CS Top-level statements、CS7022/CS8802/CS8600–CS8618；.NET 8 MSBuild SDK 属性。本条不触发本机 MSBuild 构建。
+
 ## 使用边界
 
 将本页与所选方向和另一语言事实页组合；具体场景/系统差异按[共性索引](../seven-language-common-semantics.md)选读。缺逐例第三方证据保持 UNVERIFIED，本机不运行或编译。

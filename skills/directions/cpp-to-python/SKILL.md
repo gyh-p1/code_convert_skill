@@ -60,6 +60,106 @@ description: Use when converting C++ source to Python; apply this direction's la
 6. **信息不足或实现相关时的处理**：涉及线程/任务都加载[并发场景](../../scenes/concurrency/SKILL.md)，不只在出现共享内存词时加载。无既定并行性能义务时先保持功能；共享状态/取消边界未明则报告缺口，不擅自重构。
 7. **资料依据（名称/版本/章节）**：Python 3.12 threading；multiprocessing 编程约束。
 
+### 规则 CPP-PY-04：C++ 确定性 RAII 析构向 Python `with` / `try...finally` 映射
+1. **源码触发条件**：C++ 源码依赖局部对象析构函数释放文件句柄、锁、事务或缓冲区等非内存资源，包含提前返回或异常展开路径。
+2. **冻结版本/运行时/API 前提**：ISO C++17（WG21-N4659 Clause 15.2/6.7）→ CPython 3.12（PY-REF-CTX）。
+3. **原可观察行为**：离开词法作用域时按构造逆序（LIFO）同步确定性执行析构清理，即使抛出异常也不延迟。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：使用上下文管理器（`with ...:`、`contextlib.ExitStack`）或 `try ... finally` 在离开作用域时按逆序同步释放资源。
+   - *不适用条件*：严禁把资源清理寄托在 `__del__` 终结器上——循环引用、解释器退出序或非 CPython 实现均会延迟甚至跳过 `__del__`。
+5. **错误机械替换反例**：
+   ```python
+   # 错误：依赖 __del__ 代替 C++ RAII 析构释放锁或文件
+   class Guard:
+       def __init__(self, lock):
+           self.lock = lock
+           self.lock.acquire()
+       def __del__(self):
+           self.lock.release() # 时机不确定，若发生引用保留则长期不解锁！
+
+   # 正确：实现上下文管理器协议并使用 with
+   class Guard:
+       def __init__(self, lock):
+           self.lock = lock
+       def __enter__(self):
+           self.lock.acquire()
+           return self
+       def __exit__(self, exc_type, exc, tb):
+           self.lock.release()
+           return False
+   ```
+6. **信息不足或实现相关时的处理**：若原 C++ 析构包含多个成员的逆序释放且中途可能抛异常，在目标 `__exit__` 或嵌套 `with`/`ExitStack` 中显式保留全部释放与异常传播规则。
+7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 15.2；PY-REF-CTX、`contextlib.ExitStack`。
+
+### 规则 CPP-PY-05：C++ 按值拷贝语义向 Python 对象引用别名与显式拷贝映射
+1. **源码触发条件**：C++ 源码将 `struct` / `std::vector` / 容器按值传参或通过 `b = a` 复制后独立修改副本或原对象。
+2. **冻结版本/运行时/API 前提**：ISO C++17 → CPython 3.12（PY-REF-DATA、`copy` 模块）。
+3. **原可观察行为**：按值赋值为目标对象创建独立存储与拷贝（除非字段本身为共享指针或引用），修改副本不回写原对象；同时若源码本身按引用 `T&` 或 `shared_ptr` 传递，则原值必须共享可见修改。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：先区分源声明是按值（`T`）还是按引用/指针（`T&`/`T*`）；按值且后续会被修改的复合对象，在绑定或传参边界显式复制（如 `copy.deepcopy` 或显式逐字段拷贝工厂），共享引用则保留原对象别名。
+   - *不适用条件*：严禁将 C++ 按值传递直接写成 Python 普通赋值 `b = a` 并原地修改内部列表或属性，这会导致原对象状态被静默污染。
+5. **错误机械替换反例**：
+   ```python
+   # 错误：将 C++ 按值传参 struct State { std::vector<int> items; }; 机械译为别名修改
+   def step(state):
+       state.items.append(99) # 污染调用方传入的 orig！
+
+   # 正确（对应源按值语义）：在进入按值边界时显式构造独立副本
+   def step(state):
+       local_state = state.clone() # 显式复制须独立的成员
+       local_state.items.append(99)
+       return local_state
+   ```
+6. **信息不足或实现相关时的处理**：混合含共享资源句柄与独立值字段的类型须按成员所有权分别拷贝或引用共享，不在报告中以“浅/深拷贝”一言以蔽之。
+7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 15.8；PY-REF-DATA、`copy.copy`/`copy.deepcopy`。
+
+### 规则 CPP-PY-06：C++ 向零截断整数除法与定宽回绕向 Python 向下取整与位掩码映射
+1. **源码触发条件**：C++ 源码中出现负数整数 `/`、`%` 运算，或依赖固定位宽有符号/无符号整型（如 `uint32_t`、`uint64_t`）算术、移位溢出回绕。
+2. **冻结版本/运行时/API 前提**：ISO C++17（WG21-N4659 Clause 8.6 / 6.9.1）→ CPython 3.12（PY-REF-DATA）。
+3. **原可观察行为**：C++ `/` 朝零截断，且 `(a / b) * b + a % b == a`（`-7 / 3 == -2`、`-7 % 3 == -1`）；无符号定宽运算按 $2^W$ 取模，高位移出即截断。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：向零除法在存在负数时写显式语义转换（如 `int(a / b)` 对小整数，或仅整数路径 `math.trunc`/符号校正后绝对值相除，再以 `a - q * b` 得 C 余数）；定宽无符号回绕与移位对结果显式按掩码（`& 0xFFFFFFFF`、`& 0xFFFFFFFFFFFFFFFF`）截断。
+   - *不适用条件*：严禁直接把 C++ 负数 `/`、`%` 译为 Python `//`、`%`（`-7 // 3 == -3`、`-7 % 3 == 2`）；严禁省略定宽无符号溢出与左移的高位掩码（Python `int` 任意精度不会截断）。
+5. **错误机械替换反例**：
+   ```python
+   # 错误：直接用 // 和 % 以及不加掩码的 uint32 位运算
+   q = -7 // 3        # Python 得 -3（C++ 为 -2）
+   r = -7 % 3         # Python 得 2（C++ 为 -1）
+   h = (1 << 32) - 1
+   h = h + 2          # Python 得 4294967297（C++ uint32_t 回绕为 1）
+
+   # 正确：保持向零除法与 32 位无符号模意义
+   q = -((-7) // 3) if (-7 < 0) != (3 < 0) else (-7) // 3  # 或精确向零符号函数
+   r = -7 - q * 3                                           # 得 -1
+   h = (0xFFFFFFFF + 2) & 0xFFFFFFFF                        # 得 1
+   ```
+6. **信息不足或实现相关时的处理**：C++ 源码若自身发生有符号整数溢出（UB），须按源风险单独登记，不能把源 UB 伪称为可迁移规则。
+7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 8.6（Multiplicative operators）；Python Reference §6.7。
+
+### 规则 CPP-PY-07：C++ `std::string` 原始字节与 `std::optional`/`nullptr` 哨兵映射
+1. **源码触发条件**：C++ 源码用 `std::string` 承载原始协议字节、二进制缓冲或可能含 `\0` 与非 UTF-8 字节的数据，或用 `std::optional<T>` / 指针判空表达缺失状态。
+2. **冻结版本/运行时/API 前提**：ISO C++17 → CPython 3.12（PY-REF-DATA、`bytes` / `str`）。
+3. **原可观察行为**：`std::string` 本质是任意 `char` 字节序列容器，`size()` 返回字节数且允许内嵌 `\0`；`std::optional<int>` 为 `0` 时 `has_value()` 仍为 `true`。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：原始字节流、定长字节长度与任意二进制协议优先映射为 `bytes`/`bytearray`；确定为文本时明确源编码再解码为 `str`；`std::optional`/`nullptr` 判空必须用 `is None` / `is not None`。
+   - *不适用条件*：严禁用 `if opt:` 替代 `opt.has_value()`（当值恰好为 `0`、`""`、`False` 或空容器时逻辑反转）；严禁把含原始任意字节的 `std::string` 无条件假设为合法 UTF-8 `str`。
+5. **错误机械替换反例**：
+   ```python
+   # 错误：将 optional<int> == 0 判成无值
+   def check(opt):
+       if not opt: # 若 opt == 0，Python 误判为缺失！
+           return -1
+       return opt
+
+   # 正确：显式区分 None 与零值
+   def check(opt):
+       if opt is None:
+           return -1
+       return opt
+   ```
+6. **信息不足或实现相关时的处理**：文本编码未明确时保留 bytes 或登记编码缺口，不静默使用 `errors="ignore"` 丢弃字节。
+7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 24.3；Python 3.12 Built-in Types (`bytes`, `None`).
+
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。

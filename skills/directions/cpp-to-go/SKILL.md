@@ -81,6 +81,107 @@ description: Use when converting C++ source to Go; apply this direction's langua
 6. **信息不足或实现相关时的处理**：若需级联取消与超时，结合 `context.WithTimeout` 处理。
 7. **资料依据（名称/版本/章节）**：Go sync.Cond；GO-SPEC #Channel_types；GO-MEM。
 
+### 规则 CPP-GO-04：C++ 块级与循环内 RAII 析构向 Go 函数级 `defer` 的作用域映射
+1. **源码触发条件**：C++ 源码在 `if` 分支、`for`/`while` 循环体内或嵌套代码块 `{ ... }` 中声明带析构函数的局部守卫（文件、锁、事务、临时对象）。
+2. **冻结版本/运行时/API 前提**：ISO C++17（WG21-N4659 Clause 6.7）→ Go 1.27（GO-SPEC #Defer_statements）。
+3. **原可观察行为**：每个局部块或每次循环迭代结束时立即执行析构（释放锁/关闭文件），不会累积到外层函数返回才释放。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：Go `defer` 绑定到**外层包含函数**而非词法块。循环体与短临界区必须抽成受限局部函数（或匿名闭包调用 `func() { ... }()`)，在该闭包的 `defer` 中立即释放；或显式在路径出口释放。
+   - *不适用条件*：严禁在 `for` 循环体内直接写 `defer f.Close()` 或 `defer mu.Unlock()`——文件句柄将堆积至函数结束，锁则会在第二次迭代直接自我死锁。
+5. **错误机械替换反例**：
+   ```go
+   // 错误：循环内直接 defer 锁或文件关闭，下一次迭代死锁或句柄泄漏
+   for _, p := range paths {
+       f, err := os.Open(p)
+       if err != nil { return err }
+       defer f.Close() // 直到整个外层函数返回才关闭！
+   }
+
+   // 正确：将单次迭代逻辑封装为闭包，保证每次迭代结束即触发 defer
+   for _, p := range paths {
+       if err := func() error {
+           f, err := os.Open(p)
+           if err != nil { return err }
+           defer f.Close()
+           return process(f)
+       }(); err != nil {
+           return err
+       }
+   }
+   ```
+6. **信息不足或实现相关时的处理**：若循环内提前 `break`/`return`/`continue` 的清理条件复杂，抽取命名 helper 返回显式状态码或错误以保持控制流清晰。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Defer_statements；WG21-N4659 Clause 6.7。
+
+### 规则 CPP-GO-05：C++ `std::map` 有序遍历与索引查找语义向 Go 随机 `map` 映射
+1. **源码触发条件**：C++ 源码使用 `std::map` 遍历依赖按键序输出，或区分 `m.find(k)`（只读）与 `m[k]`（缺键自动插入零值/默认构造成员）。
+2. **冻结版本/运行时/API 前提**：ISO C++17（WG21-N4659 Clause 26.4）→ Go 1.27（GO-SPEC #Map_types、`slices.Sort`）。
+3. **原可观察行为**：`std::map` 始终按比较器有序遍历；`operator[]` 在键不存在时会修改容器插入默认值，而 `find`/`at` 不会修改。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：Go `for k, v := range m` 遍历顺序有意随机化；若源顺序可观察，须先收集键切片按源比较器排序后再遍历。只读查找用 `v, ok := m[k]`，明确区分缺失与零值；仅当源调用 `operator[]` 并依赖自动插入副作用时，才在 `!ok` 时显式插入零值并写回（尤其值类型为 `struct` 时，`m[k].Field = x` 在 Go 中无法直接寻址编译报错）。
+   - *不适用条件*：严禁直接用 `range m` 替代 `std::map` 序输出；严禁误认为 `m[k]` 会像 `std::map` 一样自动在缺键时往 map 插入元素。
+5. **错误机械替换反例**：
+   ```go
+   // 错误：直接 range Go map 替代 std::map 有序遍历，输出每次随机乱序
+   for k, v := range m {
+       fmt.Println(k, v)
+   }
+
+   // 正确：显式提取并按源比较序排序键后再输出
+   keys := make([]string, 0, len(m))
+   for k := range m {
+       keys = append(keys, k)
+   }
+   slices.Sort(keys)
+   for _, k := range keys {
+       fmt.Println(k, m[k])
+   }
+   ```
+6. **信息不足或实现相关时的处理**：C++ 自定义比较器的等价判定（Strict Weak Ordering）与字符串大小写/文化排序规则若不同于 Go 字典序，按自定义 `slices.SortFunc` 保持。
+7. **资料依据（名称/版本/章节）**：WG21-N4659 Clause 26.4；GO-SPEC #For_range、#Map_types。
+
+### 规则 CPP-GO-06：C++ 容器值拷贝向 Go slice/map 引用共享语义的防污染映射
+1. **源码触发条件**：C++ 源码将 `std::vector` / `std::map` 按值拷贝（`auto copy = orig;`）或按值传参后独立修改或 `push_back`。
+2. **冻结版本/运行时/API 前提**：ISO C++17 → Go 1.27（GO-SPEC #Slice_types、`slices.Clone`、`maps.Clone`）。
+3. **原可观察行为**：C++ 值容器赋值与按值传参复制整份底层元素存储；对副本修改或扩容绝不反写原容器。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：Go 中 `b := a` 复制的是 slice header 或 map header，底层数组/哈希表仍共享！当源按值拷贝并会写入/切片追加时，必须用 `slices.Clone(a)` / `maps.Clone(a)`（元素含指针或嵌套引用时逐层深克隆），并对子切片写操作使用三索引切片 `s[l:h:h]` 限制容量防 `append` 覆盖原底层数组后续元素。
+   - *不适用条件*：严禁将 C++ 按值复制的 `std::vector` 直接写成 `b := a` 后写入或 `append`。
+5. **错误机械替换反例**：
+   ```go
+   // 错误：切片赋值共享底层数组，且未设 cap 上限的 append 污染 orig
+   orig := []int{1, 2, 3, 4}
+   sub := orig[:2]
+   sub = append(sub, 99) // 覆盖了 orig[2] 变成 [1, 2, 99, 4]！
+
+   // 正确：若要求与 orig 独立，显式 Clone 或使用完整切片表达式隔离容量
+   独立 := slices.Clone(orig[:2])
+   独立 = append(独立, 99)
+   ```
+6. **信息不足或实现相关时的处理**：区分零长度非 nil 空切片 `[]T{}` 与 `nil` 切片（影响 `encoding/json` 输出为 `[]` 或 `null`，见 `L1-GO-15`）。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #Slice_types、#Appending_and_copying_slices；标准库 `slices`/`maps`。
+
+### 规则 CPP-GO-07：C++ `std::string` 原始字节与隐式整型提升向 Go `[]byte`/`string` 与显式转换映射
+1. **源码触发条件**：C++ 源码使用 `std::string` 承载含任意字节/`\0` 数据、按字节下标迭代 `s[i]`，或依赖 `char`/`int`/`size_t` 之间隐式窄/宽转换。
+2. **冻结版本/运行时/API 前提**：ISO C++17 → Go 1.27（GO-SPEC #Conversions、`for range`）。
+3. **原可观察行为**：`std::string::size()` 与下标按单字节操作，即使存在 `\0` 或非 UTF-8 字节也能无损保持；整型之间自动按 C++ 规则隐式提升或算术转换。
+4. **目标可选写法和不适用条件**：
+   - *可选映射*：含可能非 UTF-8 原始字节、内嵌 `\0` 或需可变字节缓冲时映射为 `[]byte`；按字节遍历使用索引循环 `for i := 0; i < len(s); i++`，只有确认为按 UTF-8 Unicode 码点遍历时才使用 `for _, r := range s`（注意遇到非法 UTF-8 字节时 Go `for range` 会替换成 `U+FFFD`，掩盖原字节！）。Go 不允许整型混合隐式转换，全部跨类型运算须显式转换并核符号与截断边界。
+   - *不适用条件*：严禁用 `for _, r := range s` 替代逐字节检查；严禁将无符号长度减法改写为可能无符号下溢的逆序。
+5. **错误机械替换反例**：
+   ```go
+   // 错误：对可能含非 UTF-8 原始字节的字符串使用 range，非法字节被变成 U+FFFD (0xFFFD)
+   for _, ch := range rawStr {
+       out = append(out, byte(ch)) // 若 ch==U+FFFD，byte(ch) 被静默截断为 0xFD，数据彻底损毁！
+   }
+
+   // 正确：按字节维度处理时直接使用索引遍历 []byte 或 s[i]
+   for i := 0; i < len(rawBytes); i++ {
+       out = append(out, rawBytes[i])
+   }
+   ```
+6. **信息不足或实现相关时的处理**：编码边界未知时默认保守保留 `[]byte` 并标出与文本格式化消费者（如 `%s`、JSON 输出）的衔接点。
+7. **资料依据（名称/版本/章节）**：GO-SPEC #For_range、#String_types、#Conversions。
+
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。

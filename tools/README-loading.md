@@ -20,7 +20,7 @@ python -B -m unittest discover -s tools -p test_loading_preflight.py -v
 
 根 SKILL 表是加载清单；程序内精确身份是验收约束，不是另一条知识入口。解析 CommonMark 加表格扩展，识别真实 Markdown 链接，代码块与行内代码不算链接。标题锚点采用已标明的 Unicode 类别规则：小写、保留字母/数字/组合符及 `-`/`_`、空格转 `-`、重复标题递增后缀；不声称兼容所有站点的 HTML 锚点。外部和范围外链接列为 skipped，不递归抓取，不用关键词检查自然语言语义。
 
-首版精确范围为发现/AGENTS/根三个入口、7 份契约、两个条件工作流，共 12 份 Markdown。语言、方向、场景、系统、Controller 和模型注入不在本工具覆盖内，其原有加载义务继续生效。
+首版（v1.0.1）精确范围为 12 份治理/工作流 Markdown；v1.1.0 起配合 [skills/routing-manifest.json](../skills/routing-manifest.json) 将 `check-repo` 与 `record-read` 扩展至**全库 76 份 Markdown**（3 个入口、7 份核心契约、2 份工作流、1 份共性导航、7 份语言页、42 个方向 + 2 份 `c-to-cpp` 子参考、4 个场景 + 1 份网络安全导航、5 个系统页、2 份专题），并在 `skills/` 下禁止未登记 Markdown。Controller 适配及模型上下文注入仍由人工/专门契约约束。
 
 ## 3. 系统提供正文与关联真实返回
 
@@ -33,13 +33,13 @@ python -B tools/loading_preflight.py record-read --offer <evidence>/offer-001.js
 
 第一条的 stdout 必须原样通过系统读取工具返回正文，不能重定向后只向智能体发送文件名或摘要。每次只返回一个片段，范围太大时先拆分，不设置会截断结果的展示预算。offer 保存精确 UTF-8 原字节快照（含 BOM/CRLF 身份），实际正文分片含行范围与字节范围。offer 只是材料准备成功，不能用于通过下一动作核对。
 
-第二条仅支持实际验证过的 Codex JSONL 返回适配：`session_meta`、`response_item` 中的 exec/exec_command call 与同 call_id 的 output；支持实际返回对象的 text/content/output 包装。适配器确认最终日志内含完整、精确的片段 JSON，不接受调用参数里的正文、后台文件、部分 JSON 或自填 complete。保存调用/输出关联、日志前缀摘要、输出摘要和上下文标识，验证时回读原日志；日志可追加，已引用前缀不得改变。现场 log 字段变化或其他宿主返回形制不明时结果为 UNAVAILABLE，需维护侧适配，第三方智能体不编写脚本补接口。
+第二条现支持两类真实宿主日志返回适配：`codex-rollout-v1`（`session_meta` + `response_item` 中 `exec`/`exec_command` 与同 `call_id` 完整 payload 输出）及 `generic-read-tool-v1`（单会话 JSONL 日志中成对的 `read_file`/`Read`/`view_file` `tool_call` 与 `tool_result`/`output`，且最终返回文本须完整匹配 offer 文本或完整行号序列，拒绝截断标记、参数回显与改写文本）。适配器保存调用/输出关联、日志前缀摘要、输出摘要和上下文标识，验证时回读原日志；日志可追加，已引用前缀不得改变。现场 log 字段变化或其他宿主返回形制不明时结果为 UNAVAILABLE，需维护侧适配，第三方智能体不编写脚本补接口。
 
 证据等级 `HOST_RETURN_OBSERVED` 只表示该日志记录了正文提供，不是理解、持续保有、模型注入或防篡改认证。工具无法证明未被日志暴露的额外截断/上下文丢失；检测到 compacted/context_compacted/context_reset 时更换 epoch，重新提供所需正文。历史/自填声明只能作为 manual 依据，不能通过修改 evidenceGrade 冒充系统证据。
 
 ## 4. 下一动作的加载核对
 
-在既有 frozen-inputs.md 准备草稿或阶段记录内放一个 `loading-preflight` fenced block。它是加载依据片段，不是新增 state.json；起始阶段可用尚未记 FROZEN 的准备草稿。以下是形制示例，摘要、身份、适用事实和指针须替换为真实值：
+在既有 frozen-inputs.md 准备草稿或阶段记录内放一个 `loading-preflight` fenced block。它是加载依据片段，不是新增 state.json；起始阶段可用尚未记 FROZEN 的准备草稿。v1.1.0 在存在 `skills/routing-manifest.json` 时要求 `freeze` 及后续常规动作附带 `routing` 全维度闭集路由对象（`start`/`map` 前可先省略或仅在就绪时填写）；以下形制中的摘要、身份、适用事实和指针须替换为真实值：
 
 ````markdown
 ```loading-preflight
@@ -49,7 +49,28 @@ python -B tools/loading_preflight.py record-read --offer <evidence>/offer-001.js
   "context": {"sessionId": "actual-host-session", "epoch": 0},
   "workflows": {
     "batch": {"applies": false, "basis": "本请求只有一个任务"},
-    "long-file": {"applies": false, "basis": "本项单文件短且无跨单元复杂依赖"}
+    "long-file": {"applies": false, "basis": "本项单文件<=700行且预期目标不膨胀超700行"}
+  },
+  "routing": {
+    "direction": "python-to-cpp",
+    "directionReferences": {},
+    "scenes": {
+      "network-io": {"applies": false, "basis": "无 socket/HTTP 调用"},
+      "file-io": {"applies": false, "basis": "无真实文件 I/O 调用"},
+      "process-execution": {"applies": false, "basis": "无子进程调用"},
+      "concurrency": {"applies": false, "basis": "单线程顺序逻辑"}
+    },
+    "systems": {
+      "posix-winsock": {"applies": false, "basis": "无 Winsock/POSIX socket API"},
+      "posix-windows-filesystem": {"applies": false, "basis": "无平台底层文件 API"},
+      "posix-windows-process-identity": {"applies": false, "basis": "无 fork/CreateProcess/令牌 API"},
+      "posix-windows-threads": {"applies": false, "basis": "无 pthread/Win32 线程同步 API"},
+      "windows-registry-service-subsystem": {"applies": false, "basis": "无注册表或 Windows 服务 API"}
+    },
+    "topics": {
+      "security-behavior": {"applies": true, "basis": "含不可信 JSON 解码与深度校验"},
+      "attack-tactic-index": {"applies": false, "basis": "不带战术标签"}
+    }
   },
   "structure": {"path": "structure-001.json", "sha256": "actual-file-sha256"},
   "reads": [{"path": "receipt-001.json", "sha256": "actual-file-sha256"}]
@@ -57,24 +78,26 @@ python -B tools/loading_preflight.py record-read --offer <evidence>/offer-001.js
 ```
 ````
 
-指针相对该 Markdown 所在目录解析，也支持绝对路径。每个原件 SHA-256 必须与实际字节相符；reads 须覆盖适用正文全部范围，可跨片段、可重叠，但不能缺中段或混用版本。工具核当前提供的仓库/只读快照与结构报告一致；已有 run 要继续旧正文时用原不可变仓库快照作为 `--repo`，不要拿当前工作树补改旧记录。
+指针相对该 Markdown 所在目录解析，也支持绝对路径。每个原件 SHA-256 必须与实际字节相符；reads 须覆盖全部必读契约、适用工作流、共性导航、源/目标两语言页、所选方向及其适用子参考、以及 `applies=true` 场景/系统/专题的全部行范围，可跨片段、可重叠，但不能缺中段或混用版本。工具核当前提供的仓库/只读快照与结构报告一致；已有 run 要继续旧正文时用原不可变仓库快照作为 `--repo`，不要拿当前工作树补改旧记录。
 
 ```powershell
-python -B tools/loading_preflight.py check-next --repo . --record <run>/01-frozen/frozen-inputs.md --action freeze --transcript <this-session-rollout.jsonl> --out <evidence>/next-freeze-001.json
+python -B tools/loading_preflight.py check-next --repo . --record <run>/01-frozen/frozen-inputs.md --action freeze --transcript <this-session-rollout.jsonl> --source <source-file> --strict-signals --out <evidence>/next-freeze-001.json
 ```
+
+`check-next` 支持可重复参数 `--source <path>` 与开关 `--strict-signals`：系统维护侧仅以只读文本扫描源码对照 `skills/routing-manifest.json` 的行数阈值与 `triggerSignals`，将疑似误标 `applies=false`（`SKIP`）的槽位记录在 `signalConflicts`；传 `--strict-signals` 时直接阻断（`FAIL`/退出码 1）。该扫描不编译、不导入、不执行源码。
 
 动作名：start（画像前，批量含 batch）、map（建图/分段前，含适用 long-file）、freeze、classify、source-precheck、generate、review（自审/修订）、submit、resume、close。start 时 long-file 可尚未加载；源码复杂度待画像确定时可用 applies=null 并说明待定依据，map/freeze 及后续动作前必须定案，适用则需要完整正文。报告不检查其他冻结字段；Agent 仍须按任务状态 §2.2 回读冻结正文并核全部字段。写 result.md 和保留停止原因不以加载 PASS 为前置条件；close 只核加载记录，不代替全去向交付及终态判据。
 
 ### 4.1 可达与不可达两条路径的加载动作
 
-两条路径先加载 task-state、safety、delivery、build、evaluation、loop 六份通用契约及实际适用的 batch/long-file 工作流。连接坐标与健康检查正文在检查前读取；确认可达后、冻结前才补分类准入及评估适配。不可达仅转换不加载分类准入或分类器、不执行分类、不要求分类产物；build 契约仍用于声明平台/依赖和待验证计划，不要求本轮有构建原件。Controller/语言/方向/场景/系统仍在本工具覆盖外，由 Agent 手工加载。
+两条路径先加载 task-state、safety、delivery、build、evaluation、loop 六份通用契约及实际适用的 batch/long-file 工作流；v1.1.0 起同时经 `routing` 闭集检查语言、方向（及子参考）、场景、系统与专题知识覆盖。连接坐标与健康检查正文在检查前读取；确认可达后、冻结前才补分类准入及评估适配。不可达仅转换不加载分类准入或分类器、不执行分类、不要求分类产物；build 契约仍用于声明平台/依赖和待验证计划，不要求本轮有构建原件。Controller 适配及模型注入仍在本工具覆盖外，由 Agent 与专门契约约束。
 
 | 本轮路径 | 调用既有加载动作的时点 | 不要求的动作/原件 |
 |---|---|---|
 | 可达正常流程 | `start` 后按已加载连接适配检查可达性；长文件建图前 `map`；随后 `freeze`、`classify`、`source-precheck`、`generate`、`review`、适用 `submit`、`close`，恢复新增动作前 `resume` | 不要求未发生的额外修复或 job；LIB 分支的行为件按评估准备契约不适用 |
 | 不可达仅转换 | `start`/适用 `map`、`freeze`，直接 `generate`、`review` 和 `close`；恢复前 `resume`，重新检查可达性后决定后续适用动作 | 不调用 `classify`/`source-precheck`/`submit`，不要求分类准入正文、分类输入/结果或源构建/job/比较原件；仍必须有自审及 result.md |
 
-`check-next` 按动作核加载范围：`classify`、`source-precheck`、`submit` 要求七份（含分类准入）；其他非恢复例外动作只要求六份通用契约及适用工作流。结构检查仍保留完整七契约目录清单，不能把“路径已登记”当分类正文已加载。工具不判断网络分支，不消费分类/job 结果，不要求此前调用顺序，也不添加 evaluationMode 开关；每次 PASS 仅为 `loading-only`、`executionAuthorized=false`。可达分支生成前的分类及源预检仍由 Agent 按根入口核真实原件，六份加载 PASS 不能代替它们。业务分流及交付按评估准备 §1.0 和[交付骨架](../references/framework/delivery-handoff-contract.md#2111-不可达仅转换的产物骨架)。缺适用契约、工作流、版本或时序仍失败。
+`check-next` 按动作核加载范围：`classify`、`source-precheck`、`submit` 要求七份（含分类准入）；其他非恢复例外动作只要求六份通用契约及适用工作流，并自 `freeze` 起（及 `map` 已填写时）强制核全维度 `routing` 闭集知识覆盖。结构检查仍保留完整七契约与全知识清单，不能把“路径已登记”当分类或知识正文已加载。工具不判断网络分支，不消费分类/job 结果，不要求此前调用顺序，也不添加 evaluationMode 开关；每次 PASS 仅为 `loading-only`、`executionAuthorized=false`。可达分支生成前的分类及源预检仍由 Agent 按根入口核真实原件，加载 PASS 不能代替它们。业务分流及交付按评估准备 §1.0 和[交付骨架](../references/framework/delivery-handoff-contract.md#2111-不可达仅转换的产物骨架)。缺适用契约、工作流、知识、版本或时序仍失败。
 
 默认检查当前日志末尾的前置条件。审计已发生动作时传 `--before-call <actual-action-call-id>`，只采信该动作之前的正文返回；补读不能追认历史合规。系统在每次动作前保存本次 next 原件并由 Agent 核对引用；未留历史检查原件时，当前 PASS 不能外推此前动作已合规。跨来源顺序不可比较时不合并，跨会话或已知 epoch 变化须重新提供。
 
