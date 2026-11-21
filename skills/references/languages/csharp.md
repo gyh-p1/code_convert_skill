@@ -40,6 +40,7 @@
 2. **冻结版本/运行时/API 前提**：C# 12 / .NET 8（`Main` 与 `args`）。
 3. **原可观察行为**：
    - **`args` 不含程序名**——`args[0]` 即第一个用户实参（与 C/C++ 的 `argv[0]`、Go `os.Args[0]`、Python `sys.argv[0]` **不同**）。因此 `args.Length == 0` 表示"没有实参"。
+   - `Environment.GetCommandLineArgs()[0]` 在托管宿主中可能是入口程序集 `.dll`，不是 apphost 可执行文件。`Environment.ProcessPath` 表示启动该进程的可执行文件路径，可为 null；由 `dotnet app.dll` 启动时它还可能指向 dotnet 宿主。先分清源消费者要原始启动名、程序集位置还是进程映像，不把三者等同。
    - 参数**默认值仅在参数被省略时生效**；显式传入与默认值相同的值**无法**由值本身区分，须用显式存在性标记。
 4. **目标可选写法和不适用条件**：
    - *C# 作为源*：目标语言实参序列含程序名时（C/C++/Go/Python），必须**补上程序名偏移**；源里的 `args[0]` 对应目标 `argv[1]`/`os.Args[1]`/`sys.argv[1]`。
@@ -59,8 +60,8 @@
      源 args[0]  → 目标 argv[1] / os.Args[1] / sys.argv[1]
      源 args.Length == 0 → 目标 argc == 1 / len(os.Args) <= 1 / len(sys.argv) <= 1
    ```
-6. **信息不足或实现相关时的处理**：无法确认目标语言实参序列是否含程序名时，标为“实参偏移待确认”；不得凭“都叫 args/argv”推断下标一致。
-7. **资料依据（名称/版本/章节）**：C# `Main` 与 `args`；POSIX exec 的 argv（程序名在 argv[0]）；Go `os.Args`；Python `sys.argv`。各自的必要参数语义已在本规则与对应本地语言页中说明。
+6. **信息不足或实现相关时的处理**：无法确认目标语言实参序列是否含程序名时，标为“实参偏移待确认”；不得凭“都叫 args/argv”推断下标一致。源明确打印进程映像且冻结用 apphost 启动时，ProcessPath 可作为候选；C/C++ argv[0] 的原始拼写/相对路径不由 ProcessPath 普遍保持。缺实际启动形态、null 回退依据或源程序名约定则记对应差异，不硬编码对侧 workspace 路径。
+7. **资料依据（名称/版本/章节）**：C# `Main` 与 `args`；.NET 8 Environment.GetCommandLineArgs/ProcessPath；POSIX exec 的 argv（程序名在 argv[0]）；Go `os.Args`；Python `sys.argv`。各自的必要参数语义已在本规则与对应本地语言页中说明。
 
 ## 二、整数宽度、溢出、符号性与转换
 
@@ -245,6 +246,12 @@ Console.WriteLine 写值后追加当前 writer 的行终止符；控制台 write
 2. **事实**：Length 计 UTF-16 代码单元；Rune 枚举计 Unicode 标量；文本元素／字素簇和 UTF-8 字节又是其他单位。有效 U+1F600 占 2 个 UTF-16 单元、1 个 Rune、4 个 UTF-8 字节；组合字符可能构成一个文本元素。无效代理序列的替换／拒绝另核实际 API，不因有效输入样例推定。
 3. **映射／反例**：PowerShell 字符串也有 Length，不表示源 EnumerateRunes 可直接改成 Length。上限 80 时 41 个有效补充平面字符在 Rune 路径应接受而 Length=82，改写会错误拒绝；反向把源 Length 换成 Python len 同样扩大接受域。按每个字段的源消费者保持单位，不能以同一个 helper 承接所有长度。
 4. **未知与依据**：未核宿主是否支持所选 Rune API 时记录具体版本条件，不能悄改单位；内存资源清理由原作用域保持。依据：.NET 8 String.Length/EnumerateRunes、System.Text.Rune、StringInfo、Encoding.GetByteCount。
+
+### L1-CS-10 元组元素名有独立的上下文限制
+
+C#12 的具名 ValueTuple 元素名不是任意合法标识符；`Rest` 在任意元素位置都不允许（CS8126），改写成 `@Rest` 也不能绕过这个成员名限制。`ItemN` 等名称还涉及对应位置/元组成员规则，应按实际位置与编译器诊断核对，不能只做 C# 关键字列表筛选。普通局部变量叫 Rest 与元组元素叫 Rest 是不同上下文，不把 Rest 列为语言关键字，也不全库替换。
+
+源 tuple 只按位置解包时，可选择合法元素名或位置表示，保持元素值、类型、顺序和解构行为；名称被调用点、公共接口或元数据消费者观察时，则记录必要改名与全部引用，不能仅因编译通过就认定名称无影响。还须区分元素名、解构局部名、Item 位置访问及类型本身。依据：C# tuple types/tuple element names、编译器 CS8126/CS8125 的命名/位置约束；本条只提供语言选择，不在本机运行编译器或新增检查脚本。
 
 ## 使用边界
 

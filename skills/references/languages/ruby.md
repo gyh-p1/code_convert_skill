@@ -260,6 +260,8 @@ Ruby puts 的字符串参数已有换行时不再追加，不能视为无条件�
 6. **未知**：库可能独立升级，准确版本未知不得把此顺序当已核事实；用户显式目录优先按源调用处理。
 7. **依据**：Ruby v3_4_0 的 lib/tmpdir.rb / Dir.tmpdir / Tmpname::TMPDIR_CANDIDATES；本条正文保留了所需候选顺序、校验与失败条件。
 
+**加载前提**：`Dir.tmpdir` 由 tmpdir 库提供，实际使用它的目标须有合法加载途径（通常 `require 'tmpdir'`）；不能因核心类 Dir 存在就以为该方法已加载。库版本/可用性按冻结依赖核，`ruby -c` 不执行 require，不能证明方法运行时存在。不把 require 设为所有 Ruby 目标的默认行，也不借它改变源的临时目录选择。
+
 ## 十一、终端键输入
 
 ### L1-RB-10 getch、getc 与 gets 的输入单位不同
@@ -287,6 +289,26 @@ Ruby puts 的字符串参数已有换行时不再追加，不能视为无条件�
 | fork/exec/等待 | Ruby fork的子返回nil、父返回PID、失败异常与C的0/-1形态不同；先核成功/失败出口和映像替换，再选择目标。等待状态不直接当退出码，单流拼接不代合流交错 |
 
 依据：Ruby3.4 IO/String/Hash/Kernel/Process及Base64库精确版本；fork/exec详细事实见本页§九和进程系统页。无法核具体库版本时只记该API缺口，不扩大rescue或补造入口。
+
+### L1-RB-11 单引号中的反斜杠不表示协议换行
+
+CRuby 3.4 的普通单引号字符串只对反斜杠/单引号有相应转义，`'exit\n'` 中的 `\n` 是反斜杠与 n；双引号的 `"exit\n"` 则含 LF。不能把 C 的双引号字面量机械换成 Ruby 单引号后仍认为字节相同。按源求值后的字节选择表示，只有源本来要求两个字面字符时保留单引号形态；CRLF、终止 NUL、嵌入 NUL 和长度也分别核对，不按显示行数判断。
+
+退出命令比较与 recv/send 的系统错误是不同分支：前者按实际已读字节/长度判断，后者按源返回值/错误、部分成功、续行/退出和关闭点重建；异常事实消费 L1-RB-04 及网络场景，不新增包围整函数的 rescue 或把所有错误改成 EOF。依据：Ruby 3.4 String literals、IO/Socket 的实际返回与 SystemCallError；具体网络语义按冻结 API 核，不提供运行许可。
+
+### L1-RB-12 关闭后的资源元数据不保证仍可查询
+
+CRuby 3.4 的 TCPServer/IPSocket 地址查询依赖打开的 socket；`addr` 在 close 后可能给出 `IOError: closed stream`，不能用源语言 Listener.Addr 的行为直接推 Ruby 可调用。区分已复制的地址值与向资源再次查询：源在关闭后仍消费稳定的绑定地址/端口时，可在资源有效期读取并保存实际值，再按源时点使用；绑定端口为0时尤其不能猜端口或拿输入0代真实分配值。
+
+只有元数据在相关期间稳定且符合源语义时才缓存；动态状态、重新绑定、地址解析/查询失败及源码本来要失败的情况分别保持，不用回环常量替任意地址。不是所有资源 API 都在关闭后失败，也不是把查询全部提前就等价。依据：Ruby3.4 Socket/IPSocket#addr、IO#close/closed?；源 Listener/句柄 API 按其精确版本另读。本条不创建网络对端或驱动，关闭/清理/原始观察仍按既有场景契约。
+
+### L1-RB-13 File.join 的路径表示不等于源 filepath.Join
+
+Ruby3.4 `File::SEPARATOR` 为 `/`，Windows 的 `File::ALT_SEPARATOR` 为反斜杠，其他平台可为 nil；File.join 通常以正斜杠连接分量。Go filepath.Join 则按冻结 GOOS 连接并 Clean，词法归一、卷/UNC、根路径与空分量仍按源分别核；不能把分隔符替换当完整 Clean 实现。
+
+源输出的路径字节属于冻结义务时，实际访问路径、输出路径和重复引用须保持对应；Windows 目标可按已确认的路径分量/平台规则选择等效表示，但不能对任意文本全局替换 `/`，否则 URL、协议或合法文件名会改变。ALT_SEPARATOR=nil 时不盲用于替换。两种路径在本次文件系统都可访问，不证明原始输出字节一致；已有允许表示差异须回指冻结依据，不在失败后扩大比较范围。
+
+依据：Ruby3.4 File.join、File::SEPARATOR/ALT_SEPARATOR；Go filepath.Join/Clean 事实见[Go L1-GO-17](go.md#l1-go-17-路径拼接与原样写入有不同消费者)。只有字段确属路径时消费本条，不新增比较器，不以知识修订关闭旧目标未修复差异。
 
 ## 使用边界
 

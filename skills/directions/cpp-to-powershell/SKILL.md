@@ -118,6 +118,15 @@ description: Use when converting C++ source to PowerShell; apply this direction'
 5. **未知处理**：未检查返回值不等于不抛错；正常 fixture 不足以证明失败路径一致。缺定位/原证据时只登记待核，不修历史目标或改原 verdict。
 6. **官方依据**：Microsoft basic_ios（异常掩码与状态）、about_Try_Catch_Finally。
 
+### 规则 CPP-PS-07：参数、扩展名、键序和续行按各自消费者映射
+
+1. **触发/前提**：C++17 → PowerShell 7.6；源码用 argv 选择输入目录、path::extension 分组、std::map 输出，或构造多行 JSON。只消费实际触发部分，不要求每项都有目录扫描。
+2. **参数对应**：先核目标 param/剩余参数形态；用户序列完整时，源 `argc > 1`/`argv[1]` 对应 Count>0/索引0，全部计数/下标一起改，不能只改取值。源数字前缀解析另消费 CPP-PS-04；事实见[PS L1-PS-05](../../references/languages/powershell.md#l1-ps-05-参数绑定与实参来源必须显式重建)。
+3. **扩展名对应**：源点文件/尾点义务见[C++ L1-CPP-08](../../references/languages/cpp.md#l1-cpp-08-pathextension-取的是最后文件名的扩展部分)，目标扩展名/比较器事实见[PS L1-PS-12](../../references/languages/powershell.md#l1-ps-12-net-扩展名与字符串比较器按实际规则选择)。目标 .NET 的 Extension 对 `.profile`/`report.` 不自动保持该规则；按 filename 和源定界实现同等词法结果，保持所有统计/过滤消费者，不新增文件访问或默认小写。
+4. **键序对应**：默认 SortedDictionary 的文化比较不是源 byte 序。按[C++ L1-CPP-09](../../references/languages/cpp.md#l1-cpp-09-string-键序由源比较器与编码决定)核实际编码/比较器；Ordinal 只在对应值域下作为候选，不将 UTF-16 排序推广为任意 UTF-8 排序。默认插入/查找与遍历顺序也分别保留。
+5. **表达式对应**：拼接文本用合法明确分组并核最终单条输出，事实见[PS L1-PS-11](../../references/languages/powershell.md#l1-ps-11-多行表达式与单条输出分别保持)；不依赖隐式续行或对象显示来生成业务 JSON。
+6. **未知/依据**：只有静态定位而缺行为反例时保留“已修订、行为未验证”；oracle 不可冻结不关闭已定位错误。本文提供候选映射，相关语言页维护事实；不新增驱动、解析器、比较器或自审轮次。
+
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。

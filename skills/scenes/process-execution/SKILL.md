@@ -41,6 +41,8 @@ description: Use alongside a conversion direction when source launches child pro
 
 ## 语言与平台映射边界
 
+Windows 命令迁入 Python 时，额外外壳层、参数序列与文本捕获的具体事实见[Python L1-PY-19](../../references/languages/python.md#l1-py-19-windows-子进程的外壳层argv-与捕获编码分开)。本场景消费其适用条件，不把 shlex 或 shell=False 设为所有源 shell 调用的默认修法。
+
 具体 API 改写由方向页维护，例如[Go→C++ 的 os/exec](../../directions/go-to-cpp/SKILL.md#子进程-api-映射)。本场景只规定显式 shell 语义、并发排空、取消/回收和输出观察义务；目标解释器、杀树能力或管道关闭条件未知时记缺口，不按名称推断。
 
 ## 与方向 Skill 的组合

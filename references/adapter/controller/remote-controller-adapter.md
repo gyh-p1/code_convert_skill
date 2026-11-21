@@ -169,6 +169,19 @@ capsule.zip
 
 以下两种提交示例使用系统工具的明确路径；其他宿主按实际工具位置替换，不从 `PATH` 中同名 `tar` 推定为同一实现。有既有 fixture 时显式加入本项准许的树，不把整个临时目录打包。每次保存精确 capsule 原字节；重新打包导致归档字节变化时，按[提交标识与恢复](platform-revision-adapter.md#5-提交标识busy-与恢复)另记实际尝试，不以同名文件复用旧 submissionId。
 
+### 提交 JSON 与 multipart 类型核对
+
+归档前用原生 JSON 解析工具手工逐件回读实际 `comparison_manifest.json`、`input_profile.json`、`metadata.json` 及分类/授权对象；核根类型、字段和本 attempt 身份，不仅看扩展名或文件非空。JSON 中反斜杠、双引号按 JSON 层转义，字符串值里的 `HKCU\Software` 不能直接以单反斜杠写入原 JSON；代码/Markdown/JSON 的转义层不能互相照抄。解析失败先更正转换侧提交材料并另存版本，保留原件；不以平台先运行再 closure 失败来代替本次核对，不改授权/分类的实际字段值。
+
+| 表单字段 | 传输形态与内容核对 |
+|---|---|
+| `file` | 上传归档文件，curl 用 `file=@capsule.zip;type=application/zip`；`file=<capsule.zip` 发送文本，不能代 UploadFile |
+| `classification` | JSON 文本字段，curl 可用 `classification=<this-task-classification.json`；内容是本项唯一对象，派生/身份规则见[分类准入 §4](../../workflow/classifier-agent-gate.md#4-留证与字段分工) |
+| `batchAuthorization` | JSON 文本字段，curl 可用 `batchAuthorization=<batch-authorization.json`；内容是合法授权对象，不能用数组或文件上传代替 |
+| `caseId`、`targetOs`、`targetLang`、`submissionId` | 按现役接口和冻结身份传标量文本值；模板占位须替换，不能因看见 `<...>` 就当从文件取值 |
+
+归档后仍核实际包内材料与已解析版本对应；修改 JSON 后重建归档，不能只改包外文件。检查依据放既有 attempt 记录，不生成包装/请求脚本，不解析或修改 Controller 安装目录。上述核对只支持提交材料形制，不证明评估受理、隔离或功能通过。
+
 ### 构建命令传递与解析证据
 
 本节适用于源预检及双侧任务中经外壳传递的 `buildCommand`，尤其 PowerShell 的不运行语法检查。已有现场记录出现过外层先展开 `$` 变量、改写内层引号，使解析器没有检查目标文件但外壳退出码为 0 的情况。冻结的命令正文正确，只能证明计划；还须核对传输后实际消费的文件与解析结果，不能从 `buildAssessment=passed` 或 shell 0 补出有效语法证据。

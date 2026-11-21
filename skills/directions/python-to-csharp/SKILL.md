@@ -39,6 +39,7 @@ description: Use when converting Python source to C#; apply this direction's lan
 1. **源码触发条件**：Python 源码中函数通过 `return a, b` 返回多个值，调用方通过 `x, y = fn()` 解构。
 2. **冻结版本/运行时/API 前提**：源语言 CPython 3.12（PY-REF-DATA §3.2）；目标语言 C# 12 / .NET 8（MS-CS-SPEC）。
 3. **原可观察行为**：返回不可变的 `tuple` 对象，支持位置匹配解包。
+   选择具名 ValueTuple 时另按[C# L1-CS-10](../../references/languages/csharp.md#l1-cs-10-元组元素名有独立的上下文限制)核元素名（包括 Rest 的禁用），保持源元素位置/值和所有消费者；不能只因标识符合法就用作元素名。
 4. **目标可选写法和不适用条件**：
    - *可选映射*：使用 C# 具名 ValueTuple：`public (int Count, string Name) GetData()`，调用点使用 `var (count, name) = GetData()` 解构。
    - *不适用条件*：严禁使用遗留的引用类型 `System.Tuple<T1, T2>`（不可变 class，产生多余堆分配且属性名退化为 `Item1, Item2`）。
@@ -134,6 +135,17 @@ description: Use when converting Python source to C#; apply this direction's lan
    ```
 6. **信息不足或实现相关时的处理**：若源码依赖 `dict` 的插入顺序做输出或校验，必须确认该顺序是否为可观察行为，否则不能声称等价；自定义键对象的哈希/相等语义在目标侧需显式实现 `IEqualityComparer<TKey>`，无法确认时标为待确认。
 7. **资料依据（名称/版本/章节）**：MS-API-DICTIONARY；PY-REF-DATA。
+
+### 规则 PY-CS-07：停止判定与容器数值真值按实际值域对应
+
+1. **触发/前提**：CPython3.12→C#12/.NET8；源用if/not/while判定返回对象（如cmdloop的stop）或intro，不只做None身份比较。同读[Python L1-PY-01](../../references/languages/python.md#l1-py-01-假值集合不等于判空)和C# null/布尔事实；先盘本项允许返回的实际类型及自定义协议。
+2. **选择**：源内置空list/dict等为假时，目标对应的List/Dictionary或明确提供Count的集合须保持空/非空判定，不能一律“非null为真”。`ICollection`、`ICollection<T>`、只读集合的接口范围不同，不能假定一个非泛型类型测试已覆盖所有实际容器；源自定义__bool__优先于__len__时保留该优先级。
+3. **数值/迭代边界**：源零值（含浮点正负零）为假，非零为真；目标只查int会漏其他实际数值类型，用“>0”又会错判负数/NaN。所选数值表示须保持源范围/精度，不因便于Truthy就强转int或decimal。源迭代器默认为真时不能通过Count/枚举求“是否有数据”，否则会消费元素或改变副作用。
+4. **消费者/未知**：对while not stop同时核判定与否定、分派返回值和后续退出；不能为了限制循环无依据地强制所有返回值为bool。协议求值异常也不能默认转true/false。值域未知时写对应缺口，有限matched或仅编译不证明完整动态真值域；本条只引导目标真值表达的选择，并入既有自审，不提供外置运行时/驱动或新增审阅轮次。
+
+### 源异常处理器的有效顺序
+
+异常映射同读[Python L1-PY-20](../../references/languages/python.md#l1-py-20-except-的-first-match-与异常继承共同决定有效分支)。目标 catch 的排序须保持源 first-match 的有效行为；C# 编译器不允许的不可达派生 catch 可按等效有效集合处理，不为保留代码外形而激活源本来不执行的分支。输出标签、实际类型与源捕获/续行/清理分别对应，不自行统一为 TokenError 或调整诊断求 matched。
 
 ## 转换与验证边界
 

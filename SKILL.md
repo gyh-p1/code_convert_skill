@@ -68,7 +68,7 @@ metadata:
 
 **系统（按实际 API/子系统多选）**：[POSIX ↔ Winsock](skills/systems/posix-winsock/SKILL.md)、[文件路径](skills/systems/posix-windows-filesystem/SKILL.md)、[进程创建/身份权限](skills/systems/posix-windows-process-identity/SKILL.md)、[线程](skills/systems/posix-windows-threads/SKILL.md)、[Windows 注册表/服务](skills/systems/windows-registry-service-subsystem/SKILL.md)。同 OS 的专有子系统也适用；双向标题不证明全面映射或验证。macOS 当前只含文件位置约定；PE、ptrace/seccomp、Keychain/launchd/CoreFoundation 无对应系统 Skill。
 
-**工作流**：普通单文件直接走本入口六步和[单项闭环](references/workflow/conversion-evaluation-loop.md)，无需批量工作流；长/复杂单文件在建图前加读[长单文件](skills/workflows/long-file-conversion/SKILL.md)，不强制分段。[批量](skills/workflows/batch-conversion/SKILL.md)按多项任务集合加载，批次中遇到长文件时两者并用。三种形态共享可达性分流、冻结、适用分类/源预检、自审及单项交付门禁。批量只手工串行，整批一个 batchId，每新增 40 项 DONE+PARTIAL 增量对账并带入遗留项，缺档立即停新增转换，关闭前终局核对。
+**工作流**：普通单文件直接走本入口六步和[单项闭环](references/workflow/conversion-evaluation-loop.md)，无需批量工作流；长/复杂单文件（含预期目标代码显著膨胀的中等源文件）在建图前加读[长单文件](skills/workflows/long-file-conversion/SKILL.md)，不强制分段。[批量](skills/workflows/batch-conversion/SKILL.md)按多项任务集合加载，批次中遇到长文件时两者并用。三种形态共享可达性分流、冻结、适用分类/源预检、自审及单项交付门禁。批量只手工串行，整批一个 batchId，每新增 40 项 DONE+PARTIAL 增量对账并带入遗留项，缺档立即停新增转换，关闭前终局核对。
 
 [ATT&CK 战术索引](skills/attack-tactic-index/SKILL.md)仅核对标签与定位知识，不生成战术规则，不参与授权；无证据记 none。HTTP/socket/文件 API 本身不构成战术。
 
@@ -102,8 +102,8 @@ metadata:
 | 5.0 回读可达性分支 | 评估准备 §1.0；冻结评估计划前已用只读健康接口检查，首次生成前回读本项原件；恢复新增动作重新检查 | 可达走正常链；确认不可达直接做 5.3–5.4，再转第 6 步，跳过 5.1 分类、5.2 及 5.5–5.7 的编译运行或提交。缺实际检查先补，不把忙碌/未就绪当不可达；未决 job 仍按原身份恢复 |
 | 5.1 分类（系统可达） | 分类准入 §1–3；检查已落盘冻结及完整源树，手工准备单项输入，核 tools/safety_classifier_v2.py 的登记版本/SHA，通过原生执行工具在获准外部临时目录逐条暂存、调用并取回原结果 | 这是评估运行准入，确认不可达仅转换不适用。可达时文件/版本、合法执行位置或通道缺失记具体缺口；无精确 ALLOWED/null 不预检、不生成，转第 6 步 |
 | 5.2 源预检与分支（系统可达） | 评估准备 §1.1/§1.3，并逐项落实[§1.4 核对清单](references/framework/evaluation-readiness-contract.md#14-源预检采信与双侧对齐核对)；读构建前提和渠道适配，核支持形态、安全/授权/隔离及精确源构建；先辨本轮合法行为入口/观察条件 | 源 build completed/0 和适用清理是必需；正常行为分支还需有效源基线；本轮行为无法评估则记录 LIB_UNOBSERVABLE_COMPILE_ONLY 继续生成。不造目标凑源预检，该分支源构建未过不生成；确认不可达按 5.0 跳过本行 |
-| 5.3 正式生成 | 单项闭环 §2；回读冻结及本分支原件，确认源范围、适用知识正文和行为义务已在当前模型上下文中；由当前模型生成，通过原生文件工具保存完整目标及阶段来源记录 | 可达核适用源预检；不可达核 §1.0 原件，不虚记 SOURCE_BUILDABLE。不要求单独模型请求；完整产物、实际上下文与版本可回读才进入自审，失败/截断按有限恢复规则留证 |
-| 5.4 自审与有限修订 | 单项闭环 §2/§4；当前模型另起明确的自审阶段，重新对照源、已落盘目标、冻结义务及适用知识，保存结构化审阅记录；阶段分离不等于独立模型调用 | 覆盖/必要记录完整且无未解决可定位转换问题；有限有效 NO-REPAIR-IDENTIFIED 可推进，不反复求保证。有依据的问题由当前模型有限修订，保存父/新版本并复审；不是独立编译或行为验证 |
+| 5.3 正式生成 | 单项闭环 §2；回读冻结及本分支原件，确认源范围、适用知识正文和行为义务已在当前模型上下文中；由当前模型生成（不可达分支落实防御性生成，不硬锁未核验小版本并主动消费构建前提），通过原生文件工具保存完整目标及阶段来源记录 | 可达核适用源预检；不可达核 §1.0 原件，不虚记 SOURCE_BUILDABLE。不要求单独模型请求；完整产物、实际上下文与版本可回读才进入自审，失败/截断按有限恢复规则留证 |
+| 5.4 自审与有限修订 | 单项闭环 §2/§4（不可达分支同一轮内落实[§4.3 双通道静态自审](references/workflow/conversion-evaluation-loop.md#43-不可达分支的双通道静态自审编译前端核对与行为推演)）；当前模型另起明确的自审阶段，重新对照源、已落盘目标、冻结义务及适用知识，保存结构化审阅记录；阶段分离不等于独立模型调用 | 覆盖/必要记录完整且无未解决可定位转换问题；有限有效 NO-REPAIR-IDENTIFIED 可推进，不反复求保证。有依据的问题由当前模型有限修订，保存父/新版本并复审；不是独立编译或行为验证 |
 | 5.5 评估就绪与提交 | 评估准备 §1–4（按 §1.4 回读源原件并对齐目标条件）、分类准入 §3及渠道适配；核精确版本、安全/授权/隔离及范围；行为分支核驱动/对称/oracle，LIB 核不运行命令；先保存本 attempt 精确材料与适用 submissionId，再 POST | 适用条件通过才提交并保留 HTTP 状态/body/传输诊断；LIB 只验目标语法/编译。支持未知只停该验证，交已有目标并记 UNVERIFIED，不伪造 job，不盲重投 |
 | 5.6 回执、轮询与取证 | 渠道适配；取得 jobId 后查原 job，终态后手工逐件取真实报告、各适用侧 evidence、comparison/logs及清理依据 | 无回执且可能已接收则 WAITING/SUBMISSION_UNKNOWN，不盲重投；不适用/未返回件不伪造，中途快照不作最终证据 |
 | 5.7 归因、必要修复或收尾 | 评估准备 §5（含 §5.1 消噪/分类及[§5.2 统计单位](references/framework/evaluation-readiness-contract.md#52-功能比较统计的集合与单位)）、单项闭环 §3；按分支回读精确版本原件。正常行为分支核两侧原始观察，LIB 分支核源构建与目标语法/编译，不要求运行观察或 comparison | 当前模型只对可定位转换引入问题作有限修复；新稿重核自审/准备并取得新证据，不借旧稿 PASS。停止或无修复需求均转第 6 步 |

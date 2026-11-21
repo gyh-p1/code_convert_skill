@@ -18,6 +18,8 @@
    - `if x:` 在 `x` 为 `None`、`False`、数值 `0`、`""`、`b""`、`[]`、`{}`、`set()` 时**均为假**；自定义类的实例默认恒为真，除非定义 `__bool__`/`__len__`。
    - `x is None` 与 `not x` **不等价**：`""` 与 `0` 使 `not x` 为真但不是 `None`。
    - `x is None` 与 `x == None` 在自定义 `__eq__` 下也可能不同；用 `is` 才是身份判定。
+   - 自定义真值协议先用 `__bool__`，没有它才用 `__len__`，两者都没有才默认为真；协议求值的副作用/异常属于行为，不能因实现不支持就返回默认true。`__bool__`须给bool结果，长度须为合法非负整数，错误不能静默吞掉。
+   - 空tuple/bytes/集合与浮点正负零也为假；非零数（含负数）为真，浮点NaN不因为“不是正数”变成假。生成器/普通迭代器不因已经耗尽就判假，不能为了真值求长度而枚举、消耗源迭代器。
 4. **目标可选写法和不适用条件**：
    - *Python 作为源*：按实际值域、__bool__/__len__ 与求值副作用保留 if not x 的真值行为，不能以推测的“作者意图”缩成 null 检查；必要类型/消费者未知时记录缺口。
    - *Python 作为目标*：源为静态类型语言时，源的空指针/零值判断必须分别映射为 `is None` 与 `== 0`/`len(x) == 0`；**不得**用 `if x:` 简化，那会把 `0`/`""` 一并并入假分支而改变控制流。
@@ -289,9 +291,40 @@ split要核分隔符、maxsplit、首尾空项和首个等号；dict读取默认
 ### L1-PY-17 JSON 接受域不由输出长得相同决定
 
 1. **触发／前提**：CPython 3.12 `json.loads/dumps` 及其 hooks、parse_constant、strict、ensure_ascii、allow_nan；包括先做 UTF-8 解码的入口。
-2. **事实**：默认 loads 的重复同名键保留后值；object_pairs_hook 可改变该策略。默认解析可接受 NaN/Infinity，parse_constant 可改为拒绝；dumps 的 allow_nan 属输出约束，不自动约束 loads。合法原始 UTF-8 字节中的 JSON `\ud800` 转义仍可得到孤立代理项，原始 UTF-8 校验不替代该层处理。
-3. **映射／反例**：保持源实际配置、错误码／时点和后续编码策略；不能照搬另一用例的拒绝重复键 hook，或将 Go 的代理项替换规则误当 Python 默认。字面 `"\\u0000"` 与解析为 U+0000 的 `"\u0000"` 分开；层数限制和递归错误依实际入口核对，不强造通用 64 层限制。
+2. **事实**：默认 loads 的重复同名键保留后值；object_pairs_hook 可改变该策略，且其在对象**所有成员值解析完毕后（后序）**才调用 hook，因此嵌套子对象错误、parse_constant 非有限数或成员值语法错误均先于外层重复键 hook 触发。默认解析可接受 NaN/Infinity，parse_constant 可改为拒绝；dumps 的 allow_nan 属输出约束，不自动约束 loads；`dumps(..., ensure_ascii=True)` 同时将 `U+007F`（DEL）转义为 `\u007f`（原样输出的 ASCII 范围为 `0x20`–`0x7E`，即 `code < 0x7F`）。合法原始 UTF-8 字节中的 JSON `\ud800` 转义仍可得到孤立代理项，原始 UTF-8 校验不替代该层处理。
+3. **映射／反例**：保持源实际配置、错误码／时点和后续编码策略；不能照搬另一用例的拒绝重复键 hook，或将 Go 的代理项替换规则误当 Python 默认。手写目标解析器若在读到重复键名时即刻抛错，会改变与嵌套/非有限数错误的优先级；输出序列化若按 `<= 0x7F` 放行 `U+007F`，也会与 `ensure_ascii=True` 分叉。字面 `"\\u0000"` 与解析为 U+0000 的 `"\u0000"` 分开；层数限制和递归错误依实际入口核对，不强造通用 64 层限制。
 4. **未知与依据**：独立核输入字节、解析值和输出转义；合法 JSON 转义表示可按冻结结构比较，但字符串值不能被替换字符、大小写或二次转义改写。依据：Python 3.12 json 的 Standard Compliance、Repeated Names、Infinite and NaN Number Values、Character Encodings、loads/dumps 参数。
+
+### L1-PY-18 文档字符串也是受转义规则约束的字符串
+
+1. **触发/前提**：CPython 3.12 目标把 Doxygen 命令、正则或 Windows 路径放入 docstring/字符串；纯 `#` 注释与字符串分别判断。
+2. **事实**：普通字符串会解释反斜杠转义，包括 `\b` 退格、`\r` 回车；未识别转义在 3.12 可产生 SyntaxWarning，构建 exit 0 不证明求值后的文本未改变。三引号只改变定界/多行方式，不关闭转义。raw 字符串保留反斜杠，但仍须满足引号定界，不能以奇数个反斜杠结束。
+3. **选择/反例**：源 Doxygen `\brief`/`\return` 直接放普通 docstring 会生成控制字符；`\warning`/`\param` 还可能给出警告。按实际内容选合法 raw 字面量、普通字符串正确转义或真正注释，不统一给所有字符串加 r，否则源有意的换行/转义也会改变。raw 三引号正文含相同三引号时仍须换定界或其他合法表示。
+4. **未知/依据**：源文本有运行时消费者时核求值后内容、首尾换行和全部引用；只有 docstring 修订不冒称业务行为已验证。依据：Python 3.12 Lexical analysis 的 string literals、escape sequences、raw string 限制。并入已有文本边界核对，不新加扫描器或审阅轮次。
+
+### L1-PY-19 Windows 子进程的外壳层、argv 与捕获编码分开
+
+1. **触发/前提**：CPython 3.12 subprocess 承接 C/CRT `_popen`、显式 `cmd /c` 或直接进程调用；冻结 OS、可执行物形态、原始命令/参数边界、cwd/env、shell 及捕获通道。
+2. **调用事实**：`shell=False` 的参数序列在 Windows 仍需序列化为 CreateProcess 命令行，具体被调用程序如何解析另核；不是 POSIX argv 内核透传。`shell=True` 又通过命令解释器解释命令，原命令已经含 `cmd /c` 时可能引入第二层引号/展开。`shlex` 按 Unix shell 语法设计，`posix=False` 不等于完整 Windows CRT/cmd 参数解析器。
+3. **选择/反例**：源本来是直接 argv 调用时不添加 shell；源确需管道、重定向、变量展开或 shell 内建时也不能为修尾引号一律删 shell。源已明确 shell 可执行文件/参数边界时可选择相应 argv 形态，保留一次所需解释层；空参数、空格路径、引号、反斜杠、元字符按源消费者核。历史固定命令用 shlex + shell=False 修后比较通过，只支持那个命令集合，不能推广成通用 Windows splitter。
+4. **捕获事实**：stdout/stderr 默认可捕获为 bytes；启用 text、encoding 或 errors 会进入文本层，默认/指定编码与通用换行另核，文本模式可将 CRLF/CR 变为 LF。子进程实际 ANSI/OEM/UTF-8 输出、Python locale 与控制台编码不天然相同；源对窄字节的拼接、计数、JSON 转义和源自己去 CR 的位置分别保持。不统一 UTF-8 解码、不一律删 CR，不用 errors=replace 吞未知差异。
+5. **未知/依据**：未确认源外壳解析、编码或字节范围时记录该调用点缺口，不猜完整参数/代码页。启动失败、非零状态、部分输出和清理仍按[进程场景](../../scenes/process-execution/SKILL.md)，不新增驱动或本机试验。依据：Python 3.12 subprocess 的 Windows Popen、shell、安全与文本流说明；shlex 的 Unix shell 范围说明。具体转换效果仍独立取证。
+
+### L1-PY-20 except 的 first-match 与异常继承共同决定有效分支
+
+CPython3.12 在同一个 try 的 except 序列中选择第一个匹配异常类型/基类的处理器。`IndentationError` 是 `SyntaxError` 的子类；`TabError` 又是 IndentationError 的子类。因此前面的 except SyntaxError 会承接缩进异常，后面的 except IndentationError 不会再执行，不能按分支名直觉把后者“恢复”为目标的优先处理。
+
+先对应源真实顺序、继承/匹配集合、处理器体、raise/续行/finally 和诊断消费者，再选择目标处理。C# 等语言可能拒绝前置基类 catch 后的不可达派生 catch；目标可合并有效集合或显式表达源 first-match，不能仅为编译把派生 catch 提到前面，从而改变有效输出。源原来派生在前时，也不能反向合并而丢专门行为。
+
+打印标签 `Token Error` 不证明异常类型就是 `tokenize.TokenError`；后者与 SyntaxError/IndentationError 的继承关系须分别核，不能凭文案重建异常分类。未知自定义类型/过滤器或缺位置证据时记相应缺口，不根据自修次数猜捕获行为。依据：Python3.12 try statement/except 匹配、内置异常层次；目标 catch 约束按其语言版本。只并入既有有限自审/修订，不额外造错误输入或运行 tokenizer。
+
+### L1-PY-21 perf_counter 与 process_time 测量不同对象
+
+CPython3.12 的 `time.perf_counter()` 测短时段的高分辨率经过时间，包含睡眠/阻塞的经过时长；本实现用单调时钟。`time.process_time()` 返回本进程累计的用户态+系统态CPU秒，排除睡眠，覆盖进程而非单个线程。两者参考起点未定义，只有同类时钟的两次差值有意义；不能共用一个origin或把两种累计值相减。线程CPU、墙钟日期时间和子进程CPU也分别区分。
+
+源按 `-p/--process` 切换计时器时，选择必须改变实际测量对象，不能只换函数名仍调用默认时钟。采样范围、单位、起止位置、调用次数及如timeit中的GC启停/恢复按源保持；计时输出可变不授权固定值、删选项或改测量定义。计时API失败的回退/传播也须有源语义或冻结允许差异依据，不能静默换成另一物理量。
+
+依据：Python3.12 time.perf_counter/process_time/thread_time、timeit的timer选择与计时行为；实际底层实现/分辨率/平台条件按冻结版本核，未核写缺口，不在本机运行计时探针或受测代码。此条用于语义映射，不提供性能测试框架或动态验证结论。
 
 ## 使用边界
 

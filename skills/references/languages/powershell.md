@@ -43,6 +43,7 @@
    - **参数有三种来源**：**未绑定**、**显式传入**、**默认值生效**。默认值**仅在参数被省略时**生效；`$PSBoundParameters` 只含**真正传入**的参数。
    - 函数参数默认可按声明顺序位置绑定；显式 Position、CmdletBinding 的 PositionalBinding、参数集及 switch 等影响实际绑定。不能仅凭没有 Position 就判只能按名传入；需要稳定公开位置接口时显式记录/声明位置。
    - `$args` 只在**没有** `param()` 块（或 `param()` 未声明该参数）时承接剩余位置实参；一旦参数被 `param()` 声明，多余实参的行为依 `ValueFromRemainingArguments` 而变。
+   - 脚本/函数的用户实参不含脚本名。仅在声明方式确实完整承接该序列时，C/C++ 的 `argc > 1`/`argv[1]` 对应用户序列 `Count > 0`/索引 0；计数守卫、全部下标与后续消费范围一起调整。`$PSCommandPath` 是脚本路径，不是用户序列的第一个元素，也不能自动代源 argv[0] 的启动拼写。
    - 名称**缩写**：PowerShell 允许**唯一前缀**缩写参数名（`-Dep` 可匹配 `-Depth`），有歧义时报错。
    - **`[switch]` 的显式假值**：`-Flag:$false` 与**省略** `-Flag` 在 `$PSBoundParameters` 中不同（前者已绑定）。
 4. **目标可选写法和不适用条件**：
@@ -243,6 +244,32 @@ PowerShell7.6的管道对象、输出流和外部进程是不同语义层。先�
 2. **事实**：ConvertFrom-Json 的 Depth 限制输入解析的嵌套深度；ConvertTo-Json 的 Depth 决定输出遍历的深度，不能代替前者。输入合法且目标解码成功，不证明满足源指定的解析上限；输入根数组在成功流中的展开行为还须按 NoEnumerate 和实际消费点核对。
 3. **映射／反例**：源显式 `ConvertFrom-Json -Depth 64` 时，目标不能只采用 Go 解码器更宽的自身上限。分别对应源的错误捕获、退出或续行、初始化是否已发生，以及输出序列化约束。深度按源解析器的计数口径核，不能把 JSON 字符串值里的括号当嵌套，也不能按输出缩进计数；边界前／等于／超过上限是候选输入，具体预期从源和合法资料确定。
 4. **未知与依据**：显式参数与运行时默认分开；无法确认相同口径时写深度语义待核，不删除源约束或用固定错误匹配样例。依据：Microsoft.PowerShell.Utility 的 ConvertFrom-Json Depth/AsHashtable/NoEnumerate 与 ConvertTo-Json Depth 参数说明；本页不提供辅助解析器或动态验证结论。
+
+### L1-PS-10 定宽模运算先确定中间值范围再掩码
+
+1. **触发/前提**：PowerShell 7.6 目标承接源已定义的 uint32/DWORD 回绕、位运算或全一哨兵；冻结位宽、实际运算和输入范围，C 有符号溢出不并入此规则。
+2. **选择依据**：对 uint32 的加/减，已证明范围可容纳时可用 int64 中间值，再以明确正值的 32 位全一掩码取模并转 uint32；size=0 的 size-1 中间值为 -1，取模后为 4294967295。直接 uint64 减法或强转 uint32 不保证下溢回绕。原始 `0xFFFFFFFF` 的字面量类型/符号不能当正值掩码保证，使用明确类型的 `[uint32]::MaxValue` 等已定义边界。
+3. **范围/反例**：两个任意 uint32 相乘可能超出 int64，64 位运算也不能统一塞进 int64；按范围选 bigint 或有依据的分步位宽算法，确保每个源截断点都对应。最后一次掩码不能补救此前浮点提升造成的低位损失。函数 success 流、返回值类型、哨兵比较和全部消费者同时核，不只给赋值处标 uint32。
+4. **未知/依据**：范围或源运算类型不明时保留缺口，不自定更窄输入。依据：PowerShell 7.6 about_Arithmetic_Operators、about_Type_Conversion、about_Numeric_Literals；.NET UInt32/Int64/BigInteger。这里只提供映射条件，未运行的分支仍 UNVERIFIED，不新建算术探针。
+
+### L1-PS-11 多行表达式与单条输出分别保持
+
+PowerShell 的换行可能结束语句，只有语法允许的未完成表达式/分组等形态才续行。拼接 JSON 或长文本时可用明确括号保持同一表达式，核实际运算符位置、首尾定界和求值后字符串；不把 Markdown 展示换行直接当脚本合法续行。反引号续行的尾部空白可能破坏形态，不作为复制文本时的隐式保证。
+
+将一条表达式拆成多条裸字符串语句，还可能向 success 流输出多个对象；这与源写一次完整文本不同。按源消费者保持对象数、拼接顺序、内容及输出通道，不以解析通过代输出一致。依据：PowerShell 7.6 about_Parsing、about_Operators、about_Quoting_Rules；既有合法语法检查由构建契约负责，不新增解析脚本或审阅轮次。
+
+### L1-PS-12 .NET 扩展名与字符串比较器按实际规则选择
+
+PowerShell 7.6 使用 .NET 路径/容器 API 时，冻结宿主 .NET 版本与 OS。`[IO.Path]::GetExtension` 按最后路径分量查点并返回含点后缀：`.profile` 得 `.profile`，`report.` 得空串，`report.tar.gz` 得 `.gz`；这与 C++ 的前导点/尾点规则不同。`FileInfo.Extension` 同样走 .NET 的扩展名规则，不因为叫 Extension 就等于另一语言的规则。路径分解和源后续去点/大小写处理分开核，不为词法取后缀而新增文件读写。
+
+未指定比较器的 `SortedDictionary<string,T>` 使用默认字符串比较，涉及文化规则；`StringComparer.Ordinal` 则按 UTF-16 代码单元比较，区分大小写。目标需要源 std::string 字节序时，只有编码/值域对应才选 Ordinal，源比较事实见[C++ L1-CPP-09](cpp.md#l1-cpp-09-string-键序由源比较器与编码决定)；不能从一个 ASCII fixture 推定全域。依据：.NET Path.GetExtension、FileSystemInfo.Extension、SortedDictionary 的 comparer 构造与 Comparer<T>.Default、StringComparer.Ordinal。未知宿主/API 版本记该点缺口，不以本机调用补证。
+
+### L1-PS-13 版本锁定指令与可变值类型枚举器绑定边界
+
+1. **触发／前提**：PowerShell 目标使用 `#requires -Version` 声明运行时版本，或在类/函数中以 `.NET` 可变值类型枚举器（例如 `SortedDictionary<K,V>.ValueCollection.Enumerator` 等 struct `Enumerator`）封装惰性迭代并装箱为 `[System.Collections.IEnumerator]`。
+2. **事实与保持行为**：依 PowerShell `about_Requires`，`#requires -Version <M.m>` 会在任何低于该次版本的宿主运行时上直接拒绝启动脚本；项目知识基线为 7.6，并不证明目标执行环境已安装 7.6。将可变 struct 枚举器装箱到接口字段后经 PowerShell 动态成员分派调用 `MoveNext()`/`Current`，可能产生值复制或方法绑定行为偏差，在未获实际宿主运行证据前属于高风险绑定面。
+3. **选择／反例**：无源语义或冻结环境版本要求时，不得默认写入未核验的精确次版本 `#requires -Version 7.6`；若未冻结精确小版本且未使用高版本专有语法，应省略次版本硬锁并在冻结与报告中标明最低兼容假设。需要保持“首次迭代才打开并统计/finally 才关闭”的惰性状态对象时，无运行验证前优先采用无歧义的显式键集合/索引游标状态对象，避免装箱可变 struct 枚举器。
+4. **未知与依据**：实际目标宿主次版本与成员绑定行为未获运行证据时保持未验证，并在自审记录为 `toolchain-unknown` 风险点；依据：PowerShell `about_Requires`、`about_Methods` 与 `.NET` `SortedDictionary<TKey,TValue>.ValueCollection.Enumerator` 值类型规范。
 
 ## 使用边界
 

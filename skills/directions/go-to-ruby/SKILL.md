@@ -189,6 +189,12 @@ description: Use when converting Go source to Ruby; apply this direction's langu
 
 涉及 Go os.TempDir 与 Ruby Dir.tmpdir 时，分别读[Go L1-GO-07](../../references/languages/go.md#l1-go-07-ostempdir-选路径不检查目录可用性)与[Ruby L1-RB-09](../../references/languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)。上文进程/清理例中的 Dir.tmpdir 只演示清理结构，不证明源目录选择已等价；候选优先级、可用性、回退/诊断依准确版本对应，不能借换目录使评估匹配。
 
+### 规则 GO-RB-09：资源元数据、临时目录加载与路径表示分别对应
+
+源码使用 Listener.Addr/Close、os.TempDir 或 filepath.Join 时，分别读[Ruby L1-RB-09](../../references/languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)、[L1-RB-12/13](../../references/languages/ruby.md#l1-rb-12-关闭后的资源元数据不保证仍可查询)和源 Go 的实际 API。Dir.tmpdir 需要 tmpdir 加载，但加载齐备不说明候选/检查/回退与 os.TempDir 相同。Ruby socket 在关闭后查询地址也不自动保持 Go 源的消费时点。
+
+源确实在关闭后使用稳定的绑定地址时，保存资源有效期取得的真实元数据；不把任意源地址硬编码为 loopback，不猜动态端口。源 Windows filepath.Join 的路径输出有字节义务时，按源词法与目标实际文件系统对应其表示；File.join 返回正斜杠不能仅靠“可打开文件”就宣布输出保持。失败/EOF/关闭传播按源分支，不新增宽泛 rescue、无限修复或辅助驱动。
+
 ## 转换与验证边界
 
 > **构建前提**：目标代码进入编译前还须满足链接库、工程文件、工具链版本与构建缓存等前提，并须在冻结阶段写入任务契约（平台构建命令取自契约 `buildCommand`，不自动适配）。规则见[构建前提与工具链适配](../../../references/workflow/build-prerequisites.md)。

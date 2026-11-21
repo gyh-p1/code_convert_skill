@@ -42,10 +42,27 @@
 
 | 源码触发 | 应读正文 |
 |---|---|
+| 动态返回对象的停止判定、空容器/浮点零、__bool__/__len__ | [Python L1-PY-01](languages/python.md#l1-py-01-假值集合不等于判空)及目标语言实际值域；Python→C#同读[PY-CS-07](../directions/python-to-csharp/SKILL.md#规则-py-cs-07停止判定与容器数值真值按实际值域对应)，不通过枚举求默认真值 |
+| perf_counter/process_time、计时选项、进程/线程/子进程CPU | [Python L1-PY-21](languages/python.md#l1-py-21-perf_counter-与-process_time-测量不同对象)、[Go L1-GO-19](languages/go.md#l1-go-19-进程-cpu-时间不是-timesince)；Python→Go同读[规则5](../directions/python-to-go/SKILL.md#规则-5墙钟与进程-cpu-计时器分别映射)，源失败回退与动态数值消噪分别核 |
+| 外部函数/完整类型、Go 零值迁入 C、Windows 输出模式 | [C L1-C-08/09/10](languages/c.md#l1-c-08-外部函数与完整类型都须有声明来源)；源对应语言及 SDK 同读，目标漏声明不套源侧诊断放宽，初始化不等于业务成功 |
+| JSON 游标跳空白、空结构、闭括号与尾逗号 | [C++ L1-CPP-10](languages/cpp.md#l1-cpp-10-解析循环须在跳过空白后按语法状态判闭合)；按源解析 API 的接受域和当前语法状态，不统一先判结束而接受尾逗号 |
+| Ruby tmpdir 加载、关闭后元数据、Windows 路径表示 | [Ruby L1-RB-09](languages/ruby.md#l1-rb-09-dirtmpdir-的候选顺序与有效性)、[L1-RB-12/13](languages/ruby.md#l1-rb-12-关闭后的资源元数据不保证仍可查询)；Go→Ruby 同读 [GO-RB-09](../directions/go-to-ruby/SKILL.md#规则-go-rb-09资源元数据临时目录加载与路径表示分别对应)，不猜动态地址或全局替换分隔符 |
+| 具名元组的 Rest/Item 位置与解构消费者 | [C# L1-CS-10](languages/csharp.md#l1-cs-10-元组元素名有独立的上下文限制)；元素名、普通变量、位置/值与元数据分别核，不当通用关键字 |
+| except/catch 顺序、基类/派生匹配、不可达处理器 | [Python L1-PY-20](languages/python.md#l1-py-20-except-的-first-match-与异常继承共同决定有效分支)及实际目标语言；诊断标签不当异常类型，不能为目标可编译而激活源被遮蔽分支 |
 | 命令行守卫、参数下标、shift/解析后剩余范围 | 源/目标语言页 §一的参数规则；[C](languages/c.md)、[C++](languages/cpp.md)、[Ruby](languages/ruby.md)补计数与全部使用点联合映射；[Python L1-PY-07](languages/python.md#l1-py-07-getopt-的顺序策略由源解析器决定)区分扫描策略 |
+| 程序名、托管程序集位置与进程映像回显 | [C# L1-CS-05](languages/csharp.md#l1-cs-05-程序实参不含程序名参数绑定与默认值必须显式重建)，同读源 argv 事实与冻结启动形态；ProcessPath 不普遍等同原始 argv[0] |
+| Win32 API 包成员、输出指针、StartupInfo/ProcessInformation | [Go L1-GO-13](languages/go.md#l1-go-13-windows-api-的包归属与导出边界)；按实际 ABI/源 A-W 接口另读系统页，不从动态绑定或编译推行为 |
+| 原生宽字符串/注册表缓冲与代码单元长度 | [Go L1-GO-16](languages/go.md#l1-go-16-utf-16-代码单元不能直接转换成-string)及两语言 §三；解码、原始 uint16/bytes、终止 NUL 与容量分开 |
+| filepath.Join、路径拼接与裸 LF 写入 | [Go L1-GO-17](languages/go.md#l1-go-17-路径拼接与原样写入有不同消费者)，另一语言的路径/CRT/writer 事实同读；实际文件操作读文件场景 |
+| 源正则/路径移入注释、Doxygen 文档字符串、Ruby 换行字面量 | [Go L1-GO-18](languages/go.md#l1-go-18-源文本放入目标注释仍须满足目标定界)、[Python L1-PY-18](languages/python.md#l1-py-18-文档字符串也是受转义规则约束的字符串)、[Ruby L1-RB-11](languages/ruby.md#l1-rb-11-单引号中的反斜杠不表示协议换行)；按本项语言选择，不把三种定界/转义层互套 |
+| DWORD 下溢、全一哨兵、乘法中间值与多行表达式 | [PS L1-PS-10/11](languages/powershell.md#l1-ps-10-定宽模运算先确定中间值范围再掩码)；中间类型按范围选，解析通过不代对象数/输出一致 |
+| path::extension、std::string 键序与 .NET API 候选 | [C++ L1-CPP-08/09](languages/cpp.md#l1-cpp-08-pathextension-取的是最后文件名的扩展部分)、[PS L1-PS-12](languages/powershell.md#l1-ps-12-net-扩展名与字符串比较器按实际规则选择)；C++→PS 同读 [CPP-PS-07](../directions/cpp-to-powershell/SKILL.md#规则-cpp-ps-07参数扩展名键序和续行按各自消费者映射)，Ordinal 有编码/值域条件 |
+| Windows _popen/cmd 外壳层、引号和 subprocess 文本捕获 | [Python L1-PY-19](languages/python.md#l1-py-19-windows-子进程的外壳层argv-与捕获编码分开)与进程场景；shell/argv/编码/换行分别保持，不把 shlex 当通用 Windows parser |
 | 字节计数、非 ASCII 路径、文本流行尾 | 两语言页 §三；[Python L1-PY-03](languages/python.md#三字符串字节nulunicode-与编码)、[C++ L1-CPP-03](languages/cpp.md#三字符串字节nulunicode-与编码)；实际文件操作还读文件场景 |
 | NFC/NFD/NFKC/NFKD、casefold、大小写键及码点限长 | [Python L1-PY-16](languages/python.md#l1-py-16-unicode-规范化折叠与文本长度分别保持)、[Go L1-GO-14](languages/go.md#l1-go-14-大小写映射不提供完整规范化与-casefold)、[C++ L1-CPP-07](languages/cpp.md#l1-cpp-07-文本容器与-locale-不等于-unicode-规范化)、[C# L1-CS-09](languages/csharp.md#l1-cs-09-lengthrune-与文本元素的单位不同)；按源实际调用，不把缺离线库变成语义等效 |
-| JSON 重复键、孤立代理项、内嵌 NUL、数值和深度 | [Python L1-PY-17](languages/python.md#l1-py-17-json-接受域不由输出长得相同决定)、[Go L1-GO-15](languages/go.md#l1-go-15-encodingjson-的替换重复键与数值路径)、[C L1-C-07](languages/c.md#l1-c-07-json-解码字符串的长度须保留到校验与输出)、[PowerShell L1-PS-09](languages/powershell.md#l1-ps-09-json-解析深度与序列化深度是不同约束)；同时读另一语言实际解析 API，区分 raw 字节校验与 JSON 转义解码 |
+| JSON 重复键、孤立代理项、内嵌 NUL、数值和深度 | [Python L1-PY-17](languages/python.md#l1-py-17-json-接受域不由输出长得相同决定)、[Go L1-GO-15](languages/go.md#l1-go-15-encodingjson-的替换重复键与数值路径)、[C L1-C-07](languages/c.md#l1-c-07-json-解码字符串的长度须保留到校验与输出)、[PowerShell L1-PS-09](languages/powershell.md#l1-ps-09-json-解析深度与序列化深度是不同约束)；同时读另一语言实际解析 API，区分 raw 字节校验与 JSON 转义解码，核 `object_pairs_hook` 后序优先级与 `ensure_ascii=True` 对 `U+007F` 转义 |
+| C++ 可空辅助指针、右值临时对象取地址与系统宏冲突 | [C++ L1-CPP-11](languages/cpp.md#l1-cpp-11-右值临时对象不得取地址与系统宏冲突防护)；按目标标准选 `std::optional` 或具名左值，避开 POSIX/Windows 系统宏同名常量 |
+| PowerShell #requires 版本锁定与 .NET 值类型枚举器装箱 | [PowerShell L1-PS-13](languages/powershell.md#l1-ps-13-版本锁定指令与可变值类型枚举器绑定边界)；未核验目标小版本不硬锁次版本，惰性迭代避开值类型枚举器装箱绑定 |
 | 函数返回嵌套集合、0/1/多项、JSON 序列化泛型绑定 | [PowerShell L1-PS-08](languages/powershell.md#l1-ps-08-函数-success-流集合对象与泛型调用)；C#→PowerShell 同读方向 CS-PS-01/04 及两侧长度单位，不用 @() 假定保留容器类型 |
 | 固定文本、长字节常量、拼接/转义 | [C L1-C-06](languages/c.md#l1-c-06-字面量内容终止-nul-与显式长度分别保持)、C++ §三、Python L1-PY-06、[PowerShell L1-PS-06](languages/powershell.md#l1-ps-06-固定文本须区分字面值插值与输出终止符)；另一语言正文同时读取 |
 | 标签/goto、case 跳转跨局部初始化 | [PowerShell §九](languages/powershell.md#九普通控制流)；按方向读 [CPP-PS-05](../directions/cpp-to-powershell/SKILL.md)、[C→C++ 规则 9](../directions/c-to-cpp/SKILL.md)；不因普通控制流加载并发场景 |

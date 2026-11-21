@@ -262,6 +262,17 @@ CombinedOutput取得合并stdout/stderr；分别采集后stdout+stderr拼接不�
 6. **反例**：把扩展模块中的函数写成标准库成员；把查到符号当作签名已确认；把某一平台/版本的可用性推到所有 GOOS/GOARCH。这些都不能凭名字或一次编译通过推定成立。
 7. **依据与结论范围**：Go 官方 `syscall` Windows 实现的 `dll_windows.go`（`LazyDLL`/`NewLazyDLL`/`NewProc`）及 `golang.org/x/sys` 模块说明。具体 API 导出仍以本任务的合法本地声明/冻结版本为准；本节不替代该目标的编译、加载或行为证据，不提供专用平台调用实现。
 
+**已暴露的具体声明边界**：下表补充 Windows `syscall` 公开声明的核对点，资料依据为 Go `syscall` 的 `syscall_windows.go`、`zsyscall_windows.go`、`types_windows.go`。实际工具链不同则先核该版本声明；这不是全 Win32 绑定表或可直接执行的实现。
+
+| 使用点 | 本地可消费的事实与反例 |
+|---|---|
+| Win32 内存 API/常量 | `syscall` 不提供 `VirtualAlloc`、`MEM_COMMIT`、`PAGE_READWRITE` 等完整 SDK 投影；不能照 C 标识符写包成员。按源实际 API/常量、合法已提供的扩展模块或动态入口核声明；动态绑定不免返回指针宽度、错误与权限语义 |
+| 注册表打开/写值 | Windows `syscall.RegOpenKeyEx` 为 `(Handle, *uint16, uint32, uint32, *Handle) error`，句柄从最后一个输出指针取得，不是 `(Handle, error)` 两返回值；宽字符串参数与源 A/W 版本分别核。`syscall` 不导出 `RegSetValueEx`，不能因有打开函数就假定同包也有写值函数；选择扩展模块/动态绑定仍保持源 A/W、值类型、字节长度与关闭分支 |
+| `StartupInfo` | 标准句柄字段是 `StdInput`、`StdOutput`、`StdErr`（均为 `Handle`），没有 `StdError`；`Cb` 是 `uint32` 的结构大小字段。不能套用 C 的 hStdError 拼写或将 Cb 写为字段数，其他字段/对齐按实际架构声明核对 |
+| `ProcessInformation` | `Process`、`Thread` 是 `Handle`；`ProcessId`、`ThreadId` 是 `uint32`。句柄与 ID 各有消费者，不能因都可表示成整数就互换；结构大小/对齐及初始化仍由冻结 ABI 决定 |
+
+编译发现未导出成员、参数数目、返回值数目或字段名不符时，先核本表与精确声明并修调用，不能删除源调用或造零值求编译。仅编译通过不验证动态符号、注册表副作用、进程启动或句柄继承。
+
 ### L1-GO-14 大小写映射不提供完整规范化与 casefold
 
 1. **触发／前提**：Go 1.27 的 unicode/strings/utf8 与源端规范化、折叠或码点计长对应；Unicode 数据版本按实际工具链与库冻结。
@@ -275,6 +286,35 @@ CombinedOutput取得合并stdout/stderr；分别采集后stdout+stderr拼接不�
 2. **事实**：该包接受重复同名键，后遇值按解码目标替换或合并，不自动报重复键；对字符串的非法 UTF-8／孤立 UTF-16 代理项可替换为 U+FFFD。向 interface 解码数字默认浮点；UseNumber 保留 json.Number，随后 ParseInt 的词法、位宽与范围检查属于另外一层。一次 Decode 成功不证明输入后无第二个 JSON 值，源若检查 EOF 须保留。
 3. **映射／反例**：先定位源的原始 UTF-8 校验、重复键 hooks、非有限常量和整数／布尔区分；不能用 Python 默认 loads 原样代替 Go 的代理项处理，也不能在 Go 目标默认接受重复键来替代源的拒绝。nil slice 的 JSON null 与非 nil 空 slice 的 [] 有外部区别；保留是否返回数组对象的协议。
 4. **未知与依据**：JSON 层的转义代理项处理和原始字节解码分开，源深度限制／错误分流不从另一个包默认值推定。依据：Go encoding/json 的 Security Considerations、Unmarshal、Decoder.Decode/UseNumber、Marshal；strconv.ParseInt。实际编译及行为仍独立取证。
+
+### L1-GO-16 UTF-16 代码单元不能直接转换成 string
+
+1. **触发/前提**：Go 目标承接宽字符 API 返回的 `[]uint16`；冻结原生长度的单位、是否含终止 NUL、实际字符编码及源消费者。
+2. **事实**：Go `string(slice)` 的内建切片转换支持 byte/rune 元素，不支持 `[]uint16`。`unicode/utf16.Decode` 将 UTF-16 代码单元转换成 rune 序列，再转 string 得 UTF-8；代理对被合并，孤立代理项按 U+FFFD 替换。逐个 uint16 强转 rune 也不等于解码代理对。
+3. **选择/反例**：源确实把缓冲当 UTF-16 文本时选择相应解码；按真实返回长度/源终止规则裁范围，不盲删最后一个元素。源依赖原始代码单元、孤立代理项或字节内容时保留该表示，不用替换解码冒充可逆转换。注册表二进制值不因为来自宽 API 就成为 UTF-16 文本。
+4. **未知/依据**：长度/编码未知时记调用点缺口，不从缓冲容量猜有效长度。依据：Go spec Conversions；unicode/utf16.Decode；syscall.UTF16ToString（首 NUL 边界）。本条不证明本项原生返回内容已被观察。
+
+### L1-GO-17 路径拼接与原样写入有不同消费者
+
+1. **触发/前提**：`path/filepath.Join`、路径回显与文件写入；Go 基线及冻结 GOOS 的文件路径规则。Windows 路径与 POSIX 路径不能互套。
+2. **事实**：filepath.Join 忽略空元素、用 OS 分隔符连接并 Clean；全空得到空串。它是词法操作，不证明目录存在或解析了链接。普通字符串相加不会自动补分隔符，手写 snprintf 还可能截断；显示的路径与实际打开/创建的路径须对应同一结果。
+3. **选择/反例**：源将非空目录和文件名 Join 后使用，目标仅连接两段会把两个路径分量变成一个文件名。按源实际根/卷/绝对分量、空值和清理语义选择，不为适配比较器硬编码临时根；实际文件行为还读文件场景/系统页。
+4. **写入边界**：`os.File.Write`/`WriteString` 原样写入给定字节，不自动把 LF 改成 Windows CRT 的 CRLF。向 Go 转换时按源 CRT 模式/实际 writer 保持翻译；源为二进制或已有 CRLF 时不能统一再插 CR。向其他语言转换时也不能引入原来没有的文本翻译。
+5. **未知/依据**：源路径/通道未知时记具体缺口，normalizedText 相等不证明实际访问路径相同。依据：path/filepath.Join/Clean；os.File.Write/WriteString；源 CRT 事实消费另一语言 §三。
+
+### L1-GO-18 源文本放入目标注释仍须满足目标定界
+
+Go 块注释由 `/*` 至第一个 `*/` 结束，不能嵌套；行注释到行尾结束。复述源正则、URL 或路径时，正文可能含 `*/` 而提前闭合，使余下文本成为代码。按内容选择行注释或不含终止序列的描述，保留可执行字符串本身；不能通过改源正则来修注释。原始字符串的反引号与注释定界也是不同规则。
+
+在现有生成/自审文本边界核对内回读实际目标，按编译诊断定位注释闭合位置；不新增扫描器或审阅轮次。依据：Go spec Comments、String literals；只是词法事实，不提供编译通过保证。
+
+### L1-GO-19 进程 CPU 时间不是 time.Since
+
+Go基线下，`time.Since(origin)`表示当前时间与origin的差；origin含单调读数时按单调时钟计算，仍计入睡眠/阻塞的经过时间，不是进程CPU累计值。序列化等操作可能丢失Time中的单调读数，不能仅凭类型为Time推定经过时间永不受墙钟调整影响。
+
+在冻结Linux/Unix接口确实提供 `syscall.Getrusage` 的条件下，`RUSAGE_SELF` 的 `Utime`与`Stime`可表示本进程所有线程累计的用户态/系统态CPU时间，不包含RUSAGE_CHILDREN对应的子进程用量。按实际Timeval的Sec/Usec单位转换并相加，再取同类两次采样之差；微秒不当纳秒，线程/子进程计时不当本进程计时。该API是平台条件，不是所有GOOS都导出的Go跨平台计时器。
+
+源义务是CPU计时时，不得在Getrusage失败或平台未支持时静默回退到time.Since、零值或猜测用量；只有源已规定相同回退/预先许可差异才保留，未知须记调用点缺口和未验证路径。并发进程CPU可超过同一期间的墙钟经过时间，两者只因某个fixture数值相近不代表可互换。依据：Go time.Time/Since的单调时钟说明、相应GOOS syscall.Getrusage/Rusage/Timeval声明与getrusage(2)的范围/单位；本条不执行探针或提供新驱动。
 
 ## 使用边界
 

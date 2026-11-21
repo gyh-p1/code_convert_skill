@@ -80,6 +80,8 @@ hostname 误报复核逐条回读 network_targets 的原值/位置和实际消�
 
 ## 4. 留证与字段分工
 
+**分类原件与单项提交对象分开**：分类器原始结果为数组时，保留整个 `classification-<N>.json` 原件；用原生结构化工具手工取出 `id/dir/case` 与本项冻结身份一致的唯一对象，另存本 attempt 的单对象提交件并回读核对。只有本项单元素数组且身份已核才可取 `[0]`；不对多项数组盲取首项。根类型不是预期数组/对象、零个或多个身份匹配、JSON 损坏时停止该提交，不能手改准入字段或靠重排数组放行。派生对象字段/值须与原对象一致，记录父原件路径/版本及选中身份；派生文件不是一次重新分类。Controller 的 `classification` 与 `batchAuthorization` 表单都要求 JSON 对象，不提交分类数组；具体传输类型见连接适配。
+
 在现有冻结/阶段记录保留分类原文路径与哈希、原始/临时清单对应、任务及源/目标哈希、授权来源、隔离证据、现役契约/Runner、时间和提交尝试。批量逐项登记，不能仅留一个允许总数。
 
 分类 JSON 的兼容字段 `executionApproved` 仅表示分类 ALLOWED；**禁止复制到 `evaluator_manifest.json`**。交付清单的同名字段仍按[交付契约 §3](../framework/delivery-handoff-contract.md#3-evaluator_manifestjson-字段来源纪律三分)，在获批隔离 Controller 接收并取得 jobId 后填写。分类、平台接收与 build/行为证据分别保留。

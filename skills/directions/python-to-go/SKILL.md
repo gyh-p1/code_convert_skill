@@ -131,6 +131,12 @@ description: Use when converting Python source code (CPython 3.12) to Go (Go 1.2
 
 `contextmanager` 的生成器协议不强制用 goroutine 重建；事务快照须复制被修改的字段／容器，错误返回时按源决定恢复数据、仅恢复身份还是保留已确认结果。清理、审计和历史结果快照分别核对，不把一次成功和一次注入失败外推到所有操作。命名与职责是否保留按交付契约核对，不为 Go 惯用风格无依据地改写合法源名。
 
+### 规则 5：墙钟与进程 CPU 计时器分别映射
+
+触发为源timeit/timer按选项选择perf_counter或process_time；同读[Python L1-PY-21](../../references/languages/python.md#l1-py-21-perf_counter-与-process_time-测量不同对象)与[Go L1-GO-19](../../references/languages/go.md#l1-go-19-进程-cpu-时间不是-timesince)。默认经过时间与进程CPU时间分别选择对应测量来源、采样点/基准和单位；不能让ProcessTimer只委托DefaultTimer而使选项无效。
+
+Linux已确认的Getrusage/RUSAGE_SELF可作CPU来源候选，但失败回退墙钟是测量定义变化，须按源失败路径/许可差异处理，不能把历史修法当所有平台默认。动态浮点输出是否可比较与计时对象是否正确分开，oracle不可冻结不关闭已定位的占位误译；未运行的计时路径仍UNVERIFIED。本规则只给语义选择，不提供独立封装工具、受测程序或计时驱动。
+
 ## 四、跨场景与系统规则按需加载
 
 > 若源码实际涉及线程、socket、文件或跨 OS API，加载对应 B 类场景/系统 Skill；A 类规则仅说明需要保留的语言层错误、资源、并发、文本或所有权契约。
