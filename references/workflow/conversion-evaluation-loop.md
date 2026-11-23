@@ -78,6 +78,12 @@ EVALUATOR_UNREACHABLE_CONVERSION_ONLY 不进入 CLASSIFIED、SOURCE_BUILDABLE、
 
 产物命名和实际目录指针按[交付契约 §2.2](../framework/delivery-handoff-contract.md)；不要改写已冻结输入或原评估报告。
 
+### 生成前的工作边界
+
+评估可达时，开始写首份目标正文或分段稿前，回读精确源版本的源构建 `completed/0`、适用清理证据，以及行为分支的有效源基线。可先记录源符号、候选 API 和映射说明。目标函数体、补丁、临时草稿及会话中的目标代码都属于生成，即使尚未保存或提交。已经出现提前起草时，记录当时阶段、版本和实际处理结果，保留已有来源及偏差记录。适用门禁通过后重新生成当前稿，旧稿及其审阅仍归原阶段。
+
+确认评估不可达时，首次生成以真实可达性检查原件、冻结回读和文本安全核对为前置，按本页规定继续自审与交付。
+
 ## 3. 证据判读与失败分流
 
 先核对 report/evidence 的 job、case、role、输入/目标版本与工具链，再读取**对应侧的 build**。build.status=completed 且 exitCode=0 才支持编译 PASS；已实际构建且非零退出支持 FAIL；未构建、跳过、基础设施故障或证据不足为 UNVERIFIED/无法判定，不能反推代码错误。编译、链接、启动、行为、安全分开。
@@ -129,6 +135,8 @@ EVALUATOR_UNREACHABLE_CONVERSION_ONLY 不进入 CLASSIFIED、SOURCE_BUILDABLE、
 预算耗尽、重复无有效变化、同一反例在修订后持续失败而无新定位依据、证据不足或安全边界变化时停止该项自动修复，交付当前稿与未决项，继续不受影响的其他任务。分类/预算耗尽不是新的功能 FAIL 证据；最终语法与行为结论分别由最终版本的第三方证据支持，有限覆盖不外推为普遍等价。
 
 ## 4. 自审最小契约
+
+核对目标中新增的 API 和可变操作。将引用符号对应到实际导入、头文件或限定名，并对原地修改操作追到调用接收者、声明和消费者。按[共性语义索引的前端条目](../../skills/references/seven-language-common-semantics.md#5-编译器前端头文件abi-与工程输入)选择对应语言事实，并入同一轮审阅。
 
 生成落盘后，当前模型另起明确的自审阶段，重新读取精确源、被审目标、冻结义务与适用知识（同步对照 `frozen-inputs.md` 的全维度闭集路由表复核源码符号，严查是否误将适用的 `long-file-conversion`、`security-behavior.md`、场景、系统或方向子参考标为 `SKIP`），保存结构化审阅产物；不要求新会话、子智能体或独立模型请求。容量足够时整文件审阅；不足时按[长文件工作流 §4.1](../../skills/workflows/long-file-conversion/SKILL.md#41-分段自审与合并后的放行)逐单元审阅并核跨单元关系，不能用摘要替代未读代码。首次审阅不以生成时的自我解释为正确性前提，复审核旧问题与实际 diff。逐条核正常/错误/边界路径和源→目标对应，结论仍为 REPAIR-RECOMMENDED 或 NO-REPAIR-IDENTIFIED；reviewedScope、位置、evidence、origin、proposed_fix/无需修改、risk 均须明确。在 `EVALUATOR_UNREACHABLE_CONVERSION_ONLY` 分支下，本轮有限自审同步落实[§4.3 不可达分支的双通道静态自审](#43-不可达分支的双通道静态自审编译前端核对与行为推演)，以提升单轮审查深度，不增加额外审阅轮次。阶段分离不是独立验证；空/截断、结论矛盾或无编译证据却宣称通过均不能放行。
 

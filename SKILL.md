@@ -57,7 +57,7 @@ metadata:
 | 路由层 | 适用范围 / 闭集条目 | 裁决规则与必填依据 |
 |---|---|---|
 | 必读通用契约 | `task-state` / `safety` / `delivery` / `build` / `evaluation` / `loop`（可达分支补 `classifier`） | 本分支必读逐件 `LOAD`（完整已读行范围 `1-N/N` + SHA-256）；不可达分支 `classifier` 记 `SKIP` |
-| 条件工作流（2 个） | `batch-conversion`、`long-file-conversion` | 逐项标 `LOAD` 或 `SKIP`；`long-file` 标 `SKIP` 须同时写明**源物理行数 <=700 且预期目标代码不膨胀超 700 行** |
+| 条件工作流（2 个） | `batch-conversion`、`long-file-conversion` | 逐项标 `LOAD` 或 `SKIP`。对照[长文件规模判断](skills/workflows/long-file-conversion/SKILL.md#规模判断与加载时点)，源物理行数和预估目标上界均不超过 700 行且结构无需全文件地图时，可记 `SKIP` |
 | 语言与方向（4 必选） | [共性索引](skills/references/seven-language-common-semantics.md)、源语言页、目标语言页、一个方向 Skill | **100% 全项 `LOAD`**，写明完整行范围、SHA-256 及**源符号/行号 → 规则编号**对应 |
 | 方向随附子参考 | `C → C++` 含 [头文件与宏](skills/directions/c-to-cpp/references/header-macro.md)、[类型/接口与 C ABI](skills/directions/c-to-cpp/references/type-abi.md)；其余 41 方向当前无子参考 | `C → C++` 逐件标 `LOAD` / `SKIP`（含宏/隐式头/ABI 排除依据）；其余方向标 `N/A` |
 | 场景（4 个闭集） | [网络 I/O](skills/scenes/network-io/SKILL.md)、[文件 I/O](skills/scenes/file-io/SKILL.md)、[进程执行](skills/scenes/process-execution/SKILL.md)、[并发](skills/scenes/concurrency/SKILL.md) | 逐行 `LOAD`（触发符号与行号）或 `SKIP`（静态排查无该类调用的依据）；`network-io` 另含[网络安全兼容入口](skills/scenes/network-io/references/security-behavior.md) |
@@ -91,6 +91,8 @@ metadata:
 **跨场景安全语义**：源码有网络、文件、认证或边界校验行为时，读取[安全行为共性](skills/references/security-behavior.md)的适用正文；它规定源防护语义，不替代执行安全边界。
 
 ## 按以下顺序执行
+
+目标正文的首次起草适用第 5.3 步。等待源预检时可完成画像、查阅映射、建图和记录构建前提。具体范围见[生成前的工作边界](references/workflow/conversion-evaluation-loop.md#生成前的工作边界)。
 
 以下六步适用于每个实际处理项，不能替代上方门禁链。先完成第 1–4 步的准备与知识选择，再记 FROZEN；第 5 步严格按下方调度表逐行推进，不把整段概述当成一次操作。任一步停止均转第 6 步。从方向/场景/系统页直接进入时，也须先返回本入口完成必读加载，不能只读映射页开始生成。
 

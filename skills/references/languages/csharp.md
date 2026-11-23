@@ -264,6 +264,13 @@ C#12 的具名 ValueTuple 元素名不是任意合法标识符；`Rest` 在任�
 3. **选择／反例**：在目标工程配置未明或需独立跨 `.csproj` 配置稳健编译时，统一采用**显式 `using` 指令 + 显式清晰命名空间/类型入口结构**（显式声明入口类与 `Main` 时不混用顶级语句；若采用单文件顶级语句则不另写入口 `Main` 且把类型定义置于顶级语句之后），对可为 `null` 的字段按需显式声明初始化或可空类型并守卫确定赋值，不依赖未核验的 `<ImplicitUsings>enable</ImplicitUsings>` 假定。
 4. **未知与依据**：具体 `<OutputType>`、`<TargetFramework>`、`<ImplicitUsings>`、`<Nullable>` 及 `<AllowUnsafeBlocks>` 以冻结 `.csproj` 与构建前提 §2.2 为准。依据：MS-CS Top-level statements、CS7022/CS8802/CS8600–CS8618；.NET 8 MSBuild SDK 属性。本条不触发本机 MSBuild 构建。
 
+### L1-CS-12 新增线程类型须对应实际命名空间
+
+1. **触发／前提**：生成或修订 C# 12/.NET 8 目标时引入线程、原子操作、取消或任务 API。以冻结工程实际提供的引用、全局 using 和隐式导入为准。
+2. **事实**：`Thread`、`Interlocked`、`Monitor`、`CancellationToken` 和 `SemaphoreSlim` 属于 `System.Threading`，`Task` 与 `Parallel` 属于 `System.Threading.Tasks`。普通 `using` 的作用范围不递归导入子命名空间，也不会导入其父命名空间。
+3. **选择／反例**：逐个将新增符号对应到实际可见的命名空间或完全限定名。比如只写 `using System.Threading.Tasks;` 时，若没有其他导入，`Interlocked.Increment(ref completed)` 仍缺声明来源。用 `using System.Threading;` 或 `System.Threading.Interlocked.Increment(ref completed)` 闭合引用，并保留原子更新语义。
+4. **未知与依据**：冻结工程的全局/隐式导入证据缺失时，优先使用显式 `using` 或限定名。依据为 C# 规范 Using directives、.NET 8 `System.Threading` 和 `System.Threading.Tasks` 类型声明。
+
 ## 使用边界
 
 将本页与所选方向和另一语言事实页组合；具体场景/系统差异按[共性索引](../seven-language-common-semantics.md)选读。缺逐例第三方证据保持 UNVERIFIED，本机不运行或编译。

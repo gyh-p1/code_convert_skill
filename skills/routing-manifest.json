@@ -26,7 +26,7 @@
       "path": "skills/workflows/long-file-conversion/SKILL.md",
       "tier": "conditional",
       "lineThreshold": 700,
-      "triggerSummary": "源物理行 > 700、多类/复杂状态机，或动态→静态等预期目标膨胀超过 700 行的中等源文件",
+      "triggerSummary": "源物理行 > 700、结构需要全文件地图，或无法按源码和目标增量排除目标物理行 > 700",
       "expansionDirections": [
         "python-to-c",
         "python-to-cpp",

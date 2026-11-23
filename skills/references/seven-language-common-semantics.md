@@ -94,8 +94,10 @@
 | 外部函数/完整类型、特性测试宏位置、隐式声明禁令、Go 零值迁入 C | [C L1-C-08/09/10](languages/c.md#l1-c-08-外部函数与完整类型都须有声明来源)、[L1-C-11](languages/c.md#l1-c-11-特性测试宏位置隐式声明禁令与-goto-跨-vla-初始化边界)；源对应语言及 SDK 同读，目标漏声明不套源侧诊断放宽，初始化不等于业务成功 |
 | C→C++ 隐式宏/缺系统头、`NOMINMAX`、C ABI 布局与符号消歧 | [头文件与宏](../directions/c-to-cpp/references/header-macro.md)、[类型/接口与 C ABI](../directions/c-to-cpp/references/type-abi.md)（[c-to-cpp](../directions/c-to-cpp/SKILL.md) 随附子参考）；不凭同名头文件推定兼容 |
 | C++ 可空辅助指针、右值临时对象取地址与系统宏冲突 | [C++ L1-CPP-11](languages/cpp.md#l1-cpp-11-右值临时对象不得取地址与系统宏冲突防护)；按目标标准选 `std::optional` 或具名左值，避开 POSIX/Windows 系统宏同名常量 |
+| C++ 字符串原地替换、只读参数与调用方写回 | [C++ L1-CPP-12](languages/cpp.md#l1-cpp-12-字符串原地修改取决于接收者的可变性)，区分只需返回新结果和调用方须观察修改的路径 |
 | Go 未用导入/局部变量、短声明 `:=` 遮蔽、包入口与 `GOOS` 构建标签 | [Go L1-GO-20](languages/go.md#l1-go-20-未用导入变量短声明遮蔽与包入口编译红线)；不以 `_ = err` 吞错，库包不擅自改 `main` |
 | C# SDK `Compile` 输入排除、顶级语句冲突与隐式 `using`/可空配置 | [C# L1-CS-08](languages/csharp.md#l1-cs-08-磁盘上的入口声明不等于本次编译实际包含它)、[L1-CS-11](languages/csharp.md#l1-cs-11-顶级语句冲突显式命名空间与-nullablesdk-默认配置边界)；配置未明时优先显式 `using` 与清晰入口 |
+| C# 新增线程、原子操作、取消与任务类型的导入 | [C# L1-CS-12](languages/csharp.md#l1-cs-12-新增线程类型须对应实际命名空间)，区分 `System.Threading` 与 `System.Threading.Tasks` 的实际可见范围 |
 | PowerShell `#requires` 版本锁定与 .NET 值类型枚举器装箱 | [PowerShell L1-PS-13](languages/powershell.md#l1-ps-13-版本锁定指令与可变值类型枚举器绑定边界)；未核验目标小版本不硬锁次版本，惰性迭代避开值类型枚举器装箱绑定 |
 | 类内名称碰撞、抽象成员、源文本迁入注释 | [PowerShell §十](languages/powershell.md#十对象管道与外部状态的选择引导)、[C# §十](languages/csharp.md#十互操作与公开返回形态的选择引导)、[C L1-C-06](languages/c.md#l1-c-06-字面量内容终止-nul-与显式长度分别保持)；所有引用点、成员契约和目标文本定界分别保持 |
 
