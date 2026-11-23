@@ -66,10 +66,11 @@
 ## 二、整数宽度、溢出、符号性与转换
 
 - **整数宽度规范**：`[语言规范保证]` `sbyte`/`byte` (8), `short`/`ushort` (16), `int`/`uint` (32), `long`/`ulong` (64), `nint`/`nuint` (原生宽度)。
-- **有符号溢出行为**：`[语言规范保证]` 默认处于 `unchecked` 上下文：**按补码截断回绕**；在 `checked` 作用域或编译选项下超出表示范围抛出 `OverflowException`。
-- **无符号溢出行为**：`[语言规范保证]` **按模截断回绕**（在 `checked` 作用域下若超出上限同样抛出 `OverflowException`）。
+- **整数加减乘、取负及整数窄化**：`[语言规范保证]` 对内建整数运算，`unchecked` 按目标位宽截断，`checked` 溢出在运行时抛出 `OverflowException`，在常量求值时产生编译错误。常量表达式默认 `checked`，非常量表达式的默认上下文受编译选项影响。
+- **除法与取余**：`[语言规范保证]` 运行时整除向零截断，零除抛出 `DivideByZeroException`。有符号最小值除以 `-1` 在 `checked` 下抛出 `ArithmeticException` 或其派生类型，在 `unchecked` 下由实现决定抛出该异常或返回最小值。同一条件下的整数取余仅在对应除法会抛异常时抛出 `OverflowException`，否则余数为零。常量折叠由编译期规则处理，不能沿用运行时分支。
+- **运行时边界**：`[指定运行时的实现相关事实]` Microsoft 的 .NET 算术运算符参考记录了非常量 `unchecked` 的最小值除以 `-1` 仍会抛算术异常的行为。需要保持具体异常类型、捕获分支或取余边界时，核对精确运行时与表达式形态。
 - **隐式提升与转换陷阱**：`[语言规范保证]` 较小整型进行算术运算时自动提升为 `int`，必须显式强转回目标窄类型。
-- **官方资料依据**：MS-CS-CHECKED
+- **官方资料依据**：MS-CS-CHECKED、C# 语言规范 Expressions 的 The checked and unchecked operators、Division operator、Remainder operator 和 Constant expressions、Microsoft .NET Arithmetic operators。
 
 ### L1-CS-02 数值文本输出必须钉住格式提供程序与区域设置
 1. **源码触发条件**：源码把数值转成文本——`ToString()`、`$"{x}"` 内插、`string.Format`、`Console.WriteLine(x)`。

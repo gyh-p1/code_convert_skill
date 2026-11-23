@@ -9,14 +9,13 @@ import json
 import ntpath
 import os
 from pathlib import Path
-import posixpath
 import re
 import sys
 import tempfile
 import unicodedata
 from urllib.parse import unquote, urlsplit
 
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 SCHEMA = "loading-preflight/v1"
 MARKER = "LOADING_READ_V1\n"
 MANIFEST_PATH = "skills/routing-manifest.json"
@@ -44,6 +43,7 @@ SYSTEM_KEYS = (
 )
 TOPIC_KEYS = ("security-behavior", "attack-tactic-index")
 READ_TOOL_NAMES = ("read_file", "Read", "view_file")
+READ_PATH_KEYS = ("path", "Path", "file_path", "filePath", "file")
 ACTIONS = ("start", "map", "freeze", "classify", "source-precheck", "generate",
            "review", "submit", "resume", "close", "query", "collect", "terminate", "cleanup")
 RECOVERY = ("query", "collect", "terminate", "cleanup")
@@ -410,12 +410,14 @@ def check_repo(root):
 
 def make_offer(root, name, start, end):
     require(name in allowed_docs(root), "document outside declared loading scope")
-    raw = safe_path(root, name).read_bytes()
+    document_path = safe_path(root, name)
+    raw = document_path.read_bytes()
     snapshot = raw.decode("utf-8")
     lines = snapshot.splitlines(keepends=True)
     require(lines and type(start) is int and type(end) is int and 1 <= start <= end <= len(lines), "invalid line range")
     body = "".join(lines[start - 1:end])
-    payload = {"kind": "loading-read-v1", "document": name, "sha256": digest(raw),
+    payload = {"kind": "loading-read-v1", "document": name, "documentPath": str(document_path),
+               "sha256": digest(raw),
                "sizeBytes": len(raw), "lineCount": len(lines), "startLine": start,
                "endLine": end, "text": body,
                "byteStart": len("".join(lines[:start - 1]).encode("utf-8")),
@@ -428,6 +430,8 @@ def validate_offer(offer, allowed=None):
     p, snapshot = offer["payload"], offer["snapshotUtf8"]
     valid_docs = allowed if allowed is not None else _default_allowed_docs()
     require(p["kind"] == "loading-read-v1" and p["document"] in valid_docs, "offer outside declared scope")
+    if "documentPath" in p:
+        require(_match_doc_path(p["documentPath"], p["documentPath"]), "invalid offered document path")
     raw = snapshot.encode("utf-8")
     lines = snapshot.splitlines(keepends=True)
     start, end = p["startLine"], p["endLine"]
@@ -478,13 +482,16 @@ def has_payload(output, payload):
     return False
 
 
-def _match_doc_path(candidate, expected):
-    if not isinstance(candidate, str) or not candidate.strip():
+def _match_doc_path(candidate, expected, cwd=None):
+    if not isinstance(candidate, str) or not candidate or not isinstance(expected, str):
         return False
-    norm = posixpath.normpath(candidate.strip().replace("\\", "/"))
-    if norm in ("", ".") or norm == ".." or norm.startswith("../"):
-        return False
-    return norm == expected or norm.endswith("/" + expected)
+    path = Path(candidate)
+    if not path.is_absolute():
+        if path.anchor or not isinstance(cwd, str) or not Path(cwd).is_absolute():
+            return False
+        path = Path(cwd) / path
+    # Match the recorded checkout without resolving aliases against today's filesystem.
+    return ".." not in path.parts and str(path) == expected
 
 
 def _match_native_text_block(text, payload):
@@ -519,7 +526,7 @@ def _match_native_text_block(text, payload):
     return True
 
 
-def has_native_read_payload(output, payload):
+def has_native_read_payload(output, payload, cwd=None):
     def check_node(node):
         if isinstance(node, str):
             try:
@@ -541,8 +548,13 @@ def has_native_read_payload(output, payload):
         if isinstance(node, dict):
             if _is_truncated(node):
                 return False
-            doc_val = node.get("document", node.get("path", node.get("file")))
-            if doc_val is not None and not _match_doc_path(doc_val, payload["document"]):
+            document = node.get("document")
+            expected_path = payload["documentPath"]
+            if (document is not None and document != payload["document"]
+                    and not _match_doc_path(document, expected_path, cwd)):
+                return False
+            if any(not _match_doc_path(node[key], expected_path, cwd)
+                   for key in (*READ_PATH_KEYS, "documentPath") if node.get(key) is not None):
                 return False
             s_val = node.get("startLine", node.get("start_line"))
             e_val = node.get("endLine", node.get("end_line"))
@@ -665,15 +677,17 @@ def witness(path, call_id, payload, _log_cache=None):
     require(len(calls) == len(outputs) == 1 and calls[0][0] < outputs[0][0], "call/output association unavailable")
     tool_name = _row_name(calls[0][1])
     line, row = outputs[0]
+    require(not (_is_truncated(row) or _is_truncated(row.get("payload"))),
+            "host marked tool result as truncated")
     raw_out = _row_output(row)
     if tool_name in ("exec", "exec_command"):
         require(has_payload(raw_out, payload), "final host output does not contain exact complete offered payload")
         adapter = "codex-rollout-v1"
     elif tool_name in READ_TOOL_NAMES:
         call_args = _extract_call_args(calls[0][1])
-        req_path = next((call_args.get(k) for k in ("path", "Path", "file_path", "filePath", "document", "file")
-                         if call_args.get(k) is not None), None)
-        require(isinstance(req_path, str) and _match_doc_path(req_path, payload["document"]),
+        paths = [call_args[key] for key in (*READ_PATH_KEYS, "document") if call_args.get(key) is not None]
+        cwd = call_args.get("cwd", call_args.get("workdir"))
+        require(paths and all(_match_doc_path(path, payload.get("documentPath"), cwd) for path in paths),
                 "read tool call target path missing or does not match offered document")
         req_start = next((call_args.get(k) for k in ("startLine", "StartLine", "start_line")
                           if call_args.get(k) is not None), None)
@@ -685,7 +699,7 @@ def witness(path, call_id, payload, _log_cache=None):
         if req_end is not None:
             require(type(req_end) is int and req_end >= payload["endLine"],
                     "read tool call endLine precedes offered endLine")
-        require(has_native_read_payload(raw_out, payload), "final read tool output does not contain exact offered text")
+        require(has_native_read_payload(raw_out, payload, cwd), "final read tool output does not contain exact offered text")
         adapter = "generic-read-tool-v1"
     else:
         raise Invalid("unsupported host read tool")
@@ -914,7 +928,8 @@ def check_next(root, record_path, action, transcript, before_call=None, sources=
             if "late-read" not in rejected_reasons[name]:
                 rejected_reasons[name].append("late-read")
             superseded_receipts += 1
-        elif p["sha256"] != current["files"][name]:
+        elif (p["sha256"] != current["files"][name] or
+              ("documentPath" in p and p["documentPath"] != str(safe_path(root, name)))):
             if "version" not in rejected_reasons[name]:
                 rejected_reasons[name].append("version")
             superseded_receipts += 1

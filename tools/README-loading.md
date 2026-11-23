@@ -20,7 +20,7 @@ python -B -m unittest discover -s tools -p test_loading_preflight.py -v
 
 根 SKILL 表是加载清单；程序内精确身份是验收约束，不是另一条知识入口。解析 CommonMark 加表格扩展，识别真实 Markdown 链接，代码块与行内代码不算链接。标题锚点采用已标明的 Unicode 类别规则：小写、保留字母/数字/组合符及 `-`/`_`、空格转 `-`、重复标题递增后缀；不声称兼容所有站点的 HTML 锚点。外部和范围外链接列为 skipped，不递归抓取，不用关键词检查自然语言语义。
 
-首版（v1.0.1）精确范围为 12 份治理/工作流 Markdown；v1.1.0/v1.1.1 起配合 [skills/routing-manifest.json](../skills/routing-manifest.json) 将 `check-repo` 与 `record-read` 扩展至**全库 76 份 Markdown**（3 个入口、7 份核心契约、2 份工作流、1 份共性导航、7 份语言页、42 个方向 + 2 份 `c-to-cpp` 子参考、4 个场景 + 1 份网络安全导航、5 个系统页、2 份专题）；含知识目录或清单引用的仓库缺失清单时直接 fail（`manifest-missing`），不会降级回 12 份范围，并在 `skills/` 下禁止未登记 Markdown。Controller 适配及模型上下文注入仍由人工/专门契约约束。
+首版（v1.0.1）精确范围为 12 份治理/工作流 Markdown。v1.1.0 起配合 [skills/routing-manifest.json](../skills/routing-manifest.json) 将 `check-repo` 与 `record-read` 扩展至**全库 76 份 Markdown**（3 个入口、7 份核心契约、2 份工作流、1 份共性导航、7 份语言页、42 个方向 + 2 份 `c-to-cpp` 子参考、4 个场景 + 1 份网络安全导航、5 个系统页、2 份专题）。含知识目录或清单引用的仓库缺失清单时报告 `manifest-missing`，`skills/` 下的 Markdown 须全部登记。Controller 适配及模型上下文注入由人工和专门契约约束。
 
 ## 3. 系统提供正文与关联真实返回
 
@@ -33,7 +33,11 @@ python -B tools/loading_preflight.py record-read --offer <evidence>/offer-001.js
 
 第一条的 stdout 必须原样通过系统读取工具返回正文，不能重定向后只向智能体发送文件名或摘要。每次只返回一个片段，范围太大时先拆分，不设置会截断结果的展示预算。offer 保存精确 UTF-8 原字节快照（含 BOM/CRLF 身份），实际正文分片含行范围与字节范围。offer 只是材料准备成功，不能用于通过下一动作核对。
 
-第二条现支持两类真实宿主日志返回适配：`codex-rollout-v1`（`session_meta` + `response_item` 中 `exec`/`exec_command` 与同 `call_id` 完整 payload 输出）及 `generic-read-tool-v1`（单会话 JSONL 日志中成对的 `read_file`/`Read`/`view_file` `tool_call` 与 `tool_result`/`output`；除要求最终返回文本完整匹配 offer 文本或完整行号序列外，同时校验调用参数的目标路径 `path`/`file_path`/`document` 与行范围覆盖 offer 所指文档，且在两类适配器中均拒绝 `truncated`/`is_truncated`/`isTruncated` 截断标志、参数回显与改写文本）。适配器保存调用/输出关联、日志前缀摘要、输出摘要和上下文标识，验证时回读原日志；日志可追加，已引用前缀不得改变。现场 log 字段变化或其他宿主返回形制不明时结果为 UNAVAILABLE，需维护侧适配，第三方智能体不编写脚本补接口。
+宿主日志支持 `codex-rollout-v1` 和 `generic-read-tool-v1`。前者要求 `exec`/`exec_command` 与同 `call_id` 的输出包含完整 offer payload。后者把 `read_file`/`Read`/`view_file` 的调用与工具输出配对，核对请求路径、行范围和最终返回的精确正文或完整行号序列。两类适配器检查结果记录、payload 外层和承载正文的结果容器中的 `truncated`/`is_truncated`/`isTruncated` 标志。参数回显、改写文本及标记为截断的结果无效。
+
+v1.1.2 的 offer 记录选定工作树中文档的绝对路径 `documentPath`。通用读取调用须记录该绝对路径，或以调用参数中的绝对 `cwd`/`workdir` 解释相对路径。路径按生成 offer 的宿主格式精确匹配，另一工作树中的同路径后缀及同正文也不能提供本项读取证据。`check-next` 同时核对工作树内的当前文档路径及字节哈希。升级时保留旧通用读取原件，缺少 `documentPath` 的旧通用读取凭证不再作为当前 `reads` 的证据，须重新读取并生成凭证。历史 Codex marker 原件保留原有读取格式。
+
+适配器保存调用/输出关联、日志前缀摘要、输出摘要和上下文标识，并在验证时回读原日志。日志可追加，已引用前缀保持原样。日志字段或路径身份无法核实时结果为 UNAVAILABLE，由系统维护侧适配。
 
 证据等级 `HOST_RETURN_OBSERVED` 只表示该日志记录了正文提供，不是理解、持续保有、模型注入或防篡改认证。工具无法证明未被日志暴露的额外截断/上下文丢失；检测到 compacted/context_compacted/context_reset 时更换 epoch，重新提供所需正文，并在 `reads` 中保留已验证旧 epoch 历史凭证的同时追加覆盖全部必需范围的新 epoch 凭证（以当前 epoch 完整覆盖为准，记 `supersededReceipts` 而不因保留历史凭证误阻断）。历史/自填声明只能作为 manual 依据，不能通过修改 evidenceGrade 冒充系统证据。
 

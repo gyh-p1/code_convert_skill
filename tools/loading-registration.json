@@ -1,11 +1,11 @@
 {
-  "version": "1.1.1",
+  "version": "1.1.2",
   "status": "verified-system-regression",
   "executor": "conversion-system-only",
   "thirdPartyAgentPolicy": "native-tools-manual-per-item-no-helper-scripts",
   "files": {
-    "loading_preflight.py": "7a9703acd06170ce5ed7097b2ec2b0d5bb971834ef7dd2ef987d231640b6a14f",
-    "test_loading_preflight.py": "5867d6b97a36dfd6c4e4f6790d4351d131a56331ab52c1f56b87e99b8c560443",
+    "loading_preflight.py": "c8c5889566f7f091a901d1a95a5bd57c66b25815b797636523c2f3c467beb530",
+    "test_loading_preflight.py": "cbb419ac119e750ea5f683ebc9ecf001af6ffb325311693527d82e21e3b86d74",
     "requirements-loading.txt": "a321362197ec8d9b0d73b8e664f21ae49ebea61ea43676efc08274051d386397"
   },
   "scope": [

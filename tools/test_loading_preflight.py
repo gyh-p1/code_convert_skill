@@ -4,6 +4,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -521,7 +522,8 @@ class KnowledgeRoutingTests(unittest.TestCase):
         call = f"call-{self.count}"
         if use_generic:
             self.rows.append({"type": "tool_call", "call_id": call, "name": "read_file",
-                              "arguments": {"path": rel, "startLine": 1, "endLine": total}})
+                              "arguments": {"path": str((self.repo / rel).resolve()),
+                                            "startLine": 1, "endLine": total}})
             numbered = "\n".join(f"{idx}: {ln}" for idx, ln in enumerate(offer["payload"]["text"].splitlines(), 1))
             out_body = f"Showing lines 1-{total} of {total}\n{numbered}"
             self.rows.append({"type": "tool_result", "call_id": call, "output": out_body})
@@ -697,7 +699,7 @@ class KnowledgeRoutingTests(unittest.TestCase):
         bad_rows = [
             {"type": "session_meta", "payload": {"id": "sess-1"}},
             {"type": "tool_call", "call_id": "c1", "name": "read_file",
-             "arguments": {"path": "skills/references/languages/c.md", "text": offer["payload"]["text"]}},
+             "arguments": {"path": offer["payload"]["documentPath"], "text": offer["payload"]["text"]}},
             {"type": "tool_result", "call_id": "c1", "output": {"truncated": True, "text": offer["payload"]["text"]}},
         ]
         bad_log.write_bytes(b"".join(lp.encoded(r) + b"\n" for r in bad_rows))
@@ -717,7 +719,7 @@ class KnowledgeRoutingTests(unittest.TestCase):
         cross_rows = [
             {"type": "session_meta", "payload": {"id": "sess-1"}},
             {"type": "tool_call", "call_id": "cross-1", "name": "read_file",
-             "arguments": {"path": "skills/references/languages/c.md", "startLine": 1, "endLine": 4}},
+             "arguments": {"path": offer_c["payload"]["documentPath"], "startLine": 1, "endLine": 4}},
             {"type": "tool_result", "call_id": "cross-1", "output": offer_c["payload"]["text"]},
             {"type": "tool_call", "call_id": "no-path-1", "name": "read_file", "arguments": {"startLine": 1, "endLine": 4}},
             {"type": "tool_result", "call_id": "no-path-1", "output": offer_c["payload"]["text"]},
@@ -737,7 +739,7 @@ class KnowledgeRoutingTests(unittest.TestCase):
         trunc_rows = [
             {"type": "session_meta", "payload": {"id": "sess-1"}},
             {"type": "tool_call", "call_id": "g-trunc", "name": "read_file",
-             "arguments": {"path": "skills/references/languages/c.md", "startLine": 1, "endLine": 4}},
+             "arguments": {"path": offer_c["payload"]["documentPath"], "startLine": 1, "endLine": 4}},
             {"type": "tool_result", "call_id": "g-trunc",
              "output": {"truncated": True, "text": payload_str}},
             {"type": "response_item", "payload": {"type": "custom_tool_call", "name": "exec",
@@ -750,6 +752,50 @@ class KnowledgeRoutingTests(unittest.TestCase):
             lp.make_receipt(offer_c, trunc_log, "g-trunc")
         with self.assertRaises(lp.Invalid):
             lp.make_receipt(offer_c, trunc_log, "e-trunc")
+
+    def test_generic_read_tool_requires_exact_checkout(self):
+        data = self.build_record(self.build_routing(direction="python-to-c"), use_generic=True)
+        record = self.save_record(data)
+        other_repo = self.base / "other-repo"
+        shutil.copytree(self.repo, other_repo)
+        result = lp.check_next(other_repo, record, "freeze", self.log)
+        self.assertEqual(result["status"], "FAIL")
+        self.assertIn({"severity": "error", "code": "version", "detail": lp.CORE["build"]},
+                      result["findings"])
+
+        receipt = lp.load_json(data["reads"][-1]["path"])
+        offer = receipt["offer"]
+        call_id = receipt["witness"]["callId"]
+        doc = offer["payload"]["document"]
+        args = self.rows[-2]["arguments"]
+        for request in (
+            {"path": str((other_repo / doc).resolve())},
+            {"path": doc},
+            {"path": doc, "cwd": str(other_repo.resolve())},
+        ):
+            with self.subTest(request=request):
+                self.rows[-2]["arguments"] = {**args, **request}
+                self.write_log()
+                with self.assertRaisesRegex(lp.Invalid, "target path"):
+                    lp.make_receipt(offer, self.log, call_id)
+        self.rows[-2]["arguments"] = {**args, "path": doc, "cwd": str(self.repo.resolve())}
+        self.write_log()
+        self.assertEqual(lp.make_receipt(offer, self.log, call_id)["witness"]["adapter"],
+                         "generic-read-tool-v1")
+
+    def test_outer_tool_result_truncation_rejected(self):
+        for use_generic in (False, True):
+            receipt = lp.load_json(self.offer_and_read(lp.CORE["build"], use_generic)["path"])
+            result = self.rows[-1]
+            for envelope in (result, result.setdefault("payload", {})):
+                with self.subTest(use_generic=use_generic, outer=envelope is result):
+                    envelope["isTruncated"] = True
+                    self.write_log()
+                    with self.assertRaisesRegex(lp.Invalid, "marked tool result as truncated"):
+                        lp.make_receipt(receipt["offer"], self.log, receipt["witness"]["callId"])
+                    del envelope["isTruncated"]
+            self.write_log()
+            lp.make_receipt(receipt["offer"], self.log, receipt["witness"]["callId"])
 
     def test_missing_manifest_in_knowledge_repo_fails_without_downgrade(self):
         # Deleting routing-manifest.json in a repo with knowledge subdirs must FAIL check-repo and check-next.

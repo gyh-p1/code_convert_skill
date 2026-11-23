@@ -152,9 +152,11 @@ description: Use when converting C# source to C++; apply this direction's langua
 ### 规则 CS-CPP-07：C# `checked` / `unchecked` 整数溢出语义向 C++17 无 UB 可移植算术映射
 1. **源码触发条件**：C# 源码在 `checked`/`unchecked` 上下文或默认上下文中执行有符号整数 `+`/`-`/`*`/一元 `-`/显式整转，或执行有符号 `/`、`%`（含 `int.MinValue / -1`、除数为 0），或依赖补码回绕计算哈希/位运算。
 2. **冻结版本/运行时/API 前提**：C# 12 / .NET 8 → ISO C++17（WG21-N4659 §7.8 `[conv.integral]`、Clause 8 / `<cstdint>`）。
-3. **原可观察行为**：C# 默认/`unchecked` 上下文中 `+`、`-`、`*`、一元 `-`、`++`、`--` 与显式整数转换按二补码模 $2^W$ 回绕；`checked` 上下文中上述溢出抛出 `OverflowException`。但**有符号整数除法与取余在 `checked` 和 `unchecked` 两种上下文下遇到 `int.MinValue / -1`、`long.MinValue / -1`、`int.MinValue % -1`、`long.MinValue % -1` 时都会确定抛出 `OverflowException`**（C# 规范 §12.12.3/§12.12.4），除数为 0 则抛出 `DivideByZeroException`；二者均非“静默回绕”。
+3. **原可观察行为**：
+   - 内建整数加减乘、取负和整数窄化按[源语言第二区](../../references/languages/csharp.md#二整数宽度溢出符号性与转换)区分显式上下文及求值阶段。例：`checked(int.MaxValue + 1)` 是编译错误，`checked(x + 1)` 则可能在运行时抛出 `OverflowException`。
+   - 有符号最小值除以 `-1` 在运行时不是普通模运算：`checked` 下抛出算术异常，`unchecked` 下由实现决定抛出算术异常或返回最小值。对应的取余按除法是否会抛异常，决定抛出 `OverflowException` 或返回零。Microsoft 记录的 .NET 非常量除法异常属于运行时事实。零除异常及源捕获边界分别核对。
 4. **目标可选写法和不适用条件**：
-   - *可选映射*：`unchecked` 加/减/乘/一元负取模按对应宽度无符号类型（`uint32_t`、`uint64_t`）执行模 $2^W$ 算术；**回到 C++17 有符号整数时不得依赖超出 `INT32_MAX`/`INT64_MAX` 的直接 `static_cast<int32_t>(u)`**（在 ISO C++17 §7.8 中超范围有符号转换属于**实现定义行为**，二补码保证直到 C++20 才纳入标准），须使用值域分段可移植还原函数（见下例）。有符号除法/取余必须在目标执行除法前显式守卫 `b == 0` 与 `a == INT32_MIN && b == -1`（对应 `long` 为 `INT64_MIN && -1`），按源异常/错误契约分发；`checked` 加减乘转换前作显式边界判定。
+   - *可选映射*：`unchecked` 加/减/乘/一元负取模可按对应宽度无符号类型（`uint32_t`、`uint64_t`）实现。ISO C++17 §7.8 对超范围有符号转换采用实现定义行为，回转时可用下例的值域分段。目标在执行有符号除法或取余之前分别识别零除和最小值除以 `-1`，在相应分支明确保留已确认的源返回值或错误类别。先核是否为常量表达式，将编译期诊断与运行时失败分开。运行时 `checked` 加减乘和窄化先做边界判定。
    - *不适用条件*：严禁将 C# `unchecked` 有符号加减乘直接写成 C++ `int` / `int64_t` 运算（C++ 有符号溢出是 UB）；严禁把有符号 `int.MinValue / -1` 或 `% -1` 概括为“在 `unchecked` 下无异常回绕”；严禁在宣称 C++17 可移植实现时直接对大于 `INT32_MAX` 的 `uint32_t` 使用 `static_cast<int32_t>`。
 5. **错误机械替换反例**：
    ```cpp
@@ -165,7 +167,7 @@ description: Use when converting C# source to C++; apply this direction's langua
        return static_cast<int32_t>(static_cast<uint32_t>(h) * 31u + static_cast<uint32_t>(x)); // >INT32_MAX 时在 C++17 为实现定义
    }
 
-   // 正确：C++17 标准可移植的无符号模算术回转 + 显式除法溢出/零除守卫
+   // 候选：C++17 可移植的无符号模算术回转
    inline int32_t wrap_u32_to_i32(uint32_t u) {
        return (u <= static_cast<uint32_t>(INT32_MAX))
                   ? static_cast<int32_t>(u)
@@ -178,16 +180,22 @@ description: Use when converting C# source to C++; apply this direction's langua
        return wrap_u32_to_i32(uh * 31u + ux);
    }
 
-   bool checked_div_i32(int32_t a, int32_t b, int32_t& out) {
-       if (b == 0 || (a == INT32_MIN && b == -1)) {
-           return false; // 分别转入 DivideByZeroException / OverflowException 对应错误处理（checked/unchecked 均适用）
+   // 仅用于已确认这两种运行时错误均需向调用方传播的源路径
+   enum class DivisionStatus { ok, divide_by_zero, overflow };
+
+   DivisionStatus divide_i32(int32_t a, int32_t b, int32_t& out) {
+       if (b == 0) {
+           return DivisionStatus::divide_by_zero;
+       }
+       if (a == INT32_MIN && b == -1) {
+           return DivisionStatus::overflow;
        }
        out = a / b;
-       return true;
+       return DivisionStatus::ok;
    }
    ```
-6. **信息不足或实现相关时的处理**：工程若显式开启 `<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>` 改变默认算术上下文，或已冻结特定 C++20/编译器二补码选项时，先在冻结记录中明确版本与约束再选择对应映射。
-7. **资料依据（名称/版本/章节）**：MS-CS `checked`/`unchecked` 语句、C# 语言规范 §12.12.3（Division operator）/ §12.12.4（Remainder operator）；WG21-N4659 §7.8 `[conv.integral]`、Clause 8。
+6. **信息不足或实现相关时的处理**：冻结默认溢出检查选项、常量或非常量形态、源运行时和调用方捕获的类型。边界行为不明确时记录具体缺口，暂停受影响映射。如果源在最小值边界返回最小值或零，目标显式生成该结果并避开 C++17 的未定义运算。
+7. **资料依据（名称/版本/章节）**：C# 语言规范 Expressions 的 The checked and unchecked operators、Division operator、Remainder operator 和 Constant expressions，Microsoft .NET Arithmetic operators。目标整数转换和除法见 WG21-N4659 §7.8 `[conv.integral]` 与 `[expr.mul]`。
 
 ### 规则 CS-CPP-08：C# `try / catch / finally` 向 C++17 RAII 清理守卫与析构异常边界映射
 1. **源码触发条件**：C# 源码使用 `try { ... } finally { ... }` 或 `try { ... } catch { ... } finally { ... }` 执行必经清理逻辑。
